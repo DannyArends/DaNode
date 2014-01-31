@@ -1,0 +1,2 @@
+rm -rf server.log
+nohup authbind danode/server -b 100 > server.log 2>&1 &

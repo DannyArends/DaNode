@@ -1,0 +1,11 @@
+#!/bin/bash
+
+UI1="$(echo $1 | tr  '[:upper:]' '[:lower:]')"
+CFLAGS=""
+
+if [ "$UI1" == "ssl" ]; then
+    echo "Documentation: DaNode openSSL version"
+    CFLAGS="-version=SSL -I../openssl -L-lssl -L-lcrypto"
+fi
+
+rdmd --build-only $CFLAGS -D -Ddwww/localhost/ddoc danode/server.d

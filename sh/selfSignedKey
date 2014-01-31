@@ -1,0 +1,16 @@
+# Generate a private Key
+openssl genrsa -des3 -out server.key 1024
+
+# Certificate Signing Request, use our config
+openssl req -new -key server.key -out server.csr -config openssl.cnf
+
+# View what is requested:
+openssl req -text -noout -in server.csr
+
+# Sign the key yourself get a 3650 day certificate
+openssl x509 -req -days 3650 -in server.csr -signkey server.key -out server.crt -extfile openssl.cnf -extensions v3_req
+
+# Set the passphrase into the key, so the start of the webserver doesn't ask for it
+cp server.key server.key.org
+openssl rsa -in server.key.org -out server.key
+
