@@ -1,0 +1,4 @@
+handle SIGUSR1 nostop
+handle SIGUSR2 nostop
+set pagination off
+run
