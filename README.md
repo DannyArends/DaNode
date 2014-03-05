@@ -63,7 +63,7 @@ TESTS
 ADVANCED
 
   - WEBSITE-CONFIG
-   - Sub-domain redirecting, such as www.test.nl -> test.nl
+   - Sub-domain redirecting, such as http://www.test.nl to http://test.nl
    - Directory browsing
    - Custom index page
    - Server overview page at http://127.0.0.1/
