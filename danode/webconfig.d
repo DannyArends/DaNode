@@ -7,6 +7,10 @@ bool allowsCGI(in string[string] config){
   return(!inarr("allowcgi", config) || (fromarr("allowcgi", config) == "yes"));
 }
 
+bool allowsCoins(in string[string] config){
+  return(!inarr("coindaemon", config) || (fromarr("coindaemon", config) == "yes"));
+}
+
 string[string] parseWebConfig(in string content){
   string[string] config;
   foreach(line; strsplit(content, "\n")){

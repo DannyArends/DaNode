@@ -9,7 +9,8 @@
 module danode.structs;
 
 import std.stdio, std.string, std.socket, std.datetime, std.file, std.uri, std.random, std.conv;
-import danode.helper , danode.client, danode.jobrunner, danode.filebuffer, danode.mimetypes, danode.https;
+import danode.helper, danode.keyboard , danode.client, danode.jobrunner, danode.filebuffer, danode.mimetypes, danode.https;
+import danode.crypto.daemon;
 
 immutable string      SERVER_INFO      = "DaNode/0.0.1 (Universal)";                /// Server identification info
 immutable string      MPHEADER         = "multipart/form-data";                     /// Multipart header id
@@ -80,13 +81,16 @@ struct Server{
     Context      SSL;               /// SSL context
     HTTPS        https;             /// HTTPS server socket
   }
-  SocketSet    set;                 /// Socket listening set
-  ServerStat   stats;               /// Statistics
-  FileBuffer   filebuffer;          /// FileBuffer for small files
-  Client[]     clients;             /// Active client array
+  SocketSet     set;                 /// Socket listening set
+  ServerStat    stats;               /// Statistics
+  FileBuffer    filebuffer;          /// FileBuffer for small files
+  CryptoDaemon  cryptodaemon;
+  KeyHandler    keyboard;            /// Keyboard monitoring
+  Client[]      clients;             /// Active client array
+
+  bool isRunning(){ return keyboard.isRunning(); }
 
   void addClient(Client client){ this.clients ~= client; }
-
   uint         verbose = 0;         /// Verbose switch
 }
 
@@ -162,15 +166,13 @@ struct Response{
   bool            headeronly = false;           /// Set to true when only a HTTP header is required
   bool            bodyonly   = false;           /// Does the Server generate the HTTP header
   string[string]  headers    = null;            /// Additional HTTP headers
+  uint            maxage     = 0;               /// Cache control
   const string toString(Client client){
     string cstr     = format("%s", code);
     string sslstat  = "]  ";
     version(SSL){ 
-      sslstat = (client.isSSL? doColor(" ⬤"): doColor(" ✖", RED)) ~ "]";
+      sslstat = (client.isSSL? " ⬤": " ✖") ~ "]";
     }
-    if(code < 400) cstr = doColor(cstr, GREEN);
-    if(code == 400) cstr = doColor(cstr, YELLOW);
-    if(code > 400) cstr = doColor(cstr, RED);
     return(format("[%s%s  %s %s %.2f kB", cstr, sslstat, reason, protocol, payload.length / 1024.0f));
   }
 }
@@ -179,22 +181,43 @@ struct Response{
  * Internal structure used by FileBuffer
  */
 struct BFile{
-  void[]   content;  /// Raw file content
-  string   mime;     /// Mime type of the content
-  SysTime  btime;    /// Time when the file was buffered
+  void[]   content;                 /// Raw file content
+  string   mime;                    /// Mime type of the content
+  SysTime  btime;                   /// Time when the file was buffered
 }
 
+/***********************************
+ * Internal job structure for the job handler, to allow distributed computing via javascript
+ */
 struct Job{
-  long      id;
-  string    name;
-  string    owner     = "system";
-  long      period    = 1000;
-  long      times     = -1;
-  long      executed  = 0;
-  SysTime   t0;
-  JobFunc   task;
+  long      id;                     /// ID of the job
+  string    name;                   /// Name of the job
+  string    owner     = "system";   /// The owner of the job
+  long      period    = 1000;       /// Period of the job
+  long      times     = -1;         /// Maximum number of times to execute a job (-1 = always)
+  long      executed  = 0;          /// Number of times executed
+  SysTime   t0;                     /// Start time
+  JobFunc   task;                   /// Task to execute
 
   @property long   age(){ return(Msecs(t0)); }
   @property string asitem(){ return format("<li>%s - %s [%s] (%s/%s)</li>", id, name, owner, executed, times); }
+}
+
+/***********************************
+ * Simple commandline call output structure
+ */
+struct ProcessOutput{
+  int     status;                   /// Process output status
+  string  output;                   /// Returned std.out and std.err
+}
+
+/***********************************
+ * Crypto currency transaction
+ */
+struct Transaction{
+  string          txid;             /// Transaction ID in the block chain
+  real            amount;           /// Amount of currency transfered
+  string          address;          /// Address from/to which we received/transfered
+  long            confirmations;    /// Number of confirmations on the transaction
 }
 

@@ -30,6 +30,7 @@ class Client : Thread {
       _server    = server;
       _modified  = now();
       _socket    = socket;
+      isDaemon(true);
       try{
         _address   = socket.remoteAddress();
       }catch(Exception e){ 
@@ -56,7 +57,7 @@ class Client : Thread {
     /***********************************
      * Main HTTP event loop
      */
-    void run(){ debug writeln("[CLIENT] Handle a request");
+    final void run(){ debug writeln("[CLIENT] Handle a request");
       signal(SIGPIPE, SIG_IGN);                                           // Ignore broken pipe errors
       version(SSL){ if(isSSL){
           if(!waitForHandShake(this, _bio)) completed = true;             // When SSL do a handshake
@@ -100,7 +101,7 @@ class Client : Thread {
      * Pretty print the client & response after we're done
      */
     final void outputResponse(in Response response){
-   writefln("%s - %s %s (%s msecs)", response.toString(this), _request.shortname, address, Msecs(connected));
+      writefln("%s - %s %s (%s msecs)", response.toString(this), _request.shortname, address, Msecs(connected));
     }
 
     /***********************************
@@ -149,18 +150,19 @@ class Client : Thread {
     /***********************************
      * Set the response with payload
      */
-    final void setResponse(Response r, PayLoad payload, in string mime = "text/html", in SysTime date = now()){
+    final void setResponse(Response r, PayLoad payload, in string mime = "text/html", in SysTime date = now(), uint maxage = 0){
       _response = r;
       _response.protocol= _request.protocol;
       _response.mime = mime;
       _response.payload = payload;
       _response.date = date;
+      _response.maxage = maxage;
     }
 
     /***********************************
      * Send an nice HTML error response with msg
      */
-    void sendErrorResponse(Response r, in string msg, in string mime = "text/html", in SysTime date = now()){
+    final void sendErrorResponse(Response r, in string msg, in string mime = "text/html", in SysTime date = now()){
       setResponse(r, PayLoad(_request.stdErr(r, msg)), mime);
       sendResponse(true);
       _completed = true;

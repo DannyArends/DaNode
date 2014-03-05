@@ -28,7 +28,7 @@ string remoteInfo(Socket socket){
   try{
     if(socket){
       Address a = socket.remoteAddress();
-      if(a !is null){ return a.toAddrString() ~ ":" ~ a.toPortString(); }else{ return "x.x.x.x:-1"; }
+      if(a !is null){ return(format("%s:%s", a.toAddrString(), a.toPortString())); }else{ return "x.x.x.x:-1"; }
     }
   }catch(Exception e){ debug writeln("[Error]  Unable to get remoteAddress"); }
   return "x.x.x.x:-1";
@@ -41,7 +41,7 @@ void log(in string msg, in string file = "debug.log", bool console = false){
   if(LOGENABLED){
     try{
       auto logfile = new File(file,"at");
-      logfile.writefln("%s - %s",htmlTime(now()), msg);
+      logfile.writefln("%s - %s", htmlTime(now()), msg);
       logfile.close();
     }catch(Exception e){ writefln("Log error: '%s' not saved", msg); }
   }

@@ -40,7 +40,7 @@ class FileBuffer{
   /***********************************
    * Does the buffer contain path
    */
-  final bool  has(string path){ synchronized{
+  final bool has(string path){ synchronized{
     return inarr!(BFile,string)(path, buffer);
   }}
 
@@ -70,9 +70,9 @@ class FileBuffer{
   final void sendFile(ref Client client, string path){
     if(has(path) && !needUpdate(path)){
       BFile bf = get(path);
-      client.setResponse(STATUS_OK, PayLoad(cast(string)bf.content), bf.mime, bf.btime);
+      client.setResponse(STATUS_OK, PayLoad(cast(string)bf.content), bf.mime, bf.btime, 120);
     }else{
-      client.setResponse(STATUS_OK, loadFile(path), toMime(path), timeLastModified(path));
+      client.setResponse(STATUS_OK, loadFile(path), toMime(path), timeLastModified(path), 120);
     }
     client.sendResponse();
   }

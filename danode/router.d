@@ -11,7 +11,7 @@ module danode.router;
 import std.stdio, std.string, std.file, std.path, std.conv, std.uri;
 import danode.structs, danode.httpstatus, danode.filebuffer, danode.helper, danode.mimetypes;
 import danode.cgi, danode.webconfig, danode.client, danode.clientfunctions, danode.request;
-import danode.overview, danode.response;
+import danode.overview, danode.response, danode.crypto.daemon;
 
 /***********************************
  * Route a canonical URL request from client to its destination using specified server and configuration
@@ -31,7 +31,7 @@ void route(Server server, ref Client client, in string[string] configuration){
     path = strrepl(client.webroot ~ decode(client.request.path), "//", "/");
   }catch(URIerror e){
     writefln("[URI]    Error: cannot decode URI: %s, server continuing", client.request.path);
-  	throw(new RException("PATH could not be decoded:" ~ e.msg, STATUS_BAD_REQUEST));
+    throw(new RException("PATH could not be decoded:" ~ e.msg, STATUS_BAD_REQUEST));
   }
   string rootpath   = strrepl(client.webroot ~ getIndexPage(client.webroot, configuration),"//","/");
   string redirect   = shortDomain(client.request.domain, configuration);
@@ -63,9 +63,10 @@ void route(Server server, ref Client client, in string[string] configuration){
       }else{                                            // Directory browsing is not allowed
         throw(new RException("Directory browsing is not allowed for this directory", STATUS_FORBIDDEN));
       }
-    }      // We filer out 'local' server requests to 127.0.0.1
+    }      // Filter out 'local' server requests to 127.0.0.1
   }else{   // Otherwise there is no such file, so route canonical to root path when thats CGI
     if(client.webroot.indexOf("127.0.0.1") >= 0) return serverPage(server, client);
+    if(configuration.allowsCoins() && client.request.path == "/crypto") return cryptoPage(server.cryptodaemon, client);
     if(isCGI(rootpath)) return server.routeCanonical(client, configuration, 'p');
     // Too bad we failed even canonical request, return not found 
     throw(new RException("Page cannot be found or URL cannot be interpreted", STATUS_PAGE_NOT_FOUND));

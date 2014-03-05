@@ -11,7 +11,7 @@ module danode.server;
 import std.stdio, std.getopt, std.socket,std.string, std.conv,std.datetime, std.c.stdlib, core.memory, std.random;
 import danode.jobrunner, danode.httpstatus, danode.client, danode.clientfunctions, danode.cgi, std.zlib;
 import danode.filebuffer, danode.helper, danode.structs, danode.response, danode.index;
-import danode.https;
+import danode.https, danode.keyboard, danode.crypto.currency, danode.crypto.daemon;
 
 /***********************************
  * Handle any incomming data from a client
@@ -66,6 +66,10 @@ void setup(ref Server server, in ushort port = 3000, in uint backlog = 100){
   server.socket.setup(port, backlog);
   server.set = new SocketSet(MAX_CONNECTIONS + 1);     // +2 adds space for the socket
   server.filebuffer = new FileBuffer();
+  server.keyboard = new KeyHandler();
+  server.keyboard.start();
+  server.cryptodaemon = new CryptoDaemon(server, [ BITCOIN, DOGECOIN, FEDORA ]);
+  server.cryptodaemon.start();
 }
 
 /***********************************
@@ -105,7 +109,7 @@ void handle(ref Server server, int select){
       debug writefln("[INFO]   Closing socket %d - %s", i, server.clients[i].address);
       try{
         closeSocket(each.socket);
-        each.join();             // Join the thread, to make it finish
+      //  each.join();             // Join the thread, to make it finish
       }catch(Error e){
         writefln("[ERROR] Client %s Unable to close socket or join: %s", i, e.msg);
       }
@@ -138,7 +142,6 @@ int sISelect(ref Server server, int timeout = 10){
  * Main entry point for the server
  */
 void main(string[] args){
-  write("\x1B[37m");
   int    select;
   Server server = Server();
   getopt(args, "port|p",    &server.port, 
@@ -149,7 +152,8 @@ void main(string[] args){
   server.setup(server.port, server.backlog);
   scope(exit){ closeSocket(server.socket); }
 
-  for(;;){
+
+  while(server.isRunning()){
     try{
       if((select = sISelect(server)) > 0){
         server.listen(server.socket);
@@ -161,5 +165,7 @@ void main(string[] args){
     }
     Sleep(msecs(1));
   }
+  writeln("DONE");
+  exit(1);
 }
 
