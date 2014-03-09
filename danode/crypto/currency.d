@@ -35,16 +35,21 @@ struct Currency{
 
   final real blocktime(){ if(hashpersec > 0){ return(difficulty * pow(2.0, 32.0) / (hashpersec/1024) / 1000); }else{ return -1; } }
   final bool hasAccount(string name){ foreach(a; accounts){ if(a.name == name) return true; } return false; }
+  final int  accountIdx(string name){ foreach(int i, a; accounts){ if(a.name == name) return i; } return -1; }
 
   final void updateAccounts(bool verbose = true){
     auto exec = executeDaemon(daemon, "listaccounts");
     if(exec.status != 0){ /* writeln("[DEBUG] No deamon: ", daemon); */ return; }
     auto listaccounts = parseJSON(exec.output);
-    int i = 0;
     foreach(string name; listaccounts.object.keys){
-      if(!hasAccount(name)){ accounts ~= Account(name, toF(listaccounts, name)); i++; }
+      int i = accountIdx(name);
+      if(i < 0){
+        accounts ~= Account(name, toF(listaccounts, name));
+      }else{
+        accounts[i].balance = toF(listaccounts, name);
+      }
     }
-    if(verbose && i > 0) writefln("[INFO]   Created %d new accounts for %s", i, daemon);
+    if(verbose) writefln("[INFO]   Created %d new accounts for %s", accounts.length, daemon);
     foreach(ref account; accounts){
       account.updateAddresses(daemon, verbose);
       account.updateTransactions(daemon, verbose);

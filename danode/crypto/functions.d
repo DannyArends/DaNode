@@ -1,6 +1,6 @@
 module danode.crypto.functions;
 
-import std.stdio, core.vararg, std.math, std.string, std.process, std.json, core.thread, std.uri, std.process, std.array;
+import std.stdio, core.vararg, std.math, std.string, std.process, std.json, core.thread, std.uri, std.process, std.array, std.conv;
 import danode.structs, danode.response, danode.client, danode.helper, danode.mimetypes, danode.httpstatus;
 import danode.crypto.currency, danode.crypto.account, danode.crypto.cryptsy, danode.crypto.daemon;
 
@@ -31,7 +31,9 @@ ProcessOutput executeDaemon(string daemon, string query = "", ...){
 }
 
 string CRYPTSY(ref CryptoDaemon daemon, string coincode, string marketcode, string versus){
-  return(format(marketFmt, versus, daemon.getVolume(coincode, marketcode), daemon.getLastTradePrice(coincode, marketcode))); 
+  string tradeprice = daemon.getLastTradePrice(coincode, marketcode);
+  if(coincode == versus) tradeprice = format("%.2f", 1.0 / to!real(tradeprice));
+  return(format(marketFmt, versus, daemon.getVolume(coincode, marketcode), tradeprice)); 
 }
 
 string JSON(ref CryptoDaemon daemon, Currency currency){

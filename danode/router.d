@@ -29,7 +29,7 @@ void route(Server server, ref Client client, in string[string] configuration){
   string path;
   try{
     path = strrepl(client.webroot ~ decode(client.request.path), "//", "/");
-  }catch(URIerror e){
+  }catch(Error e){
     writefln("[URI]    Error: cannot decode URI: %s, server continuing", client.request.path);
     throw(new RException("PATH could not be decoded:" ~ e.msg, STATUS_BAD_REQUEST));
   }

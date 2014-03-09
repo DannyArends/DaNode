@@ -135,7 +135,7 @@ int sISelect(ref Server server, int timeout = 10){
   foreach(Client each; server.clients){ 
     if(each.socket && each.socket.isAlive) server.set.add(each.socket); 
   }
-  return Socket.select(server.set, null, null, timeout);
+  return Socket.select(server.set, null, null, dur!"msecs"(timeout));
 }
 
 /***********************************
@@ -166,6 +166,5 @@ void main(string[] args){
     Sleep(msecs(1));
   }
   writeln("DONE");
-  exit(1);
 }
 
