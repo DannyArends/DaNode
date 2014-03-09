@@ -52,7 +52,7 @@
     this.lastUpdated   = 0,
     this.networkUpdate = 20000,
 
-    this.update = function(){ this.page(this.currentpage);
+    this.update = function(){
       var now = new Date();
       if(now.getTime() > this.lastUpdated + this.networkUpdate){
         for(var i = 0; i < this.currencies.length; ++i){
@@ -64,8 +64,10 @@
     },
 
     this.page = function(name){ this.currentpage = name;
-      document.getElementById('content').innerHTML = '<h2>' + name + '</h2>';
+      getHTTP(0, 'application.php?page=' + this.currentpage, function(i, text){ cryptoengine.changepage(i, text); });
     },
+    this.changepage = function(i, text){ document.getElementById('content').innerHTML = text; },
     this.receive = function(i, text){ this.currencies[i].update(JSON.parse(text)); }
+    this.page(this.currentpage);
   }
 

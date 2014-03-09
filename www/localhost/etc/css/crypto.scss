@@ -11,25 +11,63 @@ small, strike, strong, sub, sup, tt, var, b,
 u, i, center, dl, dt, dd, ol, ul, li, fieldset, 
 form, label, legend, table, caption, tbody, 
 tfoot, thead, tr, th {
-  background : $bg-color;
-  border     : $p-border;
-  margin     : $p-border;
-  padding    :  1px;
-  font-size  : 12px;
-  vertical-align:$text-valign;
-  text-align : $text-align;
+  background      : $bg-color;
+  border          : $p-border;
+  margin          : $p-border;
+  padding         :  1px;
+  font-size       : 12px;
+  vertical-align  : $text-valign;
+  text-align      : $text-align;
+}
+
+body {
+  background      : #4169e1;
+  color           : #ffffff;
+}
+
+a { color           : #ddddff; }
+
+a:hover {
+  text-decoration : underline;
+  color           : #eeeeff;
+}
+
+a:visited { color           : #ddddff; }
+
+menu {
+  text-align      : right;
+}
+
+#prefix {
+  width           : 200px;
 }
 
 td {
-  background : $bg-color;
-  border     : $p-border;
-  margin     : $p-border;
-  padding    : 5px;
-  vertical-align:$text-valign;
-  text-align : $text-align;
+  background      : $bg-color;
+  border          : $p-border;
+  margin          : $p-border;
+  padding         : 5px;
+  vertical-align  : $text-valign;
+  text-align      : left;
 }
 
-#layout{
-  width: 100%; height: 100%;
+#layout {
+  width           : 100%;
+  height          : 100%;
 }
 
+ul {
+  margin          : 5px 0px 0px 20px;
+}
+
+h2 {
+  font-size       : 20px;
+  font-weight     : bold;
+  margin          : 0px 0px 10px 0px;
+}
+
+#logo {
+  font-size       : 32px;
+  text-align      : right;
+  font-weight     : bold;
+}
