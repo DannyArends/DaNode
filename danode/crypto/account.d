@@ -34,14 +34,20 @@ struct Account{
     int n = 0;
     int u = 0;
     foreach(JSONValue transaction; transactionsbyaccount.array){
-      string txid = toS(transaction,"txid");
-      int idx = transactionIdx(txid);
+      string txid      = toS(transaction,"txid");
+      int    idx       = transactionIdx(txid);
+      string address         = "";
+      real   amount          = 0.0;
+      long   confirmations   = 0;
+
+      if(inarr("address",transaction.object)) address = toS(transaction,"address");
+      if(inarr("amount",transaction.object)) amount = toF(transaction,"amount");
+      if(inarr("confirmations",transaction.object)) confirmations = toN(transaction,"confirmations");
+
       if(idx < 0){
-        transactions ~= Transaction(txid, toF(transaction,"amount"), toS(transaction,"address"), toN(transaction,"confirmations")); n++; 
+        transactions ~= Transaction(txid, amount, address, confirmations); n++; 
       }else{
-        if(transactions[idx].confirmations < maxconfirmations && transactions[idx].confirmations != toN(transaction,"confirmations")){
-          transactions[idx].confirmations = toN(transaction,"confirmations"); u++;
-        }
+        if(transactions[idx].confirmations != confirmations) transactions[idx].confirmations = confirmations; u++;
       }
     }
     if(verbose && (n > 0)) writefln("[INFO]   Transactions %s, account: %s, %d new, %d updated", daemon, name, n, u);

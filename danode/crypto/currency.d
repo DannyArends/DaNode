@@ -11,6 +11,7 @@ struct Currency{
   string           name             = "The Coin";             /// Currency name
   string           code             = "coin";                 /// Currency code (should match: Cryptsy exchange code)
   string           daemon           = "coindaemond";          /// Name of the daemon
+  bool             active           = false;                  /// Block count
   long             blockcount       = 0;                      /// Block count
   real             difficulty       = 0.0;                    /// Current block discovery difficult
   long             hashpersec       = 0;                      /// Hashes calculated per seconds by the network
@@ -24,7 +25,7 @@ struct Currency{
   final bool updateMiningInfo(){
     bool updated = false;
     auto exec = executeDaemon(daemon, "getmininginfo");
-    if(exec.status != 0){ /* writeln("[DEBUG] No deamon: ", daemon); */ return false; }
+    if(exec.status != 0){ /* writeln("[DEBUG] No deamon: ", daemon); */ this.blockcount = 0; return false; }
     auto getinfo = parseJSON(exec.output);
     if(blockcount != toN(getinfo, "blocks")) updated = true;
     blockcount = toN(getinfo, "blocks");
@@ -41,15 +42,16 @@ struct Currency{
     auto exec = executeDaemon(daemon, "listaccounts");
     if(exec.status != 0){ /* writeln("[DEBUG] No deamon: ", daemon); */ return; }
     auto listaccounts = parseJSON(exec.output);
+    int n = 0;
     foreach(string name; listaccounts.object.keys){
       int i = accountIdx(name);
       if(i < 0){
-        accounts ~= Account(name, toF(listaccounts, name));
+        accounts ~= Account(name, toF(listaccounts, name)); n++;
       }else{
         accounts[i].balance = toF(listaccounts, name);
       }
     }
-    if(verbose) writefln("[INFO]   Created %d new accounts for %s", accounts.length, daemon);
+    if(verbose && n > 0) writefln("[INFO]   Created %d new accounts for %s", accounts.length, daemon);
     foreach(ref account; accounts){
       account.updateAddresses(daemon, verbose);
       account.updateTransactions(daemon, verbose);
@@ -57,7 +59,8 @@ struct Currency{
   }
 }
 
-Currency DOGECOIN = Currency("DogeCoin", "DOGE", "dogecoind");
 Currency BITCOIN = Currency("Bitcoin", "BTC", "bitcoind");
+Currency DOGECOIN = Currency("DogeCoin", "DOGE", "dogecoind");
+Currency EMERALD = Currency("Emerald", "EMD", "emeraldd");
 Currency FEDORA = Currency("Fedoracoin", "TIPS", "fedoracoind");
 
