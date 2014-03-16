@@ -14,11 +14,15 @@
     this.update = function(json){ 
       this.json = json;
       document.getElementById(this.name).innerHTML  = '<h4>' + this.name + ' (' + this.symbol + ')</h4><ul>';
-      document.getElementById(this.name).innerHTML += '<li>Blockcount: '   + this.blockcount()      + '</li>';
-      document.getElementById(this.name).innerHTML += '<li>Difficulty: '   + this.difficulty()      + '</li>';
-      document.getElementById(this.name).innerHTML += '<li>Hashpersec: '   + this.hashpersec()      + '</li>';
-      document.getElementById(this.name).innerHTML += '<li>Accounts: '     + this.accounts().length + '</li>';
-      document.getElementById(this.name).innerHTML += '<li>Transactions: ' + this.nTransactions()   + '</li>';
+      if(this.blockcount() > 0){
+        document.getElementById(this.name).innerHTML += '<li>Blockcount: '   + this.blockcount()      + '</li>';
+        document.getElementById(this.name).innerHTML += '<li>Difficulty: '   + this.difficulty()      + '</li>';
+        document.getElementById(this.name).innerHTML += '<li>Hashpersec: '   + this.hashpersec()      + '</li>';
+        document.getElementById(this.name).innerHTML += '<li>Accounts: '     + this.accounts().length + '</li>';
+        document.getElementById(this.name).innerHTML += '<li>Transactions: ' + this.nTransactions()   + '</li>';
+      }else{
+        document.getElementById(this.name).innerHTML += "<li><font color='orange'>Warning: '"+ this.daemon +"' disabled</font></li>";
+      }
       document.getElementById(this.name).innerHTML += this.marketinfo();
       document.getElementById(this.name).innerHTML += '</ul>';
     }
@@ -47,7 +51,7 @@
   }
 
   CryptoEngine = function(){
-    this.currencies    = [new Currency('Bitcoin', 'BTC', 'bitcoind'), new Currency('DogeCoin','DOGE', 'dogecoind'), new Currency('Fedoracoin', 'TIPS', 'fedoracoind')],
+    this.currencies    = [new Currency('Bitcoin', 'BTC', 'bitcoind'), new Currency('DogeCoin','DOGE', 'dogecoind'), new Currency('Emerald','EMD', 'emeraldd'), new Currency('Fedoracoin', 'TIPS', 'fedoracoind')],
     this.currentpage   = 'Index';
     this.lastUpdated   = 0,
     this.networkUpdate = 20000,

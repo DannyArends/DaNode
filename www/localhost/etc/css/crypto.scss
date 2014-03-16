@@ -39,14 +39,22 @@ menu {
 }
 
 .mybutton {
-  width           : 150px;
+  width           : 120px;
+}
+
+.mbutton {
+  width           : 100px;
+}
+
+.darkerbg {
+  background      : #003399;
 }
 
 td {
   background      : $bg-color;
   border          : $p-border;
   margin          : $p-border;
-  padding         : 5px;
+  padding         : 4px;
   vertical-align  : $text-valign;
   text-align      : left;
 }
@@ -54,6 +62,10 @@ td {
 .layout {
   width           : 100%;
   height          : 100%;
+}
+
+.limw {
+  width           : 100px;
 }
 
 ul {
@@ -72,8 +84,26 @@ h3 {
   margin          : 10px 0px 10px 0px;
 }
 
-#logo {
-  font-size       : 32px;
-  text-align      : right;
+.cntr {
+  text-align      : center;
+}
+
+h4 {
+  font-size       : 14px;
   font-weight     : bold;
+}
+
+.scontent{
+  padding         : 12px 0px 0px 0px;
+}
+
+.leftm{
+  padding         : 12px 0px 0px 40px;
+}
+
+.logo {
+  font-size       : 32px;
+  text-align      : left;
+  font-weight     : bold;
+  padding         : 23px 0px 0px 40px;
 }
