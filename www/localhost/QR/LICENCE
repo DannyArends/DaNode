@@ -6,7 +6,10 @@
  *
  * PHP QR Code is distributed under LGPL 3
  * Copyright (C) 2010 Dominik Dzienia <deltalab at poczta dot fm>
- *
+ * 
+ * Modification to source by Danny Arends
+ * Copyright (C) 2014 Danny Arends <danny.arends at gmail dot com>
+ * 
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
