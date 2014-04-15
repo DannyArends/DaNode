@@ -123,10 +123,26 @@ bool checkData(ref Client client, size_t MAXURILENGTH = 2*KBYTE){ with(client){
  * Server parameters to insert into the response header to send to the client
  */
 string writeServerParams(Client client, in string path){ with(client){
-  return format(serverArgsFmt, SERVER_INFO, client.webroot, encodeComponent(request.protocol), 
-  encodeComponent(ip), port, encodeComponent(request.method), encodeComponent(request.url), 
+ /* writefln("%s\n\n", format(serverArgsFmt, SERVER_INFO, client.webroot, encodeComponent(request.dpp), encodeComponent(request.protocol), 
+  encodeComponent(ip), port, encodeComponent(request.method), toLower(encodeComponent(request.url)), 
+  encodeComponent(strrepl("./" ~ webroot ~ request.path,"//","/")), encodeComponent(request.getHeader("Accept")))); */
+
+ /* return format(serverArgsFmt, SERVER_INFO, "", "", "", 
+  "", "", "", "", 
+ "", ""); */
+
+  return format(serverArgsFmt, SERVER_INFO, client.webroot, toLower(encodeComponent(request.dpp)), encodeComponent(request.protocol), 
+  encodeComponent(ip), port, encodeComponent(request.method), toLower(encodeComponent(request.dpp)), 
   encodeComponent(strrepl("./" ~ webroot ~ request.path,"//","/")), encodeComponent(request.getHeader("Accept")));
 }}
+
+string writeCookies(Client client){ with(client){
+  string str = "";
+  foreach(s; request.headers["Cookie"].strsplit("; ")){
+    str ~= format("COOKIE=%s\n", strip(chomp(s)) );
+  }
+  return str;
+} }
 
 /***********************************
  * Store post parameters
@@ -134,9 +150,11 @@ string writeServerParams(Client client, in string path){ with(client){
 void storeParams(ref Client client, in string path){ with(client){
   client.request.files = [freeFile(client.webroot,"cgi", client.port, ".in")];
   auto fp  = File(client.request.files[0], "w");
-  fp.writeln(writeServerParams(client, path));              // Write the server parameters
-  string reqdata = client.data();                           // Get the full request
+  fp.writeln(writeServerParams(client, path));              // Write Server information
+  fp.writeln(writeCookies(client));                         // Write Cookies
+
   if(request.method == "POST"){                             // Save POST data
+    string reqdata = client.data();                         // Get the full request
     if(request.getHeader("Content-Type").indexOf(XFORMHEADER) >= 0){
       debug writeln("POST uses the Xform Header");
       reqdata = reqdata.strsplit("\r\n\r\n")[1];            // Safe ? Because we client.haveData

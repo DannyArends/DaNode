@@ -73,7 +73,7 @@ pure string toMime(string i){
     case ".cgi"  : return CGI_FILE ~ "perl";
     case ".d"    : return CGI_FILE ~ "rdmd";
     case ".pl"   : return CGI_FILE ~ "perl";
-    case ".php"  : return CGI_FILE ~ "php5-cgi -n -C -dextension=gd.so -q -f";
+    case ".php"  : return CGI_FILE ~ "php5-cgi -n -C -dextension=gd.so -dextension=mysql.so ";
     case ".py"   : return CGI_FILE ~ "pyton";
     case ".r"    : return CGI_FILE ~ "Rscript";
     default: return UNSUPPORTED_FILE;

@@ -18,7 +18,8 @@ stress
 www/financial.nl/db
 www/financial.nl/img
 
-www/localhost/QR/cache/*
+www/qrcode.test/QR/cache/*
+www/qrcode.test/QR/gen/*
 
 *.in
 *.err

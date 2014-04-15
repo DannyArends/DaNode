@@ -19,17 +19,15 @@ class QRbitstream {
   public static function newFromNum($bits, $num){
     $bstream = new QRbitstream();
     $bstream->allocate($bits);
-    
     $mask = 1 << ($bits - 1);
     for($i=0; $i<$bits; $i++) {
-        if($num & $mask) {
-            $bstream->data[$i] = 1;
-        } else {
-            $bstream->data[$i] = 0;
-        }
-        $mask = $mask >> 1;
+      if($num & $mask) {
+        $bstream->data[$i] = 1;
+      } else {
+        $bstream->data[$i] = 0;
+      }
+      $mask = $mask >> 1;
     }
-
     return $bstream;
   }
 
@@ -81,14 +79,10 @@ class QRbitstream {
   //----------------------------------------------------------------------
   public function appendBytes($size, $data){
     if ($size == 0) return 0;
-
     $b = QRbitstream::newFromBytes($size, $data);
-
     if(is_null($b)) return -1;
-
     $ret = $this->append($b);
     unset($b);
-
     return $ret;
   }
 

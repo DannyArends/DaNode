@@ -1,4 +1,4 @@
 <?php
-  include 'api/danode.php';
-  echo phpinfo();
+header('Content-Type: text/plain');
+phpinfo();
 ?>
