@@ -64,7 +64,7 @@ void parseResponse(ref Client client, string response , bool _verbose = false){
 /***********************************
  * Execute a CGI call at path from client to the underlying OS
  */
-void execute(ref Client client, string path, size_t chunkSize = BUFFERSIZE, bool _time = true){
+void execute(ref Client client, string path, size_t chunkSize = BUFFERSIZE, bool _time = false){
   client.storeParams(client.webroot);
   if(_time) writefln("[TIME]    Parameters stored: %s", Msecs(client.connected));
   string interpreter     = whichInterpreter(path);
