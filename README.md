@@ -29,8 +29,11 @@ EXAMPLES
 See the [www/](www/) folder for a couple example web sites, such as: [www/localhost/](www/localhost/) while is actively running 
 under http://localhost/ or http://127.0.0.1/. For the other examples you might need to update your host file.
 
-To create a new local website running under http://domain.xxx/ create a new folder called: www/domain.xxx directory, and redirect 
-the domain using the .hosts file. 
+To create a new local website running under http://domain.xxx/ create a new folder: 
+
+    mkdir www/domain.xxx
+
+and redirect the domain using the .hosts file. 
 
 CREATE A WEBSITE
 
