@@ -10,11 +10,11 @@ See a working example [HERE](../www/localhost/php.php).
 ```
 
 Common variables, are available after including the api:
-    * $_CONFIG - The variables loaded from the web.config file
-    * $_SERVER - Server related information
-    * $_GET - GET variables
-    * $_POST - POST variables
-    * $_COOKIE - Retrieve cookies set using the setcookie() function
+- $_CONFIG - The variables loaded from the web.config file
+- $_SERVER - Server related information
+- $_GET - GET variables
+- $_POST - POST variables
+- $_COOKIE - Retrieve cookies set using the setcookie() function
 
 ## PERL
 See a working example [HERE](../www/localhost/perl.pl)
