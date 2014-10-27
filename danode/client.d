@@ -83,16 +83,16 @@ class Client : Thread, ClientInterface!Socket {
       try{
         Response response;
         while(running && modified < maxtime){
-          if(receive(socket) > 0){                                      // We've received new data
-            if(!response.ready){                                          // If we're not ready to respond yet
-              router.route(this, response, to!string(inbuffer.data));     // Parse the data and try to create a response (Could fail multiple times)
+          if(receive(socket) > 0){                                        // We've received new data
+            if(!response.ready){                                            // If we're not ready to respond yet
+              router.route(this, response, to!string(inbuffer.data));       // Parse the data and try to create a response (Could fail multiple times)
             }
-            if(response.ready && !response.completed){                  // We know what to respond, but haven't send all of it yet
-              send(response, socket);                                     // Send the response, this function gets hit multiple times, so just send what you can and return
+            if(response.ready && !response.completed){                    // We know what to respond, but haven't send all of it yet
+              send(response, socket);                                       // Send the response, this function gets hit multiple times, so just send what you can and return
             }
-            if(response.ready && response.completed){                   //We've completed the request, response cycle
-              router.logrequest(this, response);                          // Log the response to the request
-              if(!response.keepalive) stop();                             // No keep alive, then stop this client
+            if(response.ready && response.completed){                     //We've completed the request, response cycle
+              router.logrequest(this, response);                            // Log the response to the request
+              if(!response.keepalive) stop();                               // No keep alive, then stop this client
               response.destroy();                                           // Clear the response
               inbuffer.destroy();                                           // Clear the input buffer
               requests++;
