@@ -38,7 +38,7 @@ string createCmdParams(in string[string] GET){
  *  - Header, no length -= Add content length + client.setResponse(OK, response) + BodyOnly
  *  - No header = client.setResponse(OK, response), Add header
  */
-void parseResponse(ref Client client, string response , bool _verbose = true){
+void parseResponse(ref Client client, string response , bool _verbose = false){
   client.setResponse(STATUS_OK, PayLoad(response));
   // Simple test to see if we have a valid HTTP header: Contains: HTTP/1.0 or HTTP/1.1
   if((response.indexOf("HTTP/1.0") == 0 ||  response.indexOf("HTTP/1.1") == 0 || response.indexOf("X-Powered-By:") >= 0)){
@@ -72,7 +72,7 @@ void execute(ref Client client, string path, size_t chunkSize = BUFFERSIZE, bool
   client.request.cgicmd  = format("%s %s", interpreter, fullpath);
   client.request.cgicmd ~= createCmdParams(client.request.GET);
   auto pStdIn  = File(client.request.files[0], "r");
-  writefln("[CGIEXEC] %s", client.request.files[0]);
+  debug writefln("[CGIEXEC] %s %s", client.request.cgicmd, client.request.files[0]);
   auto pStdOut = pipe(), pStdErr = pipe();
   if(_time) writefln("[TIME]  Spawning: %s", Msecs(client.connected));
   client.cpid  = spawnShell(client.request.cgicmd, pStdIn, pStdOut.writeEnd, pStdErr.writeEnd);
@@ -80,7 +80,8 @@ void execute(ref Client client, string path, size_t chunkSize = BUFFERSIZE, bool
   int sleep;
   while(!process.terminated){
     sleep   = uniform(2, 14);
-    process = tryWait(client.cpid);
+    auto p1 = tryWait(client.cpid);
+    process = p1;
     client.isModified();
     client.isTimedOut(client.cpid);           // Throws its way out of trouble, while killing the thread
     Sleep(sleep.msecs);

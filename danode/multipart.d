@@ -25,7 +25,7 @@ long writeFile(in string path, in string data){
  * Parse multipart request into File fp
  */
 void saveMultiPart(File fp, ref string[] fns, in string path, in string part){
-  debug writeln("Parsing a multipart item");
+  debug writeln("[MPART]   Parsing a multipart item");
   string dir = path ~ UPLOADDIR;
   if(part.indexOf(MPDESCR) > 0){
     string left = part[(part.indexOf(MPDESCR)+MPDESCR.length)..$];
@@ -43,10 +43,13 @@ void saveMultiPart(File fp, ref string[] fns, in string path, in string part){
         long fsize = writeFile(fullpath, left);
         fp.writefln("FILE=%s=%s%s", name, UPLOADDIR, fname);
         fns ~= fullpath;  // Add the full path, so the webserver will delete it in cleanup
-        writefln("[MPART]  File '%s': %s upload to: %s [%s bytes]", name, fname, fullpath, fsize);
+        writefln("[MPART]   File '%s': %s upload to: %s [%s bytes]", name, fname, fullpath, fsize);
       }else{ fp.writefln("FILE=%s=ERROR", name); }
-    }else{ fp.writefln("POST=%s=%s", name, encodeComponent(strip(chomp(left)))); }
+    }else{ 
+      fp.writefln("POST=%s=%s", name, encodeComponent(strip(chomp(left))));
+      debug writefln("[MPART]   POST=%s=%s", name, encodeComponent(strip(chomp(left))));
+    }
   }
-  debug writeln("Finished parsing a multipart item.");
+  debug writeln("[MPART]   Finished parsing a multipart item");
 }
 

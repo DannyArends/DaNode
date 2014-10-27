@@ -137,10 +137,15 @@ string writeServerParams(Client client, in string path){ with(client){
 }}
 
 string writeCookies(Client client){ with(client){
+  debug writefln("[COOKIE]  Start parsing client %s", client.address());
   string str = "";
-  foreach(s; request.headers["Cookie"].strsplit("; ")){
-    str ~= format("COOKIE=%s\n", strip(chomp(s)) );
+  if(inarr("Cookie", request.headers)){
+    foreach(s; request.headers["Cookie"].strsplit("; ")){
+      debug writefln("[COOKIE]  Found: %s = %s", client.address(), strip(chomp(s)));
+      str ~= format("COOKIE=%s\n", strip(chomp(s)) );
+    }
   }
+  debug writefln("[COOKIE]  Done parsing %s", client.address());
   return str;
 } }
 
@@ -150,25 +155,28 @@ string writeCookies(Client client){ with(client){
 void storeParams(ref Client client, in string path){ with(client){
   client.request.files = [freeFile(client.webroot,"cgi", client.port, ".in")];
   auto fp  = File(client.request.files[0], "w");
+  debug writefln("[PARAMS]  Start parsing/writing  client %s", client.address());
   fp.writeln(writeServerParams(client, path));              // Write Server information
   fp.writeln(writeCookies(client));                         // Write Cookies
 
   if(request.method == "POST"){                             // Save POST data
     string reqdata = client.data();                         // Get the full request
     if(request.getHeader("Content-Type").indexOf(XFORMHEADER) >= 0){
-      debug writeln("POST uses the Xform Header");
+      debug writeln("[POST]    XForm Header");
       reqdata = reqdata.strsplit("\r\n\r\n")[1];            // Safe ? Because we client.haveData
       foreach(s; reqdata.strsplit("&")){
         fp.writefln("POST=%s", strip(chomp(s)));
+        writefln("[POST] Post Requested Header: %s", strip(chomp(s)));
       }
     }
     if(request.getHeader("Content-Type").indexOf(MPHEADER) >= 0){
-      debug writeln("POST uses the Multipart Header");
+      debug writeln("[POST]     Multipart Header");
       foreach(int i, part; strsplit(reqdata, request.multipartid)){
         if(i > 0) fp.saveMultiPart(client.request.files, path, part);
       }
     }
   }
   fp.close();
+  debug writefln("[PARAMS]  Done %s", client.address());
 }}
 

@@ -67,9 +67,9 @@ class Client : Thread {
         try{
           version(SSL){ if(isSSL && !hasdata) getSSLinput(this);  }       // In SSL the client reads data
           if(hasheader && hasdata){                                       // We have the header and the data
-            if(_time) writefln("[TIME]  Parsed: %s", Msecs(_connected));
+            if(_time) writefln("[TIME]   Parsed: %s", Msecs(_connected));
             _server.route(this, getWebConfig(_server, webroot));          // Route the request
-            if(_time) writefln("[TIME]  Done: %s", Msecs(_connected));
+            if(_time) writefln("[TIME]   Done: %s", Msecs(_connected));
             outputResponse(_response);                                    // Pretty print the response
             completed = true;
             break;
@@ -128,11 +128,11 @@ class Client : Thread {
         _response.payload = null; _data = null;              // Set some of the used objects to null
         _request.path     = null; _request.headers = null;
         foreach(fn; request.files){                          // Remove any tmp files created
-          if(exists(fn)) remove(fn); 
+          if(exists(fn)) std.file.remove(fn); 
         }
         GC.collect();                                        // Run a GC collection to clean up the thread
         GC.minimize();
-        if(_time) writefln("[TIME]  Cleaned: %s", Msecs(_connected));
+        if(_time) writefln("[TIME]   Cleaned: %s", Msecs(_connected));
       }catch(Error e){
         writefln("[ERROR]  onCleanup: %s", e.msg); 
       }

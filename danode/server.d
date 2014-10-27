@@ -68,8 +68,8 @@ void setup(ref Server server, in ushort port = 3000, in uint backlog = 100){
   server.filebuffer = new FileBuffer();
   server.keyboard = new KeyHandler();
   server.keyboard.start();
-  server.cryptodaemon = new CryptoDaemon(server, [ BITCOIN, DOGECOIN, EMERALD, FEDORA ]);
-  server.cryptodaemon.start();
+  //server.cryptodaemon = new CryptoDaemon(server, [ BITCOIN, DOGECOIN, EMERALD, FEDORA ]);
+  //server.cryptodaemon.start();
 }
 
 /***********************************
