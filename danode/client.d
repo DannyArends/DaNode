@@ -35,7 +35,7 @@ class Client : Thread, ClientInterface!Socket {
     Router              router;              /// Router class from server
     long                requests;            /// Number of requests we handled
     long[long]          senddata;            /// Size of data send per request
-    Request             request;
+    Request             request;             /// Request structure
 
   public:
     this(Router router, Socket socket, bool blocking = false, long maxtime = 5000){
@@ -59,7 +59,7 @@ class Client : Thread, ClientInterface!Socket {
     final @property long    modified(){  synchronized { return(Msecs(modtime)); } }                                          // Time since last modified
     final @property void    stop(){      synchronized { terminated = true; } }                                               // Stop the client
     final @property long    port() const { if(address !is null){ return(to!long(address.toPortString())); } return(-1); }    // Client port
-    final @property string  ip() const { if(address !is null){ return(address.toAddrString()); } return("0.0.0.0"); }      // Client IP
+    final @property string  ip() const { if(address !is null){ return(address.toAddrString()); } return("0.0.0.0"); }        // Client IP
 
     final long receive(Socket socket, long maxsize = 4096){ synchronized {
       long received;

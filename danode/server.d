@@ -61,10 +61,10 @@ class Server : Thread {
       return(null);
     }
 
-    final @property bool      running(){ synchronized { return(socket.isAlive() && isRunning() && !terminated); } }                                          // Is the server still running ?
-    final @property void      stop(){ synchronized { foreach(ref Client client; clients){ client.stop(); } terminated = true;  } }                           // Stop the server
-    final @property Duration  time() const { return(Clock.currTime() - starttime); }                                                                         // Time so far
-    final @property void      info() { writefln("[INFO]   uptime %s\n[INFO]   # of connections: %d", time, connections); }                 // Server information
+    final @property bool      running(){ synchronized { return(socket.isAlive() && isRunning() && !terminated); } }                                           // Is the server still running ?
+    final @property void      stop(){ synchronized { foreach(ref Client client; clients){ client.stop(); } terminated = true;  } }                            // Stop the server
+    final @property Duration  time() const { return(Clock.currTime() - starttime); }                                                                          // Time so far
+    final @property void      info() { writefln("[INFO]   uptime %s\n[INFO]   # of connections: %d", time, connections); }                                    // Server information
     final @property long      connections() { long sum = 0; foreach(Client client; clients){ if(client.running){ sum++; } } return sum; }
     final @property int       verbose(string verbose = "") { return(router.verbose(verbose)); }
 
@@ -85,18 +85,24 @@ void main(string[] args) {
   ushort port     = 80;
   int    backlog  = 100;
   int    verbose  = NORMAL;
-  getopt(args, "port|p",    &port,
-               "backlog|b", &backlog,
-               "verbose|v", &verbose);
+  bool   keyoff   = false;
+  getopt(args, "port|p",     &port,         // Port to listen on
+               "backlog|b",  &backlog,      // Backlog of clients supported
+               "keyoff|k",   &keyoff,       // Keyboard on or off
+               "verbose|v",  &verbose);     // Verbose level (via commandline)
 
   auto server = new Server(port, backlog, verbose);
   server.start();
   string line;
   while(server.running){
-    line = chomp(stdin.readln());
-    if(line.startsWith("quit")) server.stop();
-    if(line.startsWith("info")) server.info();
-    if(line.startsWith("verbose")) server.verbose(line);
+    if(!keyoff){
+      line = chomp(stdin.readln());
+      if(line.startsWith("quit")) server.stop();
+      if(line.startsWith("info")) server.info();
+      if(line.startsWith("verbose")) server.verbose(line);
+    }else{
+      Thread.sleep(dur!"msecs"(10));
+    }
   }
 }
 

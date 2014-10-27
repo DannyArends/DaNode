@@ -9,7 +9,7 @@ import danode.httpstatus;
 
 immutable int NOTSET = -1, NORMAL = 0, INFO = 1, DEBUG = 2;
 
-struct Info{
+struct Info {
   long[StatusCode]      responses;
   Appender!(long[])     starttimes;
   Appender!(long[])     timings;
@@ -44,21 +44,20 @@ class Log {
       Request   rq  = cl.lastrequest;
       string    key = format("%s%s", rq.shorthost, rq.uripath);
 
-      if(!statistics.has(key)) statistics[key] = Info();    // Create
+      if(!statistics.has(key)) statistics[key] = Info();    // Unknown key, create new Info statistics object
 
-      // Fill statistics
+      // Fill run-time statistics
       statistics[key].responses[rs.statuscode]++;
       statistics[key].starttimes.put(rq.starttime.toUnixTime());
       statistics[key].timings.put(Msecs(rq.starttime));
       statistics[key].keepalives.put(rs.keepalive);
-      // statistics[key].useragents[((rq.track)? rq.useragent : "DNT")]++; // Needs to be better, perhaps do separate detection
       statistics[key].ips[((rq.track)? cl.ip : "DNT")]++;
 
-      // to stdout
-      if(level >= INFO) writefln("[%d]    %s %s:%s %s%s %s %s|%s", rs.statuscode, htmltime(), cl.ip, cl.port, rq.shorthost, rq.uri, Msecs(rq.starttime), rs.header.length, rs.payload.length);
+      // First to file
+      if(level >= INFO)  requests.writefln("[%d]    %s %s:%s %s%s %s %s|%s", rs.statuscode, htmltime(), cl.ip, cl.port, rq.shorthost, rq.uri, Msecs(rq.starttime), rs.header.length, rs.payload.length);
 
-      // Write to file
-      // requests.flush();
+      // Write the request to the requests file
+      requests.flush();
     }
 }
 

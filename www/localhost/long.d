@@ -4,7 +4,7 @@ import api.danode;
 
 alias core.thread.Thread.sleep  Sleep;
 
-void main(string[] args){ getGET(args);
+void main(string[] args){ setGET(args);
   Sleep(15.seconds);
 }
 
