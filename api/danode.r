@@ -13,14 +13,14 @@ open(f,"rt")
 while(length(line <- readLines(f,1)) > 0) {
   elems <- strsplit(line,"=")[[1]]
   if(length(elems) >= 2){
-    if(elems[1] %in% c("POST","FILE")){
+    if(elems[1] %in% c("P","F")){
       pnames <- c(pnames, elems[2])
       if(length(elems) == 3){
         POST <- c(POST, URLdecode(elems[3]))
       }else{ 
         POST <- c(POST, "") 
     } }      
-    if(elems[1] == "SERVER"){
+    if(elems[1] == "S"){
       snames <- c(snames, elems[2])
       if(length(elems) == 3){
         SERVER <- c(SERVER, URLdecode(elems[3]))

@@ -1,19 +1,11 @@
 module api.danode;
 import std.stdio, std.getopt, std.conv, std.string, std.uri, std.file;
 
-string[string] CONFIG;
-string[string] GET;
-string[string] POST;
-string[string] SERVER;
-
 void getGET(string[] args){
   foreach(arg;args[1..$]){
     string[] s = arg.split("=");
     if(s.length > 1) GET[decode(s[0])] = decode(s[1]);
   }
-  getSERVER();
-  getCONFIG();
-  getPOST();
 }
 
 void getCONFIG(){
@@ -30,30 +22,30 @@ void getCONFIG(){
   }
 }
 
-void getSERVER(){
+string[string] CONFIG;
+string[string] COOKIES;
+string[string] GET;
+string[string] POST;
+string[string] SERVER;
+
+void getPOST(){
   char[] buf;
-  if(ftell(stdin.getFP()) == -1){writeln("Exit One"); return; }
+  if(ftell(stdin.getFP()) == -1) return;
   while(stdin.readln(buf)){
     string s = chomp(to!string(buf));
     if(s == "") return;
     string[] splitted = decodeComponent(s).split("=");
     if(splitted.length > 2){
-      if(splitted[0] == "SERVER") SERVER[decode(splitted[1])] = chomp(strip(splitted[2]));
+      if(splitted[0] == "S")  SERVER[decode(splitted[1])]  = chomp(strip(splitted[2]));
+      if(splitted[0] == "P")  POST[decode(splitted[1])]    = chomp(strip(splitted[2]));
+      if(splitted[0] == "F")  POST[decode(splitted[1])]    = chomp(strip(splitted[2]));
+      if(splitted[0] == "C")  COOKIES[decode(splitted[1])] = chomp(strip(splitted[2]));
     }
   }
 }
 
-void getPOST(){
-  char[] buf;
-  if(ftell(stdin.getFP()) == -1){writeln("Exit One"); return; }
-  while(stdin.readln(buf)){
-    string s = chomp(to!string(buf));
-    if(s == "") return;
-    string[] splitted = decodeComponent(s).split("=");
-    if(splitted.length > 2){
-      if(splitted[0] == "POST")   POST[decode(splitted[1])]   = chomp(strip(splitted[2]));
-      if(splitted[0] == "FILE")   POST[decode(splitted[1])]   = chomp(strip(splitted[2]));
-    }
-  }
+static this(){ 
+  getPOST();
+  getCONFIG();
 }
 
