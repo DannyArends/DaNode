@@ -1,43 +1,45 @@
-/**
- * | <a href="index.html">Home</a>             | <a href="server.html">Server</a>              |
- *   <a href="client.html">Client</a>          | <a href="router.html">Router</a>              |
- *   <a href="cgi.html">CGI</a>                | <a href="filebuffer.html">File Buffer</a>     |
- *   <a href="structs.html">Structures</a>     | <a href="helper.html">Helper functions</a>    |
- *
- * License: Use freely for any purpose
- */
 module danode.httpstatus;
 
-import danode.structs, danode.response;
+enum StatusCode {
+  Continue = 100, SwitchingProtocols = 101,
+  Ok = 200, Saved = 201, Accepted = 202, NoContent = 204, ResetContent = 205, PartialContent = 206,
+  MultipleChoices = 300, MovedPermanently = 301, MovedTemporarily = 302, SeeOther = 303, NotModified = 304, TemporaryRedirect = 307, EmptyResponse = 324,
+  BadRequest = 400, Unauthorized = 401, Forbidden = 403, NotFound = 404, MethodNotAllowed = 405, TimedOut = 407, UriTooLong = 414,
+  ISE = 500, NotImplemented = 501, ServiceUnavailable = 502, VersionUnsupported = 505
+};
 
-enum Response
-  STATUS_CONTINUE =               {100, "Continue"},
-  STATUS_SWITCH_PROTOCOL =        {101, "Switching Protocols"},
-  STATUS_OK =                     {200, "Ok"},                                /// OK, cool, cool cool cool
-  STATUS_SAVED =                  {201, "Saved"},
-  STATUS_ACCEPTED =               {202, "Accepted"},
-  STATUS_NON_INFORMATION =        {203, "Non-Authoritative Information"},
-  STATUS_NO_CONTENT =             {204, "No Content"},
-  STATUS_RESET_CONTENT =          {205, "Reset Content"},
-  STATUS_PARTIAL_CONTENT =        {206, "Partial Content"},
-  STATUS_MULTIPLE_CHOICES =       {300, "Multiple Choices"},
-  STATUS_MOVED_PERMANENTLY =      {301, "Moved Permanently"},                 /// Not even a goodbye
-  STATUS_FOUND =                  {302, "Found"},
-  STATUS_SEE_OTHER =              {303, "See Other"},
-  STATUS_NOT_MODIFIED =           {304, "Not Modified"},
-  STATUS_TEMP_REDIRECT =          {307, "Temporary Redirect"},
-  STATUS_EMPTY_RESPONSE =         {324, "Empty Response"},
-  STATUS_BAD_REQUEST =            {400, "Bad Request"},
-  STATUS_TIMEOUT =                {400, "Time out"},                          /// Too slow
-  STATUS_UNAUTHORIZED =           {401, "Unauthorized"},
-  STATUS_PAYMENT_REQUIRED =       {402, "Payment Required"},                  /// All your $ are belong to us
-  STATUS_FORBIDDEN =              {403, "Forbidden"},                         /// For your eyes only
-  STATUS_PAGE_NOT_FOUND =         {404, "Not Found"},                         /// Awww
-  STATUS_METHOD_NOT_ALLOWED =     {405, "Method Not Allowed"},
-  STATUS_NOT_ACCEPTABLE =         {406, "Not Acceptable"},
-  STATUS_URI_TOO_LONG =           {414, "Request-URI Too Long"},
-  STATUS_INTERNAL_ERROR =         {500, "Internal Server Error"},             /// Why server, why ?
-  STATUS_NOT_IMPLEMENTED =        {501, "Not Implemented"},
-  STATUS_SERVICE_UNAVAILABLE =    {503, "Service Unavailable"},
-  STATUS_VERSION_UNSUPPORTED =    {505, "HTTP Version Not Supported"};
+pure string reason(StatusCode statuscode){ with(StatusCode){
+  final switch(statuscode){
+    case Continue                 : return("Continue");
+    case SwitchingProtocols       : return("Switching Protocols");
+
+    case Ok                       : return("Ok");
+    case Saved                    : return("Saved");
+    case Accepted                 : return("Accepted");
+    case NoContent                : return("No Content");
+    case ResetContent             : return("Reset Content");
+    case PartialContent           : return("Partial Content");
+
+    case MultipleChoices          : return("Multiple Choices");
+    case MovedPermanently         : return("Moved Permanently");
+    case MovedTemporarily         : return("Moved Temporarily");
+    case SeeOther                 : return("See Other");
+    case NotModified              : return("Not Modified");
+    case TemporaryRedirect        : return("Temporary Redirect");
+    case EmptyResponse            : return("Empty Response");
+
+    case BadRequest               : return("Bad Request");
+    case Unauthorized             : return("Unauthorized");
+    case Forbidden                : return("Forbidden");
+    case NotFound                 : return("Not Found");
+    case MethodNotAllowed         : return("Method Not Allowed");
+    case TimedOut                 : return("Connection Timed Out");
+    case UriTooLong               : return("Request-URI Too Long");
+
+    case ISE                      : return("Internal Server Error");
+    case NotImplemented           : return("Not Implemented");
+    case ServiceUnavailable       : return("Service Unavailable");
+    case VersionUnsupported       : return("HTTP Version Not Supported");
+  }
+} }
 

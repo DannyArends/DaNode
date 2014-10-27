@@ -1,75 +1,101 @@
-/**
- * | <a href="index.html">Home</a>             | <a href="server.html">Server</a>              |
- *   <a href="client.html">Client</a>          | <a href="router.html">Router</a>              |
- *   <a href="cgi.html">CGI</a>                | <a href="filebuffer.html">File Buffer</a>     |
- *   <a href="structs.html">Structures</a>     | <a href="helper.html">Helper functions</a>    |
- *
- * License: Use freely for any purpose
- */
 module danode.router;
 
-import std.stdio, std.string, std.file, std.path, std.conv, std.uri;
-import danode.structs, danode.httpstatus, danode.filebuffer, danode.helper, danode.mimetypes;
-import danode.cgi, danode.webconfig, danode.client, danode.clientfunctions, danode.request;
-import danode.overview, danode.response, danode.crypto.daemon;
+import std.array : Appender, indexOf, split, join;
+import std.stdio, std.string, std.conv, std.datetime, std.file, std.math;
+import std.uri : encode;
+import danode.client : Client;
+import danode.httpstatus : StatusCode;
+import danode.request : Request, internalredirect;
+import danode.response : SERVERINFO, Response, redirect, create, notmodified;
+import danode.webconfig : WebConfig;
+import danode.payload : Message, CGI;
+import danode.mimetypes : mime;
+import danode.functions : from, has, isCGI, isFILE, isDIR, Msecs, htmltime, browsedir, isAllowed, writefile;
+import danode.filesystem : FileSystem, FileInfo;
+import danode.post : parsepost, PostType, servervariables;
+import danode.log;
 
-/***********************************
- * Route a canonical URL request from client to its destination using specified server and configuration
- */
-void routeCanonical(Server server, ref Client client, in string[string] configuration, char type = 'p'){
-  client.request.query = format("%c=%s", type, client.request.path[1..$]);
-  client.request.path = "/" ~ getIndexPage(client.webroot, configuration);
-  server.route(client, configuration);
-}
+class Router {
+  private:
+    FileSystem      filesystem;
+    Log             logger;
 
-/***********************************
- * Route a request from client to its destination using specified server and configuration
- */
-void route(Server server, ref Client client, in string[string] configuration){
-  string path;
-  try{
-    path = strrepl(client.webroot ~ decode(client.request.path), "//", "/");
-  }catch(Error e){
-    writefln("[URI]    Error: cannot decode URI: %s, server continuing", client.request.path);
-    throw(new RException("PATH could not be decoded:" ~ e.msg, STATUS_BAD_REQUEST));
-  }
-  string rootpath   = strrepl(client.webroot ~ getIndexPage(client.webroot, configuration),"//","/");
-  string redirect   = shortDomain(client.request.domain, configuration);
+  public:
+    this(int verbose = NORMAL){ logger = new Log(verbose); filesystem = new FileSystem(logger); }
 
-  debug writefln("[ROUTE]   %s, Root: %s, Domain: %s->%s", path, rootpath, client.request.domain, redirect);
+    void logrequest(Client client, Response response){ logger.write(client, response); }
 
-  if(redirect != client.request.domain){                // We serve a short domain or a long domain
-    client.sendMovedPermanent("http://" ~ redirect);    // The correct way is to send 301 Moved
-  }else if(directRequest(path)){
-    if(isCGI(path)){
-      if(configuration.allowsCGI()) return client.execute(path);
-      throw(new RException("CGI scripts are not allowed", STATUS_FORBIDDEN));
-    }else if(allowedFileType(path)){
-      return server.filebuffer.sendFile(client, path);
-    }else{
-      throw(new RException("File type not allowed", STATUS_FORBIDDEN));
-    }
-  }else if(exists(path) && isDir(path)){
-    if(path != getIndexPage(path, configuration)){
-      client.request.path ~= getIndexPage(path, configuration);
-      return server.route(client, configuration);
-    }else{
-      if(path.length > 0 && path[($-1)] != '/'){        // Directory without trailing slash
-        client.sendMovedPermanent(client.request.shorturl ~ "/");
-      }else if(isAllowedDir(path, configuration)){                   // Directory browsing is allowed
-        if(redirectDirToIndex(configuration)) return server.routeCanonical(client, configuration, 'd');
-        client.setResponse(STATUS_OK, PayLoad(client.browseDir(path)));
-        return client.sendResponse();
-      }else{                                            // Directory browsing is not allowed
-        throw(new RException("Directory browsing is not allowed for this directory", STATUS_FORBIDDEN));
+    final bool parse(Client client, in string reqstr, ref Request request, ref Response response) const {
+      long header = reqstr.indexOf("\r\n\r\n");
+      if(header > 0){
+        request   = Request(client, reqstr[0 .. header], reqstr[(header + 4) .. $]);
+        if(!response.created) response  = request.create();
+        client.set(request);
+        return(true);
       }
-    }      // Filter out 'local' server requests to 127.0.0.1
-  }else{   // Otherwise there is no such file, so route canonical to root path when thats CGI
-    if(client.webroot.indexOf("127.0.0.1") >= 0) return serverPage(server, client);
-    if(configuration.allowsCoins() && client.request.path == "/crypto") return cryptoPage(server.cryptodaemon, client);
-    if(isCGI(rootpath)) return server.routeCanonical(client, configuration, 'p');
-    // Too bad we failed even canonical request, return not found 
-    throw(new RException("Page cannot be found or URL cannot be interpreted", STATUS_PAGE_NOT_FOUND));
-  }
+      return(false);
+    }
+
+    final Response route(Client client, ref Response response, in string reqstr) {
+      Request request;
+      if(parse(client, reqstr, request, response)){ route(request, response); }
+      return(response);
+    }
+
+    final void route(ref Request request, ref Response response, bool finalrewrite = false) {
+      string      localroot   = filesystem.localroot(request.shorthost());    // writefln("[INFO]   localroute: %s", localroot);
+      if(!exists(localroot)){
+        writefln("[WARN]   requested domain %s, not found", request.shorthost());
+        response.payload = new Message(StatusCode.NotFound, format("404 - No such domain is available"));
+        response.ready = true;
+        return;
+      }
+      FileInfo    configfile  = filesystem.file(localroot, "/web.config");    // writefln("[INFO]   configfile at: %s%s", localroot, "/web.config");
+      WebConfig   config      = WebConfig(configfile);                        // writefln("[INFO]   parsed config file");
+      string      fqdn        = config.domain(request.shorthost());           // writefln("[INFO]   fqdn: %s", fqdn);
+      string      localpath   = config.localpath(localroot, request.path);    // writefln("[INFO]   localpath: %s", localpath);
+
+      if(request.host != fqdn){                                                                       // Requested the wrong shortdomain
+        response.redirect(request, fqdn);
+        response.ready = true;
+      } else if(localpath.exists()) {                                                                 // Requested an existing resource
+        if(localpath.isCGI() && config.allowcgi){                                                       // CGI File
+          if(request.parsepost(response, filesystem, logger.verbose) && !response.routed){              // Check, and store POST data (could fail multiple times)
+            response.postfiles = request.postfiles;
+            filesystem.servervariables(config, request, response, logger.verbose);
+            response.payload = new CGI(request.command(localpath), request.inputfile(filesystem), logger.verbose);
+            response.ready = true;
+          }
+        }else if(localpath.isFILE() && !localpath.isCGI() && localpath.isAllowed()){                    // Static File
+          response.payload = filesystem.file(localroot, request.path);
+          if(request.ifModified >= response.payload.mtime()){                            // Non modified static content
+            response.notmodified(request, response.payload.mimetype);
+          }
+          response.ready = true;
+        }else if(localpath.isDIR() && config.isAllowed(localroot, localpath)){                          // Directory
+          if(config.internalredirect(request)) return route(request, response);
+          response.payload = new Message(StatusCode.Ok, format("200 - Allowed directory\n%s", browsedir(localpath)), "text/html");
+          response.ready = true;
+        }else{                                                                                          // Forbidden to access from the web
+          response.payload = new Message(StatusCode.Forbidden, format("403 - Access to this resource has been restricted"));
+          response.ready = true;
+        }
+      }else if(config.redirect && !finalrewrite){                                                     // Try to re-route this request to the index page
+        request.url = config.index;
+        return route(request, response, true);
+      }else{                                                                                          // Request is not hosted on this server
+        response.payload = new Message(StatusCode.NotFound, format("404 - The requested path does not exists on disk"));
+        response.ready = true;
+      }
+    }
+
+    final @property int verbose(string verbose = "") {
+      string[] sp = verbose.split(" ");
+      int nval = NOTSET;
+      if(sp.length >= 2) nval = to!int(sp[1]);
+      return(logger.verbose(nval)); 
+    }
+
+    final @property string stats(){ return(format("%s", logger.statistics)); }
 }
 

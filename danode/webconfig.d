@@ -1,75 +1,39 @@
 module danode.webconfig;
 
-import std.stdio, std.string, std.file;
-import danode.structs, danode.helper;
+import std.stdio : writeln, writefln;
+import std.string : chomp, format, split, strip, toLower, join, indexOf;
+import std.file : DirEntry, dirEntries, exists, isDir, SpanMode, readText;
+import danode.functions : has, from;
+import danode.filesystem;
 
-bool allowsCGI(in string[string] config){
-  return(!inarr("allowcgi", config) || (fromarr("allowcgi", config) == "yes"));
-}
+struct WebConfig {
+  string[string]  data;
 
-bool allowsCoins(in string[string] config){
-  return(!inarr("coindaemon", config) || (fromarr("coindaemon", config) == "yes"));
-}
-
-string[string] parseWebConfig(in string content){
-  string[string] config;
-  foreach(line; strsplit(content, "\n")){
-    if(chomp(strip(line)) != "" && line[0] != '#'){
-      string[] elem = strsplit(line, "=");
-      if(elem.length == 1) elem ~= "FALSE";
-      if(elem.length == 2){
-        config[chomp(strip(elem[0]))] = chomp(strip(elem[1]));
+  this(FileInfo file, string def = "no") {
+    string[] elements;
+    foreach(line; split(file.content, "\n")){
+      if(chomp(strip(line)) != "" && line[0] != '#'){
+        elements = split(line, "=");
+        string key = toLower(chomp(strip(elements[0])));
+        if(elements.length == 1){
+          data[key] = def;
+        }else if(elements.length >= 2){
+          data[key] = toLower(chomp(strip(join(elements[1 .. $], "="))));
+        }
       }
     }
   }
-  return config;
-}
 
-string[string] getWebConfig(Server server, in string path){ with(server){
-  string configpath = strrepl((path ~ "/web.config"),"//","/");
-  string[string] config;
-  if(filebuffer.has(configpath) && !filebuffer.needUpdate(configpath)){
-    BFile bf = filebuffer.get(configpath);
-    config   = parseWebConfig(cast(string)(bf.content));
-  }else{
-    if(exists(configpath) && isFile(configpath)){
-      config = parseWebConfig(filebuffer.loadFile(configpath));
-    }else{ debug writefln("[WARN]   No config file for: %s", path); }
+  final @property string    domain(string shorthost) const { if(data.from("shorturl", "yes") == "yes") return(shorthost); return(format("www.%s", shorthost)); }
+  final @property bool      allowcgi() const { if(data.from("allowcgi", "no") == "yes"){ return(true); } return(false); }
+  final @property string    localpath(in string localroot, in string path) const { return(format("%s%s", localroot, path)); }
+  final @property bool      redirect() const { return(data.from("redirect", "/") != "/"); }
+  final @property string    index() const { return(data.from("redirect", "/")); }
+  final @property string[]  allowdirs() const { return(data.from("allowdirs", "/").split(",")); }
+  final @property bool      isAllowed(in string localroot, in string path) const {
+    string npath = path[(localroot.length + 1) .. $]; if(npath == "") return(true);
+    foreach(d; allowdirs){ if(npath.indexOf(d) == 0) return(true); } 
+    return false; 
   }
-  config["webroot"] = path;
-  if(path[($-1)] != '/') config["webroot"] = format("%s/", path);
-  return config;
-}}
-
-bool redirectDirToIndex(in string[string] config){
-  if(inarr("redirectdir", config)){ if(fromarr("redirectdir", config)=="yes") return true; }
-  return false;
-}
-
-bool isAllowedDir(in string path, in string[string] config){
-  if(inarr("allowdirs", config)){ // If we have allowed dirs
-    foreach(string dir; strsplit(fromarr("allowdirs", config), ",")){
-      if(path == config["webroot"] ~ chomp(strip(dir))) return true;
-    }
-  }
-  return false;
-}
-
-bool hasIndex(string path, string index){
-  string indexpath = strrepl((path ~ "/" ~ index), "//", "/");
-  if(exists(indexpath) && isFile(indexpath)) return true;
-  return false;
-}
-
-string getIndexPage(in string path, in string[string] config){
-  if(exists(path) && isDir(path)){    // If we request a directory, check for an index
-    if(inarr("redirecturl", config)){ // If the config has an index, redirect to that
-      if(hasIndex(path, fromarr("redirecturl", config))) return fromarr("redirecturl", config);
-    }
-    foreach(index; DEFAULTINDICES){          // Check for default index pages
-      if(hasIndex(path, index)) return index;
-    }
-  }
-  return path; // No index page, just return the requested path;
 }
 
