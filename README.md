@@ -83,12 +83,6 @@ ADVANCED
    - Buffer small files and serve from memory
    - Stream large downloads using a flexible buffer
 
-  - CRYPTOCOIN
-   - Integration of crypto currency facade inside the web server
-   - A crypto buffer that sends requests to the daemon
-   - Tested: Bitcoin, DogeCoin and FedoraCoin (TIPS)
-   - Example in www/localhost/crypto.html
-
 LICENCE
 
 (c) 2010-2014 Danny Arends
