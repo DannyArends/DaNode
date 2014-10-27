@@ -52,7 +52,6 @@ enable the cgi execution in this file. An example:
     shorturl     = yes
     allowcgi     = yes
     redirecturl  = index.php
-    coindaemon   = no
 
 UPDATE THE HOSTS FILE
 
