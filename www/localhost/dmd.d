@@ -3,7 +3,7 @@ import std.stdio, std.compiler;
 import api.danode;
 
 void main(string[] args){
-  getGET(args);
+  setGET(args);
   writeln("HTTP/1.1 200 OK");
   writeln("Content-Type: text/html; charset=utf-8");
   writefln("Server: %s", SERVER["SERVER_SOFTWARE"]);

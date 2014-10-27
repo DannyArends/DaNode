@@ -1,14 +1,14 @@
 module api.danode;
 import std.stdio, std.getopt, std.conv, std.string, std.uri, std.file;
 
-void getGET(string[] args){
+void setGET(string[] args){
   foreach(arg;args[1..$]){
     string[] s = arg.split("=");
     if(s.length > 1) GET[decode(s[0])] = decode(s[1]);
   }
 }
 
-void getCONFIG(){
+void setCONFIG(){
   string myloc = SERVER["SCRIPT_FILENAME"];
   string configfile = myloc[0 .. (myloc.lastIndexOf("/"))] ~ "/web.config";
   if(exists(configfile)){
@@ -28,7 +28,7 @@ string[string] GET;
 string[string] POST;
 string[string] SERVER;
 
-void getPOST(){
+void setPOST(){
   char[] buf;
   if(ftell(stdin.getFP()) == -1) return;
   while(stdin.readln(buf)){
@@ -45,7 +45,7 @@ void getPOST(){
 }
 
 static this(){ 
-  getPOST();
-  getCONFIG();
+  setPOST();
+  setCONFIG();
 }
 
