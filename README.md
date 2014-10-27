@@ -2,10 +2,11 @@ HTTP-SERVER 'DaNode'
 
 STRUCTURE
 
-The DaNode server is designed to handle multiple websites independant and simultaneously. The DaNode 
-front-end routes incomming HTTP requests to the correct web folder. It allows for multiple index pages 
-and executes scripts in other languages (PHP, Python, D and R). Results from CGI scripts are parsed 
-back into the DaNode system, (e.g. check errors, infinite loops) and send to the requesting client.
+The DaNode server is designed to handle multiple websites independent and simultaneously. The DaNode 
+front-end routes incoming HTTP requests to the correct web folder. It allows for multiple index pages 
+and executes scripts in other languages (PHP, Python, D and R). Results from CGI scripts monitored and 
+parsed back into the DaNode system, (e.g. check errors, infinite loops) and if correct are send to the 
+requesting client.
 
 EXAMPLES
 
