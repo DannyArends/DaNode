@@ -26,14 +26,20 @@ API's
 
 EXAMPLES
 
-See the www/ folder for an example web sites, running under http://localhost/. To create a new website 
-running under http://domain.xxx/ create a new folder called: www/domain.xxx directory, and redirect the 
-domain using the .hosts file. An example to create a simple PHP enabled web site:
+See the [www/](www/) folder for a couple example web sites, such as: [www/localhost/](www/localhost/) while is actively running 
+under http://localhost/ or http://127.0.0.1/. For the other examples you might need to update your host file.
+
+To create a new local website running under http://domain.xxx/ create a new folder called: www/domain.xxx directory, and redirect 
+the domain using the .hosts file. 
+
+CREATE A WEBSITE
+
+An example to create a simple PHP enabled web site:
 
     mkdir www/domain.xxx
     touch www/domain.xxx/index.php
 
-Then add some html content to the index page, optionally you can create a web.config file:
+Then add some php or html content to the index page, optionally you can create a web.config file:
 
     touch www/domain.xxx/web.config
 
@@ -45,7 +51,9 @@ enable the cgi execution in this file. An example:
     redirecturl  = index.php
     coindaemon   = no
 
-If you don't own the domain, redirect the domain to your local IP address using the hosts file
+UPDATE THE HOSTS FILE
+
+If you don't own the domain, redirect the domain to your local IP address using the hosts file:
 
     sudo nano /etc/hosts
 
@@ -54,7 +62,8 @@ Then add the lines to this file:
     127.0.0.1   domain.xxx
     127.0.0.1   www.domain.xxx
 
-Open a browser and navigate to: http://www.domain.xxx, you should now see the content of your html file
+Save the file with these lines added, then open a browser and navigate to: http://www.domain.xxx, you 
+should now see the content of your php / html file.
 
 TESTS
 
