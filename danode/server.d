@@ -64,7 +64,7 @@ class Server : Thread {
     final @property bool      running(){ synchronized { return(socket.isAlive() && isRunning() && !terminated); } }                                          // Is the server still running ?
     final @property void      stop(){ synchronized { foreach(ref Client client; clients){ client.stop(); } terminated = true;  } }                           // Stop the server
     final @property Duration  time() const { return(Clock.currTime() - starttime); }                                                                         // Time so far
-    final @property void      info() { writefln("[INFO]   uptime %s\n[INFO]   # of connections: %d\n%s", time, connections, router.stats); }                 // Server information
+    final @property void      info() { writefln("[INFO]   uptime %s\n[INFO]   # of connections: %d", time, connections); }                 // Server information
     final @property long      connections() { long sum = 0; foreach(Client client; clients){ if(client.running){ sum++; } } return sum; }
     final @property int       verbose(string verbose = "") { return(router.verbose(verbose)); }
 

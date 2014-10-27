@@ -67,7 +67,7 @@ class Process : Thread {
     final @property long    time() const { synchronized { return(Msecs(starttime)); } }                                                                                     // Time so far
     final @property long    lastmodified() const { synchronized { return(Msecs(modified)); } }                                                                              // Last time modified
     final @property bool    running() const { synchronized { return(!process.terminated); } }                                                                               // Command still running ?
-    final @property int     status() const { synchronized { return(process.status); } }                                                                               // Command still running ?
+    final @property int     status() const { synchronized { return(process.status); } }                                                                                     // Command still running ?
     final @property long    length() const { synchronized { if(errbuffer.data.length == 1){ return(outbuffer.data.length); } return errbuffer.data.length; } }              // Length of output/error
     final @property string  inputpath() const { synchronized { return path; } }
 
