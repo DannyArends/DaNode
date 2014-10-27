@@ -7,23 +7,6 @@ front-end routes incomming HTTP requests to the correct web folder. It allows fo
 and executes scripts in other languages (PHP, Python, D and R). Results from CGI scripts are parsed 
 back into the DaNode system, (e.g. check errors, infinite loops) and send to the requesting client.
 
-                                  ┊┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┊    HTTP response
-      HTTP request ━━━━━━━┓       ┊Client                          ┊          ║
-                          ┃       ┊                ┏━━━━━ CGI ━━━━━━━━━━━━━━━━╢
-                       Server ━━━━━━ Router ═══════╡               ┊          ║
-                                  ┊    ┃           ┗━━ FileBuffer ━━━━━━━━━━━━╢
-     HTTPS request ━━━━━ SSL ━━━━━━━━━━┛                           ┊          ║
-                                  ┊┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┊   HTTPS response
-
-
-API's
-
-             GET   POST    SERVER    FILE     CONFIG
-     PHP     V     V       V         ?        V
-     PYTHON  V     V
-     D       V     V       V         ?
-     R       V     V
-
 EXAMPLES
 
 See the [www/](www/) folder for a couple example web sites, such as: [www/localhost/](www/localhost/) while is actively running 
@@ -66,6 +49,16 @@ Then add the lines to this file:
 
 Save the file with these lines added, then open a browser and navigate to: http://www.domain.xxx, you 
 should now see the content of your php / html file.
+
+API's
+
+             GET   POST    SERVER    FILE     CONFIG
+     PHP     V     V       V         ?        V
+     PYTHON  V     V
+     D       V     V       V         ?
+     R       V     V
+
+For more information see: [api/README.md](api/README.md)
 
 TESTS
 
