@@ -22,7 +22,7 @@ string stdErr(in Request request, in Response status, in string msg = ""){
  * Parse the header from input string reqstring
  */
 bool parseHeader(ref Request request, in string reqstring){
-  debug writefln("[REQ]    Start parsing header");
+  debug writefln("[REQ]     Start parsing header");
   string[] lines  = reqstring.split("\r\n");
   string[] hline  = lines[0].split(" ");
   if(hline.length != 3)
@@ -51,7 +51,7 @@ bool parseHeader(ref Request request, in string reqstring){
       }
     }
   }
-  debug writefln("[REQ]    Header information");
+  debug writefln("[REQ]     Header information: %s %s %s", request.method, request.path, request.protocol);
   return true;
 }
 

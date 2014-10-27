@@ -1,1 +1,12 @@
-gdb --args danode/server -p 8080 < test/gdb.in
+#!/bin/bash
+
+UI1="$(echo $1 | tr  '[:upper:]' '[:lower:]')"
+CFLAGS=""
+
+if [ "$UI1" == "ssl" ]; then
+    echo "Compiling: DaNode openSSL version"
+    CFLAGS="-version=SSL -I../openssl -L-lssl -L-lcrypto"
+fi
+
+rdmd --force --build-only -O -gc -debug $CFLAGS -w danode/server.d
+

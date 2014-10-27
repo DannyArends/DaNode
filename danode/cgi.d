@@ -64,30 +64,29 @@ void parseResponse(ref Client client, string response , bool _verbose = false){
 /***********************************
  * Execute a CGI call at path from client to the underlying OS
  */
-void execute(ref Client client, string path, size_t chunkSize = BUFFERSIZE, bool _time = false){
+void execute(ref Client client, string path, size_t chunkSize = BUFFERSIZE, bool _time = true){
   client.storeParams(client.webroot);
-  if(_time) writefln("[TIME]  Parameters stored: %s", Msecs(client.connected));
+  if(_time) writefln("[TIME]    Parameters stored: %s", Msecs(client.connected));
   string interpreter     = whichInterpreter(path);
   string fullpath        = strrepl(format("%s%s", client.webroot, client.request.path),"//","/");
   client.request.cgicmd  = format("%s %s", interpreter, fullpath);
   client.request.cgicmd ~= createCmdParams(client.request.GET);
   auto pStdIn  = File(client.request.files[0], "r");
-  debug writefln("[CGIEXEC] %s %s", client.request.cgicmd, client.request.files[0]);
+  debug writefln("[CGIEXEC] Command: %s %s", client.request.cgicmd, client.request.files[0]);
   auto pStdOut = pipe(), pStdErr = pipe();
-  if(_time) writefln("[TIME]  Spawning: %s", Msecs(client.connected));
+  if(_time) writefln("[TIME]    Spawning: %s", Msecs(client.connected));
   client.cpid  = spawnShell(client.request.cgicmd, pStdIn, pStdOut.writeEnd, pStdErr.writeEnd);
-  auto process = tryWait(client.cpid);
+  std.typecons.Tuple!(bool, "terminated", int, "status") process = tryWait(client.cpid);
   int sleep;
   while(!process.terminated){
     sleep   = uniform(2, 14);
-    auto p1 = tryWait(client.cpid);
-    process = p1;
+    process = tryWait(client.cpid);
     client.isModified();
     client.isTimedOut(client.cpid);           // Throws its way out of trouble, while killing the thread
     Sleep(sleep.msecs);
-    //writefln("[TIME]  Sleeping: %s %s", Msecs(client.connected), sleep.msecs);
+    debug if(_time) writefln("[TIME]    Sleeping: %s %s", Msecs(client.connected), sleep.msecs);
   }
-  if(_time) writefln("[TIME]  CGI execution done: %s", Msecs(client.connected));
+  if(_time) writefln("[TIME]    CGI execution done: %s", Msecs(client.connected));
   if(process.status != 0){
     string etxt = readPipe(pStdErr, chunkSize);
     etxt ~= readPipe(pStdOut, chunkSize);
@@ -98,6 +97,6 @@ void execute(ref Client client, string path, size_t chunkSize = BUFFERSIZE, bool
     if(interpreter.strsplit(" ")[0] == "sass") client.response.mime = "text/css";
   }
   client.sendResponse();
-  if(_time) writefln("[TIME]  Response send: %s", Msecs(client.connected));
+  if(_time) writefln("[TIME]    Response send: %s", Msecs(client.connected));
 }
 

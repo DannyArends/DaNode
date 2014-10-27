@@ -57,7 +57,7 @@ class Client : Thread {
     /***********************************
      * Main HTTP event loop
      */
-    final void run(){ debug writeln("[CLIENT] Handle a request");
+    final void run(){ debug writeln("[CLIENT]  New Request");
       signal(SIGPIPE, SIG_IGN);                                           // Ignore broken pipe errors
       version(SSL){ if(isSSL){
           if(!waitForHandShake(this, _bio)) completed = true;             // When SSL do a handshake
@@ -67,9 +67,9 @@ class Client : Thread {
         try{
           version(SSL){ if(isSSL && !hasdata) getSSLinput(this);  }       // In SSL the client reads data
           if(hasheader && hasdata){                                       // We have the header and the data
-            if(_time) writefln("[TIME]   Parsed: %s", Msecs(_connected));
+            if(_time) writefln("[TIME]    Parsed: %s", Msecs(_connected));
             _server.route(this, getWebConfig(_server, webroot));          // Route the request
-            if(_time) writefln("[TIME]   Done: %s", Msecs(_connected));
+            if(_time) writefln("[TIME]    Done: %s", Msecs(_connected));
             outputResponse(_response);                                    // Pretty print the response
             completed = true;
             break;
@@ -83,12 +83,12 @@ class Client : Thread {
           completed = true;
           break;
         }catch(Exception e){
-          writefln("[WARN]   %s %s %s (%s msecs)", e.msg, request.shortname, address, Msecs(connected));
+          writefln("[WARN]    %s %s %s (%s msecs)", e.msg, request.shortname, address, Msecs(connected));
           sendErrorResponse(STATUS_INTERNAL_ERROR, e.msg);
           completed = true;
           break;
         }catch(Error e){
-          writefln("[ERROR]  %s %s %s (%s msecs)", e.msg, request.shortname, address, Msecs(connected));
+          writefln("[ERROR]   %s %s %s (%s msecs)", e.msg, request.shortname, address, Msecs(connected));
           sendErrorResponse(STATUS_INTERNAL_ERROR, e.msg);
           completed = true;
           break;
@@ -209,6 +209,7 @@ class Client : Thread {
     final @property bool completed(bool b = false){ if(b){_completed = b;} return(_completed); } 
     final @property bool hasdata(bool b = false){ if(b){_hasdata = b;} return(_hasdata); }
     final @property bool hasheader(){ synchronized(this){
+      if(_hasheader) return true;
       if((_data.indexOf("\r\n\r\n") > 0)){
         _hasheader = parseHeader(_request, _data.split("\r\n\r\n")[0]);
     } return(_hasheader); }}
@@ -234,7 +235,7 @@ class Client : Thread {
     }
     final @property string address(){ return format("%s:%d", ip(), port()); }
     final @property Pid cpid(Pid p = null){ if(p !is null){ _cpid = p; } return _cpid; }
-
+    ulong lastDataParse = 0;
   private:
     Request   _request = Request();       /// Private: request
     Response  _response = Response();     /// Private: response

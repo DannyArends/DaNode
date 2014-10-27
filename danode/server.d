@@ -22,16 +22,16 @@ void handleincoming(ref Client client, bool verbose = false){
   char buf[KBYTE];
   size_t read = client.socket.receive(buf);
   if(read == Socket.ERROR){
-    if(verbose) writefln("[WARN]   Connection: Unable to read %s", client.address);
+    if(verbose) writefln("[WARN]    Connection: Unable to read %s", client.address);
     /// client.completed = true;
   }else if(read == 0){
-    if(verbose) writefln("[WARN]   Connection: Noting to read %s", client.address);
+    if(verbose) writefln("[WARN]    Connection: Noting to read %s", client.address);
     /// client.completed = true;
   }else{
     client.data(to!string(buf[0 .. read].dup));
     client.isModified();
-    if(verbose) writefln("[INFO]   Received %s bytes from %s", read, client.address);
-    debug writefln("[INFO]   %s", client.data());
+    if(verbose) writefln("[INFO]    Received %s bytes from %s", read, client.address);
+    // debug writefln("[INFO]    %s", client.data());
   }
 }
 
@@ -45,9 +45,9 @@ void setup(ref Socket socket, in ushort port = 3000, in uint backlog = 10, bool 
     socket.blocking = false;
     socket.bind(new InternetAddress(port));
     socket.listen(backlog);
-    writefln("[INFO]   Socket is now listening on: %s [%s|%s]", port, backlog, MAX_CONNECTIONS);
+    writefln("[INFO]    Socket is now listening on: %s [%s|%s]", port, backlog, MAX_CONNECTIONS);
   }catch(Exception e){
-    writefln("[ERROR]  Unable to bind socket on port %s\n%s", port, e.msg);
+    writefln("[ERROR]   Unable to bind socket on port %s\n%s", port, e.msg);
     if(exitOnError) exit(-1);
   }
 }
@@ -81,7 +81,7 @@ void listen(ref Server server, Socket socket){
       Client client = new Client(server, socket.accept());      
       client.socket.blocking = false;
       if(server.clients.length < MAX_CONNECTIONS){
-        debug writefln("[INFO]   New connection from %s", remoteInfo(client.socket));
+        debug writefln("[INFO]    New connection from %s", remoteInfo(client.socket));
         server.clients ~= client;
         client.start();
         server.stats.nconnections++;
@@ -89,11 +89,11 @@ void listen(ref Server server, Socket socket){
         server.stats.ntoobusy++;
         client.sendErrorResponse(STATUS_SERVICE_UNAVAILABLE, "Error: Too busy");
         client.cleanup();
-        writefln("[503]    Rejected connection %s: Too many connections.", remoteInfo(client.socket));
+        writefln("[503]     Rejected connection %s: Too many connections.", remoteInfo(client.socket));
         closeSocket(client.socket);
       }
     }catch(Exception e){ //No worries, its OK to error in non-blocking
-      debug writefln("[ERROR] Unable to accept connection: %s", e);
+      debug writefln("[ERROR]   Unable to accept connection: %s", e);
     }
   }
 }
@@ -106,14 +106,14 @@ void handle(ref Server server, int select){
   for(size_t i = 0; i < server.clients.length; i++){
     Client each = server.clients[i];
     if(each.completed){
-      debug writefln("[INFO]   Closing socket %d - %s", i, server.clients[i].address);
+      debug writefln("[INFO]    Closing socket %d - %s", i, server.clients[i].address);
       try{
         closeSocket(each.socket);
       //  each.join();             // Join the thread, to make it finish
       }catch(Error e){
-        writefln("[ERROR] Client %s Unable to close socket or join: %s", i, e.msg);
+        writefln("[ERROR]   Client %s Unable to close socket or join: %s", i, e.msg);
       }
-      debug writefln("[INFO]   Closed %d - %s", i, server.clients[i].address);
+      debug writefln("[INFO]    Closed %d - %s", i, server.clients[i].address);
     }else{                                    // Client has completed,close the socket
       // When the client socket is set, new data is available
       if(server.set.isSet(each.socket) && !each.hasdata) handleincoming(each);

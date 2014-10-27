@@ -1,0 +1,1 @@
+gdb --args danode/server -p 8080 < test/gdb.in

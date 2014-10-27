@@ -19,7 +19,7 @@ class KeyHandler : Thread{
     this(){ super(&run); }
 
     void run(){
-      printf( "[INFO]   Keyboard handler running.\n" );
+      printf( "[INFO]    Keyboard handler running.\n" );
       while(getKeyBlock() != 'q'){}
     }
 }

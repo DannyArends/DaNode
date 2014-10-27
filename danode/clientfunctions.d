@@ -28,7 +28,7 @@ bool isTimedOut(Client client){
 void isTimedOut(Client client, in Pid cpid){
   long t = secs(client.connected());
   if(t >= TIMEOUT[FORCGI]){
-    throw(new RException("CGI request timed out", STATUS_TIMEOUT));
+    throw(new RException("CGI Request Timed Out", STATUS_TIMEOUT));
   }
 }
 
@@ -63,7 +63,7 @@ void sendBytes(ref Client client, in PayLoad msg, in size_t READBUFFER = BUFFERS
       sections++;
       client.isModified();
     }
-    if(client.isTimedOut()) throw(new RException("Request timed out (Sending)", STATUS_TIMEOUT));
+    if(client.isTimedOut()) throw(new RException("CGI Request Timed Out (Sending)", STATUS_TIMEOUT));
   }
   if(msg.type == PayLoadType.FILE){    // Close file, buffer and slice
     buffer = null;
@@ -71,16 +71,16 @@ void sendBytes(ref Client client, in PayLoad msg, in size_t READBUFFER = BUFFERS
     fp.close();
   }
   version(SSL){ if(client.isSSL){ BIO_flush(client.getSSL()); } }
-  debug writefln("[SEND]   %s | %s bytes in %s sections", nbytes, msg.length, sections);
+  debug writefln("[SEND]    %s | %s bytes in %s sections", nbytes, msg.length, sections);
 }
 
 /***********************************
  * Send a timeout response to client
  */
 void sendTimeOut(ref Client client){
-  writef("[TIME]   %s (%s,%s): ", client.address, Msecs(client.connected), Msecs(client.modified));
+  writef("[TIME]    %s (%s,%s): ", client.address, Msecs(client.connected), Msecs(client.modified));
   writefln("(H/D/C) - %s/%s/%s", client.hasheader, client.hasdata, client.completed);
-  client.sendErrorResponse(STATUS_TIMEOUT, "Request timed out");
+  client.sendErrorResponse(STATUS_TIMEOUT, "Request Timed Out");
   client.completed=true;
   client.cleanup();
 }
@@ -99,7 +99,7 @@ void sendMovedPermanent(ref Client client, string to){
  * Check the data we received from client
  */
 bool checkData(ref Client client, size_t MAXURILENGTH = 2*KBYTE){ with(client){
-  debug writefln("[CLIENT] Parsing %d bytes of data", data.length);
+  debug writefln("[CLIENT]  %s checkData [%d bytes]", client.address, data.length);
   if(request.path.length > MAXURILENGTH)
     throw(new RException(format("Requested URI is too long"), STATUS_URI_TOO_LONG));
   if(request.method == "GET"){
@@ -110,11 +110,14 @@ bool checkData(ref Client client, size_t MAXURILENGTH = 2*KBYTE){ with(client){
       if(contenttype.indexOf(MPHEADER) >= 0)
         request.multipartid = strsplit(contenttype, "boundary=")[1];
       if(Msecs(modified) > 35){ hasdata = true; }
+      if(lastDataParse > 0 && lastDataParse == data.length){ hasdata = true; }
+      lastDataParse = data.length;
+      Sleep(msecs(15));
     }else{
       hasdata = true;
     }
   }else{
-    throw(new RException(format("Method %s not allowed", request.method), STATUS_METHOD_NOT_ALLOWED));
+    throw(new RException(format("Method %s Not Allowed", request.method), STATUS_METHOD_NOT_ALLOWED));
   }
   return hasdata;
 }}
@@ -123,21 +126,13 @@ bool checkData(ref Client client, size_t MAXURILENGTH = 2*KBYTE){ with(client){
  * Server parameters to insert into the response header to send to the client
  */
 string writeServerParams(Client client, in string path){ with(client){
- /* writefln("%s\n\n", format(serverArgsFmt, SERVER_INFO, client.webroot, encodeComponent(request.dpp), encodeComponent(request.protocol), 
-  encodeComponent(ip), port, encodeComponent(request.method), toLower(encodeComponent(request.url)), 
-  encodeComponent(strrepl("./" ~ webroot ~ request.path,"//","/")), encodeComponent(request.getHeader("Accept")))); */
-
- /* return format(serverArgsFmt, SERVER_INFO, "", "", "", 
-  "", "", "", "", 
- "", ""); */
-
   return format(serverArgsFmt, SERVER_INFO, client.webroot, toLower(encodeComponent(request.dpp)), encodeComponent(request.protocol), 
   encodeComponent(ip), port, encodeComponent(request.method), toLower(encodeComponent(request.dpp)), 
   encodeComponent(strrepl("./" ~ webroot ~ request.path,"//","/")), encodeComponent(request.getHeader("Accept")));
 }}
 
 string writeCookies(Client client){ with(client){
-  debug writefln("[COOKIE]  Start parsing client %s", client.address());
+  debug writefln("[COOKIE]  Start parsing for %s", client.address());
   string str = "";
   if(inarr("Cookie", request.headers)){
     foreach(s; request.headers["Cookie"].strsplit("; ")){
@@ -145,7 +140,7 @@ string writeCookies(Client client){ with(client){
       str ~= format("COOKIE=%s\n", strip(chomp(s)) );
     }
   }
-  debug writefln("[COOKIE]  Done parsing %s", client.address());
+  debug writefln("[COOKIE]  Done parsing for %s", client.address());
   return str;
 } }
 
@@ -155,7 +150,7 @@ string writeCookies(Client client){ with(client){
 void storeParams(ref Client client, in string path){ with(client){
   client.request.files = [freeFile(client.webroot,"cgi", client.port, ".in")];
   auto fp  = File(client.request.files[0], "w");
-  debug writefln("[PARAMS]  Start parsing/writing  client %s", client.address());
+  debug writefln("[PARAMS]  Start parsing/writing for %s", client.address());
   fp.writeln(writeServerParams(client, path));              // Write Server information
   fp.writeln(writeCookies(client));                         // Write Cookies
 
@@ -166,14 +161,16 @@ void storeParams(ref Client client, in string path){ with(client){
       reqdata = reqdata.strsplit("\r\n\r\n")[1];            // Safe ? Because we client.haveData
       foreach(s; reqdata.strsplit("&")){
         fp.writefln("POST=%s", strip(chomp(s)));
-        writefln("[POST] Post Requested Header: %s", strip(chomp(s)));
+        debug writefln("[POST] Post Requested Header: %s", strip(chomp(s)));
       }
+      client.hasdata = true;
     }
     if(request.getHeader("Content-Type").indexOf(MPHEADER) >= 0){
-      debug writeln("[POST]     Multipart Header");
+      debug writeln("[POST]    Multipart Header");
       foreach(int i, part; strsplit(reqdata, request.multipartid)){
         if(i > 0) fp.saveMultiPart(client.request.files, path, part);
       }
+      client.hasdata = true;
     }
   }
   fp.close();

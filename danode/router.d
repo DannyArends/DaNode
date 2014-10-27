@@ -36,7 +36,7 @@ void route(Server server, ref Client client, in string[string] configuration){
   string rootpath   = strrepl(client.webroot ~ getIndexPage(client.webroot, configuration),"//","/");
   string redirect   = shortDomain(client.request.domain, configuration);
 
-  debug writefln("[ROUTE]  %s, Root: %s, Domain: %s->%s", path, rootpath, client.request.domain, redirect);
+  debug writefln("[ROUTE]   %s, Root: %s, Domain: %s->%s", path, rootpath, client.request.domain, redirect);
 
   if(redirect != client.request.domain){                // We serve a short domain or a long domain
     client.sendMovedPermanent("http://" ~ redirect);    // The correct way is to send 301 Moved

@@ -174,7 +174,7 @@ struct Response{
     version(SSL){ 
       sslstat = (client.isSSL? " ⬤": " ✖") ~ "]";
     }
-    return(format("[%s%s  %s %s %.2f kB", cstr, sslstat, reason, protocol, payload.length / 1024.0f));
+    return(format("[%s%s   %s %s %.2f kB", cstr, sslstat, reason, protocol, payload.length / 1024.0f));
   }
 }
 
