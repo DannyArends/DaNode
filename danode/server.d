@@ -11,6 +11,9 @@ import danode.functions : Msecs;
 import danode.client : Client;
 import danode.router : Router;
 import danode.log;
+version(SSL){
+  import danode.ssl;
+}
 import std.getopt : getopt;
 
 class Server : Thread {
@@ -23,7 +26,7 @@ class Server : Thread {
     Router            router;
 
   public:
-    this(ushort port = 3000, int backlog = 100, int verbose = NORMAL) {
+    this(ushort port = 80, int backlog = 100, int verbose = NORMAL) {
       this.starttime  = Clock.currTime();
       this.router     = new Router(verbose);
       this.socket     = initialize(port, backlog);
@@ -31,7 +34,7 @@ class Server : Thread {
       super(&run);
     }
 
-    final Socket initialize(ushort port = 3000, int backlog = 200) {
+    final Socket initialize(ushort port = 80, int backlog = 200) {
       try{
         socket = new Socket(AddressFamily.INET, SocketType.STREAM, ProtocolType.TCP);
         socket.setOption(SocketOptionLevel.SOCKET, SocketOption.REUSEADDR, true);

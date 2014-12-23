@@ -3,7 +3,7 @@ module danode.router;
 import std.array : Appender, indexOf, split, join;
 import std.stdio, std.string, std.conv, std.datetime, std.file, std.math;
 import std.uri : encode;
-import danode.client : Client;
+import danode.client : ClientInterface;
 import danode.httpstatus : StatusCode;
 import danode.request : Request, internalredirect;
 import danode.response : SERVERINFO, Response, redirect, create, notmodified;
@@ -23,9 +23,9 @@ class Router {
   public:
     this(int verbose = NORMAL){ logger = new Log(verbose); filesystem = new FileSystem(logger); }
 
-    void logrequest(Client client, Response response){ logger.write(client, response); }
+    void logrequest(ClientInterface client, Response response){ logger.write(client, response); }
 
-    final bool parse(Client client, in string reqstr, ref Request request, ref Response response) const {
+    final bool parse(ClientInterface client, in string reqstr, ref Request request, ref Response response) const {
       long header = reqstr.indexOf("\r\n\r\n");
       if(header > 0){
         request   = Request(client, reqstr[0 .. header], reqstr[(header + 4) .. $]);
@@ -36,7 +36,7 @@ class Router {
       return(false);
     }
 
-    final Response route(Client client, ref Response response, in string reqstr) {
+    final Response route(ClientInterface client, ref Response response, in string reqstr) {
       Request request;
       if(parse(client, reqstr, request, response)){ route(request, response); }
       return(response);

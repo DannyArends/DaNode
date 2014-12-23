@@ -1,7 +1,7 @@
 module danode.log;
 
 import std.array, std.stdio, std.string, std.conv, std.datetime, std.file, std.math;
-import danode.client : Client;
+import danode.client : ClientInterface;
 import danode.request : Request;
 import danode.response : Response;
 import danode.functions;
@@ -40,8 +40,8 @@ class Log {
 
     @property int verbose(int verbose = NOTSET) { if(verbose != NOTSET){ level = verbose; } return(level); }
 
-    void write(Client cl, Response rs){
-      Request   rq  = cl.lastrequest;
+    void write(ClientInterface cl, Response rs){
+      Request   rq  = cl.get();
       string    key = format("%s%s", rq.shorthost, rq.uripath);
 
       if(!statistics.has(key)) statistics[key] = Info();    // Unknown key, create new Info statistics object

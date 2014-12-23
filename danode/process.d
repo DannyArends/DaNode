@@ -24,7 +24,7 @@ int readpipe(ref Pipe pipe){
       if(nonblocking(fp)) return(fgetc(fp.getFP()));
       writeln("[WARN]   unable to create nonblocking pipe for command");
     }
-  }catch(Exception e){ writefln("[WARN]   Exception during readpipe command"); }
+  }catch(Exception e){ writefln("[WARN]   exception during readpipe command"); }
   return(EOF);
 }
 

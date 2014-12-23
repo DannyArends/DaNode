@@ -7,7 +7,7 @@ import std.stdio : write, writeln, writefln;
 import std.datetime;
 import std.string : split, strip, format, toLower, lastIndexOf;
 import danode.filesystem : FileSystem;
-import danode.client : Client;
+import danode.client : ClientInterface;
 import std.regex : regex, match;
 import danode.functions : interpreter, from, toD, mtoI;
 import danode.webconfig : WebConfig;
@@ -24,7 +24,7 @@ SysTime parseHtmlDate(string datestr){ // 21 Apr 2014 20:20:13 CET
 }
 
 struct Request {
-  Client            client;
+  ClientInterface   client;
   string            method = "GET";
   string            uri;
   string            url;
@@ -34,7 +34,7 @@ struct Request {
   string            content;
   PostItem[string]  postinfo;
 
-  this(Client client, string header, in string content){
+  this(ClientInterface client, string header, in string content){
     this.client = client;
     this.content = content;
     string[] parts;
