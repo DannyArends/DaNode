@@ -8,11 +8,12 @@ import std.socket : AddressFamily, InternetAddress, ProtocolType, Socket, Socket
 import std.stdio : writefln, stdin;
 import std.string : startsWith, format;
 import danode.functions : Msecs;
-import danode.client : Client;
+import danode.client : Client, HTTP;
 import danode.router : Router;
 import danode.log;
 version(SSL){
-  import danode.ssl;
+  import deimos.openssl.ssl;
+  import danode.ssl : HTTPS, initSSL;
 }
 import std.getopt : getopt;
 
@@ -24,17 +25,29 @@ class Server : Thread {
     bool              terminated;
     SysTime           starttime;
     Router            router;
+    version(SSL){
+      SSL_CTX*        context;
+      Socket          sslsocket;
+    }
 
   public:
     this(ushort port = 80, int backlog = 100, int verbose = NORMAL) {
       this.starttime  = Clock.currTime();
       this.router     = new Router(verbose);
       this.socket     = initialize(port, backlog);
-      this.set        = new SocketSet(backlog + 1);
+      version(SSL){
+        this.sslsocket = initialize(443, backlog);
+        this.context   = initSSL();
+        backlog = (backlog * 2) + 1;
+      }
+      backlog = backlog + 1;
+      this.set        = new SocketSet(backlog);
+      writefln("[SERVER] server created backlog: %d", backlog);
       super(&run);
     }
 
-    final Socket initialize(ushort port = 80, int backlog = 200) {
+    Socket initialize(ushort port = 80, int backlog = 200) {
+      Socket socket;
       try{
         socket = new Socket(AddressFamily.INET, SocketType.STREAM, ProtocolType.TCP);
         socket.setOption(SocketOptionLevel.SOCKET, SocketOption.REUSEADDR, true);
@@ -49,19 +62,32 @@ class Server : Thread {
       return socket;
     }
 
-    final int sISelect(int timeout = 10) {
+    final int sISelect(Socket socket, int timeout = 10) {
       set.reset();
       set.add(socket);
       return Socket.select(set, null, null, dur!"msecs"(timeout));
     }
 
-    final Client accept() {
+    final Client accept(Socket socket) {
       if(set.isSet(socket)){ try{
-        Client client = new Client(router, socket.accept());
+        HTTP http = new HTTP(socket.accept());
+        Client client = new Client(router, http.socket, http);
         client.start();
         return(client);
       }catch(Exception e){ writefln("[ERROR] unable to accept connection: %s", e.msg); } }
       return(null);
+    }
+
+    version(SSL){
+      final Client secure(Socket socket) {
+        if(set.isSet(socket)){ try{
+          HTTPS https = new HTTPS(socket.accept(), context);
+          Client client = new Client(router, https.socket, https);
+          client.start();
+          return(client);
+        }catch(Exception e){ writefln("[ERROR] unable to accept connection: %s", e.msg); } }
+        return(null);
+      }
     }
 
     final @property bool      running(){ synchronized { return(socket.isAlive() && isRunning() && !terminated); } }                                           // Is the server still running ?
@@ -76,7 +102,10 @@ class Server : Thread {
       Appender!(Client[]) persistent;
       while(running){
         persistent.clear();
-        if((select = sISelect()) > 0){ persistent.put(accept()); }
+        if((select = sISelect(socket)) > 0){ persistent.put(accept(socket)); }
+        version(SSL){
+          if((select = sISelect(sslsocket)) > 0){ persistent.put(secure(sslsocket)); }
+        }
         foreach(Client client; clients){ if(client.running){ persistent.put(client); } }        // Add persistent clients
         clients = persistent.data;
       }

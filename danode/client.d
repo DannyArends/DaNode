@@ -27,9 +27,13 @@ interface ClientInterface {
   void run(); 
 }
 
-interface DriverInterface {
-  long receive(Socket conn, long maxsize = 4096);
-  void send(ref Response response, Socket conn, long maxsize = 4096);
+abstract class DriverInterface {
+  public:
+    Appender!(char[])   inbuffer;            /// Input appender buffer
+    Socket              socket;              /// Client socket for reading and writing
+
+    long receive(Socket conn, long maxsize = 4096);
+    void send(ref Response response, Socket conn, long maxsize = 4096);
 }
 
 class Client : Thread, ClientInterface {
@@ -44,13 +48,13 @@ class Client : Thread, ClientInterface {
     bool                terminated;          /// Is the client / connection terminated
     SysTime             starttime;           /// Time in ms since this process came alive
     SysTime             modtime;             /// Time in ms since this process was last modified
-    Appender!(char[])   inbuffer;            /// Input appender buffer
     long[long]          senddata;            /// Size of data send per request
     long                requests;            /// Number of requests we handled
 
-    this(Router router, Socket socket, bool blocking = false, long maxtime = 5000){
+    this(Router router, Socket socket, DriverInterface driver, bool blocking = false, long maxtime = 5000){
       writefln("[INFO]   client constructor");
       this.starttime        = Clock.currTime();
+      this.driver           = driver;
       this.router           = router;
       this.socket           = socket;
       this.socket.blocking  = blocking;
@@ -67,18 +71,18 @@ class Client : Thread, ClientInterface {
       try{
         Response response;
         while(running && modified < maxtime){
-          if(receive(socket) > 0){                                        // We've received new data
-            if(!response.ready){                                            // If we're not ready to respond yet
-              router.route(this, response, to!string(inbuffer.data));       // Parse the data and try to create a response (Could fail multiple times)
+          if(driver.receive(socket) > 0){                                           // We've received new data
+            if(!response.ready){                                                    // If we're not ready to respond yet
+              router.route(this, response, to!string(driver.inbuffer.data));        // Parse the data and try to create a response (Could fail multiple times)
             }
-            if(response.ready && !response.completed){                    // We know what to respond, but haven't send all of it yet
-              send(response, socket);                                       // Send the response, this function gets hit multiple times, so just send what you can and return
+            if(response.ready && !response.completed){                              // We know what to respond, but haven't send all of it yet
+              driver.send(response, socket);                                        // Send the response, this function gets hit multiple times, so just send what you can and return
             }
-            if(response.ready && response.completed){                     //We've completed the request, response cycle
-              router.logrequest(this, response);                            // Log the response to the request
-              if(!response.keepalive) stop();                               // No keep alive, then stop this client
-              response.destroy();                                           // Clear the response
-              inbuffer.destroy();                                           // Clear the input buffer
+            if(response.ready && response.completed){                               //We've completed the request, response cycle
+              router.logrequest(this, response);                                    // Log the response to the request
+              if(!response.keepalive) stop();                                       // No keep alive, then stop this client
+              response.destroy();                                                   // Clear the response
+              driver.inbuffer.destroy();                                            // Clear the input buffer
               requests++;
             }
           }
@@ -88,23 +92,6 @@ class Client : Thread, ClientInterface {
       if(router.verbose >= INFO) writefln("[INFO]   connection %s:%s closed after %d requests %s (%s msecs)", ip, port, requests, senddata, Msecs(starttime));
       socket.close();
     }
-
-    long receive(Socket socket, long maxsize = 4096){ synchronized {
-      long received;
-      char[] tmpbuffer = new char[](maxsize);
-      if((received = socket.receive(tmpbuffer)) > 0){
-        inbuffer.put(tmpbuffer[0 .. received]); modtime = Clock.currTime();
-      }
-      return(inbuffer.data.length);
-    } }
-
-    void send(ref Response response, Socket socket, long maxsize = 4096){ synchronized {
-      long send = socket.send(response.bytes(maxsize));
-      if(send >= 0){
-        response.index += send; modtime = Clock.currTime(); senddata[requests] += send;
-        if(response.index >= response.length) response.completed = true;
-      }
-    } }
 
     final @property void    set(Request req) { request = req; }
     final @property Request get() { return(request); }
@@ -119,9 +106,6 @@ class Client : Thread, ClientInterface {
 }
 
 class HTTP : DriverInterface {
- public:
-    Socket              socket;              /// Client socket for reading and writing
-    Appender!(char[])   inbuffer;            /// Input appender buffer
  private:
     Address             address;             /// Private  address field
     SysTime             starttime;           /// Time in ms since this process came alive
@@ -139,7 +123,7 @@ class HTTP : DriverInterface {
       }catch(Exception e){ writefln("[WARN]   unable to resolve requesting origin"); }
     }
 
-    long receive(Socket socket, long maxsize = 4096){ synchronized {
+    override long receive(Socket socket, long maxsize = 4096){ synchronized {
       long received;
       char[] tmpbuffer = new char[](maxsize);
       if((received = socket.receive(tmpbuffer)) > 0){
@@ -148,7 +132,7 @@ class HTTP : DriverInterface {
       return(inbuffer.data.length);
     } }
 
-    void send(ref Response response, Socket socket, long maxsize = 4096){ synchronized {
+    override void send(ref Response response, Socket socket, long maxsize = 4096){ synchronized {
       long send = socket.send(response.bytes(maxsize));
       if(send >= 0){
         response.index += send; modtime = Clock.currTime(); senddata[requests] += send;
