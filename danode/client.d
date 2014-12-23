@@ -31,6 +31,10 @@ abstract class DriverInterface {
   public:
     Appender!(char[])   inbuffer;            /// Input appender buffer
     Socket              socket;              /// Client socket for reading and writing
+    long                requests = 0;        /// Number of requests we handled
+    long[long]          senddata;            /// Size of data send per request
+    SysTime             starttime;           /// Time in ms since this process came alive
+    SysTime             modtime;             /// Time in ms since this process was last modified
 
     long receive(Socket conn, long maxsize = 4096);
     void send(ref Response response, Socket conn, long maxsize = 4096);
@@ -46,13 +50,8 @@ class Client : Thread, ClientInterface {
   public:
     Socket              socket;              /// Client socket for reading and writing
     bool                terminated;          /// Is the client / connection terminated
-    SysTime             starttime;           /// Time in ms since this process came alive
-    SysTime             modtime;             /// Time in ms since this process was last modified
-    long[long]          senddata;            /// Size of data send per request
-    long                requests;            /// Number of requests we handled
 
     this(Router router, Socket socket, DriverInterface driver, bool blocking = false, long maxtime = 5000){ // writefln("[INFO]   client constructor");
-      this.starttime        = Clock.currTime();
       this.driver           = driver;
       this.router           = router;
       this.socket           = socket;
@@ -61,7 +60,6 @@ class Client : Thread, ClientInterface {
       try{
         this.address        = socket.remoteAddress();
       }catch(Exception e){ writefln("[WARN]   unable to resolve requesting origin"); }
-      this.modtime          = Clock.currTime();
       super(&run);
     }
 
@@ -82,13 +80,13 @@ class Client : Thread, ClientInterface {
               if(!response.keepalive) stop();                                       // No keep alive, then stop this client
               response.destroy();                                                   // Clear the response
               driver.inbuffer.destroy();                                            // Clear the input buffer
-              requests++;
+              driver.requests++;
             }
           }
           Thread.yield();
         }
       }catch(Exception e){ writefln("[WARN]   unknown client exception: %s", e.msg); }
-      if(router.verbose >= INFO) writefln("[INFO]   connection %s:%s closed after %d requests %s (%s msecs)", ip, port, requests, senddata, Msecs(starttime));
+      if(router.verbose >= INFO) writefln("[INFO]   connection %s:%s closed after %d requests %s (%s msecs)", ip, port, driver.requests, driver.senddata, Msecs(driver.starttime));
       socket.close();
     }
 
@@ -96,8 +94,8 @@ class Client : Thread, ClientInterface {
     final @property Request get() { return(request); }
 
     final @property bool    running(){   synchronized { return(socket.isAlive() && isRunning() && !terminated); } }          // Is the client still running ?
-    final @property long    time(){      synchronized { return(Msecs(starttime)); } }                                        // Time since start of request
-    final @property long    modified(){  synchronized { return(Msecs(modtime)); } }                                          // Time since last modified
+    final @property long    time(){      synchronized { return(Msecs(driver.starttime)); } }                                        // Time since start of request
+    final @property long    modified(){  synchronized { return(Msecs(driver.modtime)); } }                                          // Time since last modified
     final @property void    stop(){      synchronized { terminated = true; } }                                               // Stop the client
 
     final @property long    port() const { if(address !is null){ return(to!long(address.toPortString())); } return(-1); }    // Client port
@@ -107,15 +105,13 @@ class Client : Thread, ClientInterface {
 class HTTP : DriverInterface {
  private:
     Address             address;             /// Private  address field
-    SysTime             starttime;           /// Time in ms since this process came alive
-    SysTime             modtime;             /// Time in ms since this process was last modified
-    long                requests;            /// Number of requests we handled
-    long[long]          senddata;            /// Size of data send per request
-
+ 
   public:
     this(Socket socket, bool blocking = false){ // writefln("[HTTP]   driver constructor");
       this.socket           = socket;
       this.socket.blocking  = blocking;
+      this.starttime        = Clock.currTime();           /// Time in ms since this process came alive
+      this.modtime          = Clock.currTime();           /// Time in ms since this process was modified
       try{
         this.address        = socket.remoteAddress();
       }catch(Exception e){ writefln("[WARN]   unable to resolve requesting origin"); }

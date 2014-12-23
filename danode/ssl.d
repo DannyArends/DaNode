@@ -17,10 +17,6 @@ version(SSL){
   class HTTPS : DriverInterface {
     private:
       Address             address;             /// Private  address field
-      SysTime             starttime;           /// Time in ms since this process came alive
-      SysTime             modtime;             /// Time in ms since this process was last modified
-      long                requests;            /// Number of requests we handled
-      long[long]          senddata;            /// Size of data send per request
       SSL_CTX*            ctx;
       SSL*                ssl;
 
@@ -30,6 +26,8 @@ version(SSL){
         ssl = SSL_new(ctx);                     // writefln("[INFO]   SSL created");
         SSL_set_fd(ssl, socket.handle());       // writefln("[INFO]   Added socket handle");
         sslAssert(SSL_accept(ssl) != -1);
+        this.starttime        = Clock.currTime();           /// Time in ms since this process came alive
+        this.modtime          = Clock.currTime();           /// Time in ms since this process was modified
         this.socket           = socket;
         this.socket.blocking  = blocking;
         try{
