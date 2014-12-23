@@ -13,7 +13,7 @@ import danode.router : Router;
 import danode.log;
 version(SSL){
   import deimos.openssl.ssl;
-  import danode.ssl : HTTPS, initSSL;
+  import danode.ssl : HTTPS, initSSL, closeSSL;
 }
 import std.getopt : getopt;
 
@@ -62,12 +62,14 @@ class Server : Thread {
       return socket;
     }
 
+    // Reset the socketset and add a server socket to listen to
     final int sISelect(Socket socket, int timeout = 10) {
       set.reset();
       set.add(socket);
       return Socket.select(set, null, null, dur!"msecs"(timeout));
     }
 
+    // Create an unsecure connection to a client
     final Client accept(Socket socket) {
       if(set.isSet(socket)){ try{
         HTTP http = new HTTP(socket.accept());
@@ -79,6 +81,7 @@ class Server : Thread {
     }
 
     version(SSL){
+      // Create a secure connection to a client
       final Client secure(Socket socket) {
         if(set.isSet(socket)){ try{
           HTTPS https = new HTTPS(socket.accept(), context);
@@ -102,14 +105,15 @@ class Server : Thread {
       Appender!(Client[]) persistent;
       while(running){
         persistent.clear();
-        if((select = sISelect(socket)) > 0){ persistent.put(accept(socket)); }
+        if((select = sISelect(socket)) > 0){ persistent.put(accept(socket)); }                  // Accept basic HTTP requests
         version(SSL){
-          if((select = sISelect(sslsocket)) > 0){ persistent.put(secure(sslsocket)); }
+          if((select = sISelect(sslsocket)) > 0){ persistent.put(secure(sslsocket)); }          // Accept SSL secure clients
         }
-        foreach(Client client; clients){ if(client.running){ persistent.put(client); } }        // Add persistent clients
+        foreach(Client client; clients){ if(client.running){ persistent.put(client); } }        // Add the backlog of persistent clients
         clients = persistent.data;
       }
       socket.close();
+      closeSSL(sslsocket, context);
     }
 }
 

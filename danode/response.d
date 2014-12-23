@@ -39,10 +39,10 @@ struct Response {
     foreach(key, value; headers){ hdr.put(format("%s: %s\r\n", key, value)); }
     hdr.put(format("Date: %s\r\n", htmltime()));
     if(payload.type == PayLoadType.Script){ connection = "Close"; }                         // Close on unknown content length (such as external scripts)
-    if(payload.type != PayLoadType.Script && payload.length >= 0){                                                                // If we have any payload
-      hdr.put(format("Content-Length: %d\r\n", payload.length));                            // We can send the expected size
-      hdr.put(format("Last-Modified: %s\r\n", htmltime(payload.mtime)));                    // It could be modified long ago, lets inform the client
-      if(maxage > 0) hdr.put(format("Cache-Control: max-age=%d, public\r\n", maxage));      // Perhaps we can have the client cache it (when very old)
+    if(payload.type != PayLoadType.Script && payload.length >= 0){                          // If we have any payload
+      hdr.put(format("Content-Length: %d\r\n", payload.length));                              // We can send the expected size
+      hdr.put(format("Last-Modified: %s\r\n", htmltime(payload.mtime)));                      // It could be modified long ago, lets inform the client
+      if(maxage > 0) hdr.put(format("Cache-Control: max-age=%d, public\r\n", maxage));        // Perhaps we can have the client cache it (when very old)
     }
     hdr.put(format("Content-Type: %s; charset=%s\r\n", payload.mimetype, charset));         // We just send our mime and an encoding
     hdr.put(format("Connection: %s\r\n", connection));                                      // Client can choose to keep-alive

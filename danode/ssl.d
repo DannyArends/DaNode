@@ -27,17 +27,14 @@ version(SSL){
     public:
       this(Socket socket, SSL_CTX* ctx, bool blocking = false){
         this.ctx = ctx;
-        ssl = SSL_new(ctx);
-        writefln("[INFO]   SSL created");
-        SSL_set_fd(ssl, socket.handle());
-        writefln("[INFO]   Added socket handle");
+        ssl = SSL_new(ctx);                     // writefln("[INFO]   SSL created");
+        SSL_set_fd(ssl, socket.handle());       // writefln("[INFO]   Added socket handle");
         sslAssert(SSL_accept(ssl) != -1);
         this.socket           = socket;
         this.socket.blocking  = blocking;
         try{
           this.address        = socket.remoteAddress();
         }catch(Exception e){ writefln("[WARN]   unable to resolve requesting origin"); }
-        writefln("[INFO]   SSL driver created");
       }
 
       override long receive(Socket socket, long maxsize = 4096){ synchronized {

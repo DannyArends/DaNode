@@ -51,8 +51,7 @@ class Client : Thread, ClientInterface {
     long[long]          senddata;            /// Size of data send per request
     long                requests;            /// Number of requests we handled
 
-    this(Router router, Socket socket, DriverInterface driver, bool blocking = false, long maxtime = 5000){
-      writefln("[INFO]   client constructor");
+    this(Router router, Socket socket, DriverInterface driver, bool blocking = false, long maxtime = 5000){ // writefln("[INFO]   client constructor");
       this.starttime        = Clock.currTime();
       this.driver           = driver;
       this.router           = router;
@@ -114,8 +113,7 @@ class HTTP : DriverInterface {
     long[long]          senddata;            /// Size of data send per request
 
   public:
-    this(Socket socket, bool blocking = false){
-      writefln("[HTTP]   driver constructor");
+    this(Socket socket, bool blocking = false){ // writefln("[HTTP]   driver constructor");
       this.socket           = socket;
       this.socket.blocking  = blocking;
       try{
