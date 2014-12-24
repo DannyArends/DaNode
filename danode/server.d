@@ -19,34 +19,34 @@ import std.getopt : getopt;
 
 class Server : Thread {
   private:
-    Socket            socket;
-    SocketSet         set;
-    Client[]          clients;
-    bool              terminated;
-    SysTime           starttime;
-    Router            router;
+    Socket            socket;           // The server socket
+    SocketSet         set;              // SocketSet for server socket and client listeners
+    Client[]          clients;          // List of clients
+    bool              terminated;       // Server running
+    SysTime           starttime;        // Start time of the server
+    Router            router;           // Router to route requests
     version(SSL){
-      SSL_CTX*        context;
-      Socket          sslsocket;
+      SSL_CTX*        context;          // SSL / HTTPs context
+      Socket          sslsocket;        // SSL / HTTPs socket
     }
 
   public:
     this(ushort port = 80, int backlog = 100, int verbose = NORMAL) {
-      this.starttime  = Clock.currTime();
-      this.router     = new Router(verbose);
-      this.socket     = initialize(port, backlog);
+      this.starttime  = Clock.currTime();           // Start the timer
+      this.router     = new Router(verbose);        // Start the router
+      this.socket     = initialize(port, backlog);  // Create the HTTP socket
       version(SSL){
-        this.sslsocket = initialize(443, backlog);
-        this.context   = initSSL();
-        backlog = (backlog * 2) + 1;
+        this.sslsocket = initialize(443, backlog);  // Create the SSL / HTTPs socket
+        this.context   = initSSL();                 // Initialize the SSL certificates
+        backlog = (backlog * 2) + 1;                // Enlarge the backlog, for N clients and 1 ssl server socket
       }
-      backlog = backlog + 1;
-      this.set        = new SocketSet(backlog);
+      backlog = backlog + 1;                        // Add room for the server socket
+      this.set        = new SocketSet(backlog);     // Create a socket set
       writefln("[SERVER] server created backlog: %d", backlog);
       super(&run);
     }
 
-    Socket initialize(ushort port = 80, int backlog = 200) {
+    Socket initialize(ushort port = 80, int backlog = 200) {      // Initialize the listening socket to a certain port and backlog
       Socket socket;
       try{
         socket = new Socket(AddressFamily.INET, SocketType.STREAM, ProtocolType.TCP);
@@ -62,18 +62,16 @@ class Server : Thread {
       return socket;
     }
 
-    // Reset the socketset and add a server socket to listen to
-    final int sISelect(Socket socket, int timeout = 10) {
+    final int sISelect(Socket socket, int timeout = 10) {         // Reset the socketset and add a server socket to listen to
       set.reset();
       set.add(socket);
       return Socket.select(set, null, null, dur!"msecs"(timeout));
     }
 
-    // Create an unsecure connection to a client
-    final Client accept(Socket socket) {
+    final Client accept(Socket socket) {                          // Create an unsecure connection to a client
       if(set.isSet(socket)){ try{
         HTTP http = new HTTP(socket.accept());
-        Client client = new Client(router, http.socket, http);
+        Client client = new Client(router, http);
         client.start();
         return(client);
       }catch(Exception e){ writefln("[ERROR] unable to accept connection: %s", e.msg); } }
@@ -81,11 +79,10 @@ class Server : Thread {
     }
 
     version(SSL){
-      // Create a secure connection to a client
-      final Client secure(Socket socket) {
+      final Client secure(Socket socket) {                        // Create a secure connection to a client
         if(set.isSet(socket)){ try{
           HTTPS https = new HTTPS(socket.accept(), context);
-          Client client = new Client(router, https.socket, https);
+          Client client = new Client(router, https);
           client.start();
           return(client);
         }catch(Exception e){ writefln("[ERROR] unable to accept connection: %s", e.msg); } }
@@ -97,8 +94,8 @@ class Server : Thread {
     final @property void      stop(){ synchronized { foreach(ref Client client; clients){ client.stop(); } terminated = true;  } }                            // Stop the server
     final @property Duration  time() const { return(Clock.currTime() - starttime); }                                                                          // Time so far
     final @property void      info() { writefln("[INFO]   uptime %s\n[INFO]   # of connections: %d", time, connections); }                                    // Server information
-    final @property long      connections() { long sum = 0; foreach(Client client; clients){ if(client.running){ sum++; } } return sum; }
-    final @property int       verbose(string verbose = "") { return(router.verbose(verbose)); }
+    final @property long      connections() { long sum = 0; foreach(Client client; clients){ if(client.running){ sum++; } } return sum; }                     // Number of connections
+    final @property int       verbose(string verbose = "") { return(router.verbose(verbose)); }                                                               // Verbose level
 
     final void run() {
       int select;

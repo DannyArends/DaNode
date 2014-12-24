@@ -12,11 +12,9 @@ version(SSL){
 
   alias size_t VERSION;
   immutable VERSION SSL23 = 0, SSL3 = 1, TLS1 = 2, DTLS1 = 3;
-  const RecvSize = 1024;
 
   class HTTPS : DriverInterface {
     private:
-      Address             address;             /// Private  address field
       SSL_CTX*            ctx;
       SSL*                ssl;
 
@@ -45,7 +43,8 @@ version(SSL){
       } }
 
       override void send(ref Response response, Socket socket, long maxsize = 4096){ synchronized {
-        long send = SSL_write(ssl, cast(void*) response.bytes, cast(int)maxsize);
+        auto slice = response.bytes(maxsize);
+        long send = SSL_write(ssl, cast(void*) slice, cast(int) slice.length);
         if(send >= 0){
           response.index += send; modtime = Clock.currTime(); senddata[requests] += send;
           if(response.index >= response.length) response.completed = true;
