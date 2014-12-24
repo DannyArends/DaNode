@@ -24,10 +24,10 @@ version(SSL){
         ssl = SSL_new(ctx);                     // writefln("[INFO]   SSL created");
         SSL_set_fd(ssl, socket.handle());       // writefln("[INFO]   Added socket handle");
         sslAssert(SSL_accept(ssl) != -1);
-        this.starttime        = Clock.currTime();           /// Time in ms since this process came alive
-        this.modtime          = Clock.currTime();           /// Time in ms since this process was modified
         this.socket           = socket;
         this.socket.blocking  = blocking;
+        this.starttime        = Clock.currTime();           /// Time in ms since this process came alive
+        this.modtime          = Clock.currTime();           /// Time in ms since this process was modified
         try{
           this.address        = socket.remoteAddress();
         }catch(Exception e){ writefln("[WARN]   unable to resolve requesting origin"); }

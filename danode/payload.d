@@ -14,7 +14,6 @@ import danode.log : NORMAL, INFO, DEBUG;
 enum PayLoadType { Message, Script, File }
 
 interface Payload {
-
   public:
     @property long                ready();
     @property StatusCode          statuscode();
@@ -53,7 +52,6 @@ class CGI : Payload {
       string content = to!string(bytes(0, 1024));
       long idx = content.indexOf("\r\n\r\n"); return((idx > 0)? content[0 .. idx] : "");
     }
-
 }
 
 class Message : Payload {

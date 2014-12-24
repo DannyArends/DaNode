@@ -46,10 +46,10 @@ pure string interpreter(in string path){
   return "";
 }
 
-string browsedir(in string localpath){
+string browsedir(in string root, in string localpath){
   Appender!(string) content;
   content.put(format("Content of: %s<br>\n", localpath));
-  foreach (DirEntry d; dirEntries(localpath, SpanMode.shallow)){ content.put(format("<a href='%s'>%s</a><br>", d.name[localpath.length .. $], d.name[localpath.length .. $])); }
+  foreach (DirEntry d; dirEntries(localpath, SpanMode.shallow)){ content.put(format("<a href='%s'>%s</a><br>", d.name[root.length .. $], d.name[root.length .. $])); }
   return(content.data);
 }
 
