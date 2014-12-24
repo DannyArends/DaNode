@@ -50,9 +50,9 @@ struct Request {
     starttime = Clock.currTime();
   }
 
-  final @property string    host() const {  string h = headers.from("Host"); long i = h.indexOf(":"); if(i > 0){ return( h[0 .. i]); } return(h); }
-  final @property ushort    serverport() const {  string h = headers.from("Host"); long i = h.indexOf(":"); if(i > 0){ return( to!ushort(h[(i+1) .. $])); } return(to!ushort(80)); }
-  final @property string    path() const {  long i = url.indexOf("?"); if(i > 0){ return(url[0 .. i]); }else{ return(url); } }
+  final @property string    host() const { string h = headers.from("Host"); long i = h.indexOf(":"); if(i > 0){ return( h[0 .. i]); } return(h); }
+  final @property ushort    serverport() const { string h = headers.from("Host"); long i = h.indexOf(":"); if(i > 0){ return( to!ushort(h[(i+1) .. $])); } return(to!ushort(80)); }
+  final @property string    path() const { long i = url.indexOf("?"); if(i > 0){ return(url[0 .. i]); }else{ return(url); } }
   final @property string    query() const { long i = uri.indexOf("?"); if(i > 0){ return(uri[i .. $]); }else{ return("?"); } }
   final @property string    uripath() const { long i = uri.indexOf("?"); if(i > 0){ return(uri[0 .. i]); }else{ return(uri); } }
   final @property bool      keepalive() const { return( headers.from("Connection") == "keep-alive"); }
@@ -63,8 +63,8 @@ struct Request {
   final @property string    params() const { Appender!string str; foreach(k; get.byKey()){ str.put(format(" \"%s=%s\"", k, get[k])); } return(str.data); }
   final @property string    inputfile(in FileSystem filesystem) const { return format("%s/tmp%s%s", filesystem.localroot(shorthost()), port, ".in"); }
   final @property string    uploadfile(FileSystem filesystem, in string name) const { return format("%s/tmp_%s_%s%s", filesystem.localroot(shorthost()), name, port, ".up"); }
-  final @property string    cookies() const {  return(headers.from("Cookie")); }
-  final @property string    useragent() const {  return(headers.from("User-Agent", "Unknown")); }
+  final @property string    cookies() const { return(headers.from("Cookie")); }
+  final @property string    useragent() const { return(headers.from("User-Agent", "Unknown")); }
   final @property string[]  postfiles() const { string[] files; foreach(p; postinfo){ if(p.type == PostType.File && p.size > 0) files ~= p.value; } return(files); }
   final string              shorthost() const { return( (host.indexOf("www.") >= 0)? host[4 .. $] : host ); }
   final string              command(string localpath) const { return(format("%s %s%s", localpath.interpreter(), localpath, params())); }
