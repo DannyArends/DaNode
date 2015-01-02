@@ -1,10 +1,11 @@
 module danode.functions;
 
 import std.array : Appender;
-import std.datetime : Clock, SysTime;
+import std.datetime : Clock, SysTime, dur;
 import std.string : format, indexOf, split, endsWith, toLower;
 import std.conv : to;
 import std.file : File, exists, isFile, isDir, dirEntries, SpanMode, DirEntry;
+import std.socket : Socket, SocketSet;
 import danode.mimetypes : CGI_FILE, mime, UNSUPPORTED_FILE;
 
 immutable string timeFmt =  "%s %s %s %s:%s:%s %s";
@@ -52,4 +53,11 @@ string browsedir(in string root, in string localpath){
   foreach (DirEntry d; dirEntries(localpath, SpanMode.shallow)){ content.put(format("<a href='%s'>%s</a><br>", d.name[root.length .. $], d.name[root.length .. $])); }
   return(content.data);
 }
+
+int sISelect(SocketSet set, Socket socket, int timeout = 10) {         // Reset the socketset and add a server socket to listen to
+  set.reset();
+  set.add(socket);
+  return Socket.select(set, null, null, dur!"msecs"(timeout));
+}
+
 

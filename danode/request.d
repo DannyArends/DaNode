@@ -39,10 +39,10 @@ struct Request {
     this.content = content;
     string[] parts;
     foreach(i, line; header.split("\r\n")){
-      if(i == 0){
+      if(i == 0) {                    // method uri protocol
         parts = line.split(" ");
         if(parts.length == 3){ method = strip(parts[0]); uri = url = strip(parts[1]); protocol = strip(parts[2]); }
-      }else{
+      } else {                        // header-param: attribute 
         parts = line.split(":");
         if(parts.length > 1){ headers[strip(parts[0])] = strip(join(parts[1 .. $], ":")); }
       }

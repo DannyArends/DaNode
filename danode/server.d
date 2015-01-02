@@ -7,7 +7,7 @@ import std.datetime : Clock, dur, SysTime, Duration;
 import std.socket : AddressFamily, InternetAddress, ProtocolType, Socket, SocketSet, SocketType, SocketOption, SocketOptionLevel;
 import std.stdio : writefln, stdin;
 import std.string : startsWith, format;
-import danode.functions : Msecs;
+import danode.functions : Msecs, sISelect;
 import danode.client : Client, HTTP;
 import danode.router : Router;
 import danode.log;
@@ -62,12 +62,6 @@ class Server : Thread {
       return socket;
     }
 
-    final int sISelect(Socket socket, int timeout = 10) {         // Reset the socketset and add a server socket to listen to
-      set.reset();
-      set.add(socket);
-      return Socket.select(set, null, null, dur!"msecs"(timeout));
-    }
-
     final Client accept(Socket socket) {                          // Create an unsecure connection to a client
       if(set.isSet(socket)){ try{
         HTTP http = new HTTP(socket.accept());
@@ -78,7 +72,7 @@ class Server : Thread {
       return(null);
     }
 
-    version(SSL){
+    version(SSL) {
       final Client secure(Socket socket) {                        // Create a secure connection to a client
         if(set.isSet(socket)){ try{
           HTTPS https = new HTTPS(socket.accept(), context);
@@ -102,15 +96,21 @@ class Server : Thread {
       Appender!(Client[]) persistent;
       while(running){
         persistent.clear();
-        if((select = sISelect(socket)) > 0){ persistent.put(accept(socket)); }                  // Accept basic HTTP requests
-        version(SSL){
-          if((select = sISelect(sslsocket)) > 0){ persistent.put(secure(sslsocket)); }          // Accept SSL secure clients
+        if((select = set.sISelect(socket)) > 0){           // writefln("Accepting HTTP request");
+          persistent.put(accept(socket));
+        }
+        version(SSL) {
+          if((select = set.sISelect(sslsocket)) > 0){      // writefln("Accepting HTTPs request");
+            persistent.put(secure(sslsocket));
+          }
         }
         foreach(Client client; clients){ if(client.running){ persistent.put(client); } }        // Add the backlog of persistent clients
         clients = persistent.data;
       }
       socket.close();
-      closeSSL(sslsocket, context);
+      version(SSL) {
+        closeSSL(sslsocket, context);
+      }
     }
 }
 
