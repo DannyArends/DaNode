@@ -5,7 +5,9 @@
 	"homepage": "http://www.dannyarends.nl",
 	"targetType": "executable",
 	"sourcePaths": ["danode"],
+	"importPaths": ["danode"],
 	"targetPath": "server",
+	"mainSourceFile": "danode/server.d",
 	"dependencies": {
 	}
 }
