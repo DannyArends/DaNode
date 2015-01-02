@@ -1,5 +1,5 @@
 <?php
-  $argvs = array_slice($argv, 0);
+  $argvs = array_slice($argv, 1);
   parse_str(implode('&', $argvs), $_GET);
 
   function toS($_array){
@@ -29,6 +29,8 @@
     return $config;
   }
 
+  $_REQUEST = $_GET;
+  $_SERVER = Array();
   $_COOKIE = Array();
   $_CONFIG = readConfig($argv);
   $f = fopen( 'php://stdin', 'r' );
@@ -36,12 +38,12 @@
   while(false !== ($line = fgets($f))){
     $marray = split('=', $line);
     if(isset($marray[0]) && isset($marray[1]) && isset($marray[2])){
-      if($marray[0] == "SERVER"){
-        $_SERVER[urldecode($marray[1])] = urldecode(chop($marray[2]));
-      }else if($marray[0] == "COOKIE"){
-        $_COOKIE[urldecode($marray[1])] = urldecode(chop($marray[2]));
+      if($marray[0] == "S"){
+        $_SERVER[urldecode($marray[1])] = urldecode(chop(join(array_slice($marray, 2),"=")));
+      }else if($marray[0] == "C"){
+        $_COOKIE[urldecode($marray[1])] = urldecode(chop(join(array_slice($marray, 2),"=")));
       }else{
-        $_POST[urldecode($marray[1])] = urldecode(chop($marray[2]));
+        $_POST[urldecode($marray[1])]   = urldecode(chop(join(array_slice($marray, 2),"=")));
       }
     }
   }
