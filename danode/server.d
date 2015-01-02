@@ -145,5 +145,10 @@ void main(string[] args) {
 
 unittest {
   writefln("[FILE]   %s", __FILE__);
+  version(SSL) {
+    writefln("[TEST]   SSL support");
+  }else{
+    writefln("[TEST]   No SSL support");
+  }
 }
 
