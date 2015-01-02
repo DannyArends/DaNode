@@ -74,7 +74,7 @@ struct ServerStat{
  * Structure to hold server information
  */
 struct Server{
-  ushort       port    = 80;        /// Port the server listen on
+  ushort       port    = 8080;        /// Port the server listen on
   uint         backlog = 100;       /// Backlog of clients
   Socket       socket;              /// Server socket on port
   version(SSL){
