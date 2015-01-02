@@ -1,4 +1,4 @@
-DaNode a small webserver for the D language [![Build Status](https://travis-ci.org/DannyArends/DaNode.svg)](https://travis-ci.org/DannyArends/DaNode)
+DaNode a small webserver written in the D programming language [![Build Status](https://travis-ci.org/DannyArends/DaNode.svg)](https://travis-ci.org/DannyArends/DaNode)
 =====
 
 STRUCTURE
