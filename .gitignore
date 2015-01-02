@@ -32,3 +32,6 @@ www/qrcode.test/QR/gen/*
 
 .sass-cache
 
+.dub/
+dub.selections.json
+

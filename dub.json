@@ -1,0 +1,11 @@
+{
+	"name": "DaNode",
+	"description": "Small and flexible HTTP server for the D language.",
+	"authors": ["Danny Arends"],
+	"homepage": "http://www.dannyarends.nl",
+	"targetType": "executable",
+	"sourcePaths": ["danode"],
+	"targetPath": "server",
+	"dependencies": {
+	}
+}
