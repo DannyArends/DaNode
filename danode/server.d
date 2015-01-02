@@ -123,13 +123,12 @@ void main(string[] args) {
                "backlog|b",  &backlog,      // Backlog of clients supported
                "keyoff|k",   &keyoff,       // Keyboard on or off
                "verbose|v",  &verbose);     // Verbose level (via commandline)
-
-  auto server = new Server(port, backlog, verbose);
-  server.start();
-  string line;
   version(unittest){
-    server.terminated = true;
+    // Do nothing, unittests will run
   }else{
+    auto server = new Server(port, backlog, verbose);
+    server.start();
+    string line;
     while(server.running){
       if(!keyoff){
         line = chomp(stdin.readln());
@@ -141,5 +140,9 @@ void main(string[] args) {
       }
     }
   }
+}
+
+unittest {
+  writefln("[FILE]   %s", __FILE__);
 }
 

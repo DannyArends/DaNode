@@ -60,4 +60,9 @@ int sISelect(SocketSet set, Socket socket, int timeout = 10) {         // Reset 
   return Socket.select(set, null, null, dur!"msecs"(timeout));
 }
 
+unittest {
+  import std.stdio : writefln;
+  writefln("[FILE]   %s", __FILE__);
+  writefln("[TEST]   htmltime() = %s", htmltime());
+}
 
