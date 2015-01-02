@@ -127,3 +127,7 @@ class HTTP : DriverInterface {
 
 }
 
+unittest {
+  writefln("[FILE]   %s", __FILE__);
+}
+

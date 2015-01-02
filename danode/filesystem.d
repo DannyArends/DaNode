@@ -140,3 +140,11 @@ class FileSystem {
     }
 }
 
+unittest {
+  import std.stdio : writefln;
+  writefln("[FILE]   %s", __FILE__);
+  Log             logger = new Log(1);
+  FileSystem      filesystem = new FileSystem(logger, "./test");
+  writefln("[TEST]   ./test/server.files/server.conf (12 bytes): %s", filesystem.file("./test/server.files","/server.conf").bytes(0,12));
+}
+

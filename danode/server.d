@@ -11,6 +11,7 @@ import danode.functions : Msecs, sISelect;
 import danode.client : Client, HTTP;
 import danode.router : Router;
 import danode.log;
+import danode.serverconfig : ServerConfig;
 version(SSL){
   import deimos.openssl.ssl;
   import danode.ssl : HTTPS, initSSL, closeSSL;
@@ -123,13 +124,12 @@ void main(string[] args) {
                "backlog|b",  &backlog,      // Backlog of clients supported
                "keyoff|k",   &keyoff,       // Keyboard on or off
                "verbose|v",  &verbose);     // Verbose level (via commandline)
-
-  auto server = new Server(port, backlog, verbose);
-  server.start();
-  string line;
   version(unittest){
-    server.terminated = true;
+    // Do nothing, unittests will run
   }else{
+    auto server = new Server(port, backlog, verbose);
+    server.start();
+    string line;
     while(server.running){
       if(!keyoff){
         line = chomp(stdin.readln());
@@ -140,6 +140,15 @@ void main(string[] args) {
         Thread.sleep(dur!"msecs"(10));
       }
     }
+  }
+}
+
+unittest {
+  writefln("[FILE]   %s", __FILE__);
+  version(SSL) {
+    writefln("[TEST]   SSL support");
+  }else{
+    writefln("[TEST]   No SSL support");
   }
 }
 
