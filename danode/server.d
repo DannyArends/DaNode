@@ -115,7 +115,7 @@ class Server : Thread {
 }
 
 void main(string[] args) {
-  ushort port     = 80;
+  version(unittest){ ushort port     = 8080; }else{ ushort port     = 80; }
   int    backlog  = 100;
   int    verbose  = NORMAL;
   bool   keyoff   = false;
@@ -127,14 +127,18 @@ void main(string[] args) {
   auto server = new Server(port, backlog, verbose);
   server.start();
   string line;
-  while(server.running){
-    if(!keyoff){
-      line = chomp(stdin.readln());
-      if(line.startsWith("quit")) server.stop();
-      if(line.startsWith("info")) server.info();
-      if(line.startsWith("verbose")) server.verbose(line);
-    }else{
-      Thread.sleep(dur!"msecs"(10));
+  version(unittest){
+    server.terminated = true;
+  }else{
+    while(server.running){
+      if(!keyoff){
+        line = chomp(stdin.readln());
+        if(line.startsWith("quit")) server.stop();
+        if(line.startsWith("info")) server.info();
+        if(line.startsWith("verbose")) server.verbose(line);
+      }else{
+        Thread.sleep(dur!"msecs"(10));
+      }
     }
   }
 }
