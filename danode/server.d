@@ -66,8 +66,11 @@ void setup(ref Server server, in ushort port = 3000, in uint backlog = 100){
   server.socket.setup(port, backlog);
   server.set = new SocketSet(MAX_CONNECTIONS + 1);     // +2 adds space for the socket
   server.filebuffer = new FileBuffer();
+  version(TEST){
+  }else{
   server.keyboard = new KeyHandler();
   server.keyboard.start();
+  }
   //server.cryptodaemon = new CryptoDaemon(server, [ BITCOIN, DOGECOIN, EMERALD, FEDORA ]);
   //server.cryptodaemon.start();
 }
@@ -152,18 +155,20 @@ void main(string[] args){
   server.setup(server.port, server.backlog);
   scope(exit){ closeSocket(server.socket); }
 
-
+  version(TEST){
+  }else{
   while(server.isRunning()){
-    try{
-      if((select = sISelect(server)) > 0){
-        server.listen(server.socket);
+      try{
+        if((select = sISelect(server)) > 0){
+          server.listen(server.socket);
+        }
+        server.handle(select);
+        stdout.flush();
+      }catch (Exception e){ // Might be serious
+        writefln("[ERROR]   Main Uncaught Error: %s", e.msg);
       }
-      server.handle(select);
-      stdout.flush();
-    }catch (Exception e){ // Might be serious
-      writefln("[ERROR]   Main Uncaught Error: %s", e.msg);
+      Sleep(msecs(1));
     }
-    Sleep(msecs(1));
   }
   writeln("DONE");
 }
