@@ -6,7 +6,6 @@
 	"targetType": "executable",
 	"sourcePaths": ["danode"],
 	"targetPath": "server",
-	"dflags": ["-version=TEST"],
 	"dependencies": {
 	}
 }

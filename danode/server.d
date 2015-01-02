@@ -66,7 +66,7 @@ void setup(ref Server server, in ushort port = 3000, in uint backlog = 100){
   server.socket.setup(port, backlog);
   server.set = new SocketSet(MAX_CONNECTIONS + 1);     // +2 adds space for the socket
   server.filebuffer = new FileBuffer();
-  version(TEST){
+  version(unittest){
   }else{
   server.keyboard = new KeyHandler();
   server.keyboard.start();
@@ -155,7 +155,7 @@ void main(string[] args){
   server.setup(server.port, server.backlog);
   scope(exit){ closeSocket(server.socket); }
 
-  version(TEST){
+  version(unittest){
   }else{
   while(server.isRunning()){
       try{
