@@ -11,6 +11,7 @@ import danode.functions : Msecs, sISelect;
 import danode.client : Client, HTTP;
 import danode.router : Router;
 import danode.log;
+import danode.serverconfig : ServerConfig;
 version(SSL){
   import deimos.openssl.ssl;
   import danode.ssl : HTTPS, initSSL, closeSSL;

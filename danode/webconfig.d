@@ -4,7 +4,7 @@ import std.stdio : writeln, writefln;
 import std.string : chomp, format, split, strip, toLower, join, indexOf;
 import std.file : DirEntry, dirEntries, exists, isDir, SpanMode, readText;
 import danode.functions : has, from;
-import danode.filesystem;
+import danode.filesystem : FileInfo;
 
 struct WebConfig {
   string[string]  data;
