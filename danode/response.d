@@ -85,3 +85,7 @@ void notmodified(ref Response response, in Request request, in string mimetype =
   response.payload = new Empty(StatusCode.NotModified, mimetype);
 }
 
+unittest {
+  writefln("[FILE]   %s", __FILE__);
+}
+

@@ -83,3 +83,7 @@ bool internalredirect(in WebConfig config, ref Request request){
   return(config.redirect);
 }
 
+unittest {
+  writefln("[FILE]   %s", __FILE__);
+}
+

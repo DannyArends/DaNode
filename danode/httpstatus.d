@@ -43,3 +43,16 @@ pure string reason(StatusCode statuscode){ with(StatusCode){
   }
 } }
 
+unittest {
+  import std.stdio : writefln;
+  writefln("[FILE]   %s", __FILE__);
+  with(StatusCode){
+    writefln("[TEST]   %d: \"%s\"", Continue, reason(Continue));
+    writefln("[TEST]   %d: \"%s\"", Ok, reason(Ok));
+    writefln("[TEST]   %d: \"%s\"", MovedPermanently, reason(MovedPermanently));
+    writefln("[TEST]   %d: \"%s\"", NotModified, reason(NotModified));
+    writefln("[TEST]   %d: \"%s\"", Unauthorized, reason(Unauthorized));
+    writefln("[TEST]   %d: \"%s\"", ISE, reason(ISE));
+  }
+}
+
