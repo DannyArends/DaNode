@@ -129,7 +129,7 @@ void main(string[] args) {
   }else{
     auto server = new Server(port, backlog, verbose);
     server.start();
-    string line;
+    string line;it
     while(server.running){
       if(!keyoff){
         line = chomp(stdin.readln());
