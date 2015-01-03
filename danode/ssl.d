@@ -50,6 +50,8 @@ version(SSL){
           if(response.index >= response.length) response.completed = true;
         }
       } }
+
+      override bool isSecure(){ return(true); }
   }
 
   SSL_CTX* getCTX(string CertFile, string KeyFile) {

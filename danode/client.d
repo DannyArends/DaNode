@@ -39,6 +39,7 @@ abstract class DriverInterface {
 
     long receive(Socket conn, long maxsize = 4096);
     void send(ref Response response, Socket conn, long maxsize = 4096);
+    bool isSecure();
 }
 
 class Client : Thread, ClientInterface {
@@ -80,7 +81,7 @@ class Client : Thread, ClientInterface {
           Thread.yield();
         }
       }catch(Exception e){ writefln("[WARN]   unknown client exception: %s", e.msg); }
-      if(router.verbose >= INFO) writefln("[INFO]   connection %s:%s closed after %d requests %s (%s msecs)", ip, port, driver.requests, driver.senddata, Msecs(driver.starttime));
+      if(router.verbose >= INFO) writefln("[INFO]   connection %s:%s (%s) closed after %d requests %s (%s msecs)", ip, port, driver.isSecure(), driver.requests, driver.senddata, Msecs(driver.starttime));
       driver.socket.close();
     }
 
@@ -125,6 +126,7 @@ class HTTP : DriverInterface {
       }
     } }
 
+    override bool isSecure(){ return(false); }
 }
 
 unittest {
