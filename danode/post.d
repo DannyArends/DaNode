@@ -1,10 +1,10 @@
 module danode.post;
 
-import std.array : Appender, indexOf, split, join;
+import std.array : Appender, split, join;
 import std.stdio : write, writeln, writefln, File;
 import std.file : exists, isFile;
 import std.datetime : SysTime;
-import std.string : format, lastIndexOf, strip, chomp;
+import std.string : format, lastIndexOf, strip, chomp, indexOf;
 import std.math : fmax;
 import std.conv : to;
 import danode.httpstatus : StatusCode;

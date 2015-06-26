@@ -1,11 +1,11 @@
 module danode.request;
 
-import std.array : join, indexOf, Appender;
+import std.array : join, Appender;
 import std.conv : to;
 import std.math : fmax;
 import std.stdio : write, writeln, writefln;
 import std.datetime;
-import std.string : split, strip, format, toLower, lastIndexOf;
+import std.string : split, strip, format, toLower, lastIndexOf, indexOf;
 import danode.filesystem : FileSystem;
 import danode.client : ClientInterface;
 import std.regex : regex, match;

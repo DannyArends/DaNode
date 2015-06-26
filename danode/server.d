@@ -2,11 +2,11 @@ module danode.server;
 
 import std.c.stdlib : exit;
 import core.thread : Thread;
-import std.array : Appender, appender, chomp;
+import std.array : Appender, appender;
 import std.datetime : Clock, dur, SysTime, Duration;
 import std.socket : AddressFamily, InternetAddress, ProtocolType, Socket, SocketSet, SocketType, SocketOption, SocketOptionLevel;
 import std.stdio : writefln, stdin;
-import std.string : startsWith, format;
+import std.string : startsWith, format, chomp;
 import danode.functions : Msecs, sISelect;
 import danode.client : Client, HTTP;
 import danode.router : Router;
