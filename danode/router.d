@@ -82,8 +82,8 @@ class Router {
           response.ready = true;
         }
       }else if(config.redirect && !finalrewrite){                                                     // Try to re-route this request to the index page
-        request.page = request.url;                                                                   // Save the URL
-        request.url = config.index;
+        request.page = request.uripath();                                                             // Save the URL path
+        request.url  = format("%s?%s", config.index, request.query);
         return route(request, response, true);
       }else{                                                                                          // Request is not hosted on this server
         response.payload = new Message(StatusCode.NotFound, format("404 - The requested path does not exists on disk"));
