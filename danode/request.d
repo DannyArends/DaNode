@@ -28,6 +28,7 @@ struct Request {
   string            method = "GET";
   string            uri;
   string            url;
+  string            page;         // Used when redirecting
   string            protocol;
   string[string]    headers;
   SysTime           starttime;

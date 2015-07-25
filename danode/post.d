@@ -89,6 +89,7 @@ final void servervariables(in FileSystem filesystem, in WebConfig config, in Req
   content.put(format("S=HTTPS=%s\n",                ""));
   content.put(format("S=REMOTE_ADDR=%s\n",          request.ip));
   content.put(format("S=REMOTE_PORT=%s\n",          request.port));
+  content.put(format("S=REMOTE_PAGE=%s\n",          request.page));
   content.put(format("S=SCRIPT_FILENAME=%s\n",      config.localpath(filesystem.localroot(request.shorthost()), request.path)));
   content.put(format("S=SERVER_PORT=%s\n",          request.serverport));
   content.put(format("S=REQUEST_URI=%s\n",          request.uripath));

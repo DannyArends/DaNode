@@ -82,6 +82,7 @@ class Router {
           response.ready = true;
         }
       }else if(config.redirect && !finalrewrite){                                                     // Try to re-route this request to the index page
+        request.page = request.url;                                                                   // Save the URL
         request.url = config.index;
         return route(request, response, true);
       }else{                                                                                          // Request is not hosted on this server

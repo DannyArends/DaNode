@@ -136,11 +136,10 @@ void main(string[] args) {
         if(line.startsWith("quit")) server.stop();
         if(line.startsWith("info")) server.info();
         if(line.startsWith("verbose")) server.verbose(line);
-      }else{
-        Thread.sleep(dur!"msecs"(10));
       }
+      Thread.sleep(dur!"msecs"(2));
     }
-    writefln("[INFO]   Serverloop ended: %d", server.running);
+    writefln("[INFO]   Server shutting down: %d", server.running);
     server.info();
   }
 }
