@@ -74,7 +74,7 @@ class Router {
           response.ready = true;
         }else if(localpath.isDIR() && config.isAllowed(localroot, localpath)){                          // Directory
           if(config.internalredirect(request)) return route(request, response);
-          response.payload = new Message(StatusCode.Ok, format("200 - Allowed directory\n%s", browsedir(localroot, localpath)), "text/html");
+          response.payload = new Message(StatusCode.Ok, format("<html><head><title>200 - Allowed directory</title></head><body>%s</body></html>", browsedir(localroot, localpath)), "text/html");
           response.ready = true;
         }else{                                                                                          // Forbidden to access from the web
           response.payload = new Message(StatusCode.Forbidden, format("403 - Access to this resource has been restricted"));
