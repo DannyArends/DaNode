@@ -1,8 +1,9 @@
 module danode.router;
 
-import std.array : Appender, indexOf, split, join;
+import std.array : Appender, split, join;
 import std.stdio, std.string, std.conv, std.datetime, std.file, std.math;
 import std.uri : encode;
+import std.string : indexOf;
 import danode.client : ClientInterface;
 import danode.httpstatus : StatusCode;
 import danode.request : Request, internalredirect;
@@ -50,10 +51,10 @@ class Router {
         response.ready = true;
         return;
       }
-      FileInfo    configfile  = filesystem.file(localroot, "/web.config");    // writefln("[INFO]   configfile at: %s%s", localroot, "/web.config");
-      WebConfig   config      = WebConfig(configfile);                        // writefln("[INFO]   parsed config file");
-      string      fqdn        = config.domain(request.shorthost());           // writefln("[INFO]   fqdn: %s", fqdn);
-      string      localpath   = config.localpath(localroot, request.path);    // writefln("[INFO]   localpath: %s", localpath);
+      FileInfo    configfile  = filesystem.file(localroot, "/web.config");    writefln("[INFO]   configfile at: %s%s", localroot, "/web.config");
+      WebConfig   config      = WebConfig(configfile);                        writefln("[INFO]   parsed config file");
+      string      fqdn        = config.domain(request.shorthost());           writefln("[INFO]   fqdn: %s", fqdn);
+      string      localpath   = config.localpath(localroot, request.path);    writefln("[INFO]   localpath: %s", localpath);
 
       if(request.host != fqdn){                                                                       // Requested the wrong shortdomain
         response.redirect(request, fqdn);

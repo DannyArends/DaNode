@@ -4,7 +4,8 @@ import std.array : Appender;
 import std.datetime : Clock, SysTime, dur;
 import std.string : format, indexOf, split, endsWith, toLower;
 import std.conv : to;
-import std.file : File, exists, isFile, isDir, dirEntries, SpanMode, DirEntry;
+import std.stdio : File;
+import std.file : exists, isFile, isDir, dirEntries, SpanMode, DirEntry;
 import std.socket : Socket, SocketSet;
 import danode.mimetypes : CGI_FILE, mime, UNSUPPORTED_FILE;
 
