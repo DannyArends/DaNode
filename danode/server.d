@@ -140,6 +140,8 @@ void main(string[] args) {
         Thread.sleep(dur!"msecs"(10));
       }
     }
+    writefln("[INFO]   Serverloop ended: %d", server.running);
+    server.info();
   }
 }
 
