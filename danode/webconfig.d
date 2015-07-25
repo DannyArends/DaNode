@@ -28,7 +28,11 @@ struct WebConfig {
   final @property bool      allowcgi() const { if(data.from("allowcgi", "no") == "yes"){ return(true); } return(false); }
   final @property string    localpath(in string localroot, in string path) const { return(format("%s%s", localroot, path)); }
   final @property bool      redirect() const { return(data.from("redirect", "/") != "/"); }
-  final @property string    index() const { return(data.from("redirect", "/")); }
+  final @property string    index() const {
+    string to = data.from("redirect", "/");
+    if(to[0] != '/') return(format("/%s", to));
+    return(to);
+  }
   final @property string[]  allowdirs() const { return(data.from("allowdirs", "/").split(",")); }
   final @property bool      isAllowed(in string localroot, in string path) const {
     string npath = path[(localroot.length + 1) .. $]; if(npath == "") return(true);
