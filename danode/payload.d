@@ -28,6 +28,7 @@ interface Payload {
 class CGI : Payload {
   private:
     Process external;
+    long idx = 0;
 
   public:
     this(string command, string path, int verbose = NORMAL){ external = new Process(command, path, verbose); external.start(); }
@@ -50,7 +51,7 @@ class CGI : Payload {
     char[] bytes(long from, long maxsize = 1024){ return(external.output(from)[0 .. cast(ulong)fmin(from+maxsize, $)]); }
     final string header(){
       string content = to!string(bytes(0, 1024));
-      long idx = content.indexOf("\r\n\r\n"); return((idx > 0)? content[0 .. idx] : "");
+      idx = content.indexOf("\r\n\r\n"); return((idx > 0)? format("%s\r\n\r\n", content[0 .. idx]) : "");
     }
 }
 

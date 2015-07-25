@@ -33,20 +33,22 @@ struct Response {
 
   final void customheader(string key, string value){ headers[key] = value; }
 
-  @property final char[] header(){        // Total length in bytes to send back
-    if(hdr.data) return(hdr.data);        // If we have build the header, no need to redo this
+  @property final char[] header(){
+    if(hdr.data) return(hdr.data);                            // If we have build the header, no need to redo this
+    if(payload.type == PayLoadType.Script){
+      connection = "Close";
+      if((cast(CGI)payload).header()){ return([]); }          // Scripts can build their own header
+    }
     hdr.put(format("%s %d %s\r\n", protocol, payload.statuscode, reason(payload.statuscode)));
     foreach(key, value; headers){ hdr.put(format("%s: %s\r\n", key, value)); }
     hdr.put(format("Date: %s\r\n", htmltime()));
-    if(payload.type == PayLoadType.Script){ connection = "Close"; }                         // Close on unknown content length (such as external scripts)
     if(payload.type != PayLoadType.Script && payload.length >= 0){                          // If we have any payload
       hdr.put(format("Content-Length: %d\r\n", payload.length));                              // We can send the expected size
       hdr.put(format("Last-Modified: %s\r\n", htmltime(payload.mtime)));                      // It could be modified long ago, lets inform the client
       if(maxage > 0) hdr.put(format("Cache-Control: max-age=%d, public\r\n", maxage));        // Perhaps we can have the client cache it (when very old)
     }
     hdr.put(format("Content-Type: %s; charset=%s\r\n", payload.mimetype, charset));         // We just send our mime and an encoding
-    hdr.put(format("Connection: %s\r\n", connection));                                      // Client can choose to keep-alive
-    if(payload.type != PayLoadType.Script) hdr.put("\r\n");                                 // Unknown content, could send more headers
+    hdr.put(format("Connection: %s\r\n\r\n", connection));                                  // Client can choose to keep-alive
     return(hdr.data);
   }
 
