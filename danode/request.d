@@ -35,7 +35,7 @@ struct Request {
   string            content;
   PostItem[string]  postinfo;
 
-  this(ClientInterface client, string header, in string content){
+  this(ClientInterface client, in string header, in string content){
     this.client = client;
     this.content = content;
     string[] parts;

@@ -52,7 +52,7 @@ string browsedir(in string root, in string localpath){
   Appender!(string) content;
   content.put(format("Content of: %s<br>\n", localpath));
   foreach (DirEntry d; dirEntries(localpath, SpanMode.shallow)){ content.put(format("<a href='%s'>%s</a><br>", d.name[root.length .. $], d.name[root.length .. $])); }
-  return(content.data);
+  return(format("<html><head><title>200 - Allowed directory</title></head><body>%s</body></html>", content.data));
 }
 
 int sISelect(SocketSet set, Socket socket, int timeout = 10) {         // Reset the socketset and add a server socket to listen to

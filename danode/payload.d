@@ -33,7 +33,6 @@ class CGI : Payload {
   public:
     this(string command, string path, int verbose = NORMAL){ external = new Process(command, path, verbose); external.start(); }
 
-
     final @property PayLoadType   type(){ return(PayLoadType.Script); }
     final @property long          ready()  { if(external.running){ return(header != ""); } return(!external.running); }
     final @property long          length() const { if(!external.running){ return external.length; } return -1; }

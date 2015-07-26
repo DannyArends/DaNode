@@ -39,14 +39,15 @@ class Router {
 
     final Response route(ClientInterface client, ref Response response, in string reqstr) {
       Request request;
-      if(parse(client, reqstr, request, response)){ route(request, response); }
+      if(parse(client, reqstr, request, response)){ route(client, request, response); }
       return(response);
     }
 
-    final void route(ref Request request, ref Response response, bool finalrewrite = false) {
-      string      localroot   = filesystem.localroot(request.shorthost());    // writefln("[INFO]   localroute: %s", localroot);
-      if(!exists(localroot)){
-        writefln("[WARN]   requested domain %s, not found", request.shorthost());
+    final void route(ClientInterface client, ref Request request, ref Response response, bool finalrewrite = false) {
+      if(verbose >= DEBUG) writefln("[DEBUG]  start to route client %s:%s", client.ip,client.port);
+      string      localroot   = filesystem.localroot(request.shorthost());    // writefln("[INFO]   shorthost -> localroot: %s -> %s", request.shorthost(), localroot);
+      if(request.shorthost() == "" || !exists(localroot)) {
+        writefln("[WARN]   requested domain '%s', was not found", request.shorthost());
         response.payload = new Message(StatusCode.NotFound, format("404 - No such domain is available"));
         response.ready = true;
         return;
@@ -74,8 +75,8 @@ class Router {
           }
           response.ready = true;
         }else if(localpath.isDIR() && config.isAllowed(localroot, localpath)){                          // Directory
-          if(config.internalredirect(request)) return route(request, response);
-          response.payload = new Message(StatusCode.Ok, format("<html><head><title>200 - Allowed directory</title></head><body>%s</body></html>", browsedir(localroot, localpath)), "text/html");
+          if(config.internalredirect(request)) return route(client, request, response);
+          response.payload = new Message(StatusCode.Ok, browsedir(localroot, localpath), "text/html");
           response.ready = true;
         }else{                                                                                          // Forbidden to access from the web
           response.payload = new Message(StatusCode.Forbidden, format("403 - Access to this resource has been restricted"));
@@ -84,11 +85,12 @@ class Router {
       }else if(config.redirect && !finalrewrite){                                                     // Try to re-route this request to the index page
         request.page = request.uripath();                                                             // Save the URL path
         request.url  = format("%s?%s", config.index, request.query);
-        return route(request, response, true);
+        return route(client, request, response, true);
       }else{                                                                                          // Request is not hosted on this server
         response.payload = new Message(StatusCode.NotFound, format("404 - The requested path does not exists on disk"));
         response.ready = true;
       }
+      if(verbose >= DEBUG) writefln("[DEBUG]  routing done for client %s:%s", client.ip,client.port);
     }
 
     final @property int verbose(string verbose = "") {
