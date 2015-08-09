@@ -31,25 +31,29 @@ struct PostItem {
 }
 
 final bool parsepost(ref Request request, ref Response response, FileSystem filesystem, int verbose = NORMAL){
-  if(response.havepost) return(true);
-  if(request.method != "POST") return(true);
+  if(response.havepost || request.method != "POST"){ response.havepost = true; return(true); }
   long expectedlength = to!long(from(request.headers, "Content-Length"));
+  if(expectedlength == 0){
+    response.havepost = true;
+    return(true); // When we don't receive any post data it is meaningless to scan for any content
+  }
   if(verbose >= DEBUG) writefln("[POST]   received %s of %s", request.content.length, expectedlength);
-  if(expectedlength == 0) return(true);                                                                   // When we don't receive any post data it is meaningless to scan for any content
   if(request.content.length < expectedlength) return(false);
-
 
   string contenttype  = from(request.headers, "Content-Type");
   if(verbose >= DEBUG) writefln("[POST]   content type: %s", contenttype);
-  if(contenttype.indexOf(XFORMHEADER) >= 0){ if(verbose >= INFO) writefln("[XFORM]  parsing %d bytes", expectedlength);
+
+  if(contenttype.indexOf(XFORMHEADER) >= 0){                // X-form
+    if(verbose >= INFO) writefln("[XFORM]  parsing %d bytes", expectedlength);
     foreach(s; request.content.split("&")){
       string[] elem = strip(s).split("=");
       request.postinfo[ elem[0] ] = PostItem( PostType.Input, elem[0], "", elem[1] );
     }
     if(verbose >= INFO) writefln("[XFORM]  # of items: %s", request.postinfo.length);
-    response.havepost = true;
-  }else if(contenttype.indexOf(MPHEADER) >= 0){
-    string mpid = split(contenttype, "boundary=")[1]; if(verbose >= INFO) writefln("[MPART]  header: %s, parsing %d bytes", mpid, expectedlength);
+
+  }else if(contenttype.indexOf(MPHEADER) >= 0){             // Multipart
+    string mpid = split(contenttype, "boundary=")[1];
+    if(verbose >= INFO) writefln("[MPART]  header: %s, parsing %d bytes", mpid, expectedlength);
     foreach(int i, part; chomp(request.content).split(mpid)){
       string[] elem = strip(part).split("\r\n");
       if(elem[0] != "--"){
@@ -66,9 +70,11 @@ final bool parsepost(ref Request request, ref Response response, FileSystem file
       }
     }
     if(verbose >= INFO) writefln("[MPART]  # of items: %s", request.postinfo.length);
-    response.havepost = true;
-  }else{ writefln("[WARN]   unsupported post content type: %s [%s] -> %s", contenttype, expectedlength, request.content); }
-  return((response.havepost));
+  }else{ 
+    writefln("[WARN]   unsupported post content type: %s [%s] -> %s", contenttype, expectedlength, request.content);
+  }
+  response.havepost = true;
+  return(response.havepost);
 }
 
 final void servervariables(in FileSystem filesystem, in WebConfig config, in Request request, in Response response, int verbose = NORMAL) {
@@ -107,6 +113,7 @@ final void servervariables(in FileSystem filesystem, in WebConfig config, in Req
     if(p.type == PostType.Input)  content.put(format("P=%s=%s\n", p.name, p.value));
     if(p.type == PostType.File)   content.put(format("F=%s=%s=%s=%s\n", p.name, p.filename, p.mime, p.value));
   }
+
   string filename = request.inputfile(filesystem);
   if(verbose >= DEBUG) writefln("[IN %s]\n%s[/IN %s]", filename, content.data, filename);
   writefile(filename, content.data);

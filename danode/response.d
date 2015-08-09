@@ -4,7 +4,6 @@ import std.array : Appender, appender;
 import std.compiler;
 import std.conv : to;
 import std.datetime : Clock;
-import std.file : exists, remove;
 import std.stdio : writeln, writefln;
 import std.string : format, indexOf, split, strip;
 import danode.process : Process;
@@ -29,7 +28,6 @@ struct Response {
   bool              completed    = false;
   Appender!(char[]) hdr;
   long              index        = 0;
-  string[]          postfiles    = [];
 
   final void customheader(string key, string value){ headers[key] = value; }
 
@@ -62,10 +60,6 @@ struct Response {
   }
 
   @property final bool ready(bool r = false){ if(r){ routed = r; } return(routed && payload.ready()); }
-
-  ~this(){
-    foreach(f; postfiles){ if(exists(f)){ /* writefln("[INFO]   removing uploaded file at %s", f); */ remove(f); } }
-  }
 }
 
 Response create(in Request request, in StatusCode statuscode = StatusCode.Ok, in string mimetype = UNSUPPORTED_FILE){

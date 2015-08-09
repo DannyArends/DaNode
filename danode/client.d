@@ -3,7 +3,7 @@ module danode.client;
 import core.thread : Thread;
 import std.array : Appender, appender;
 import std.conv : to;
-import std.datetime : Clock, SysTime, msecs;
+import std.datetime : Clock, SysTime, msecs, dur;
 import std.socket : Address, Socket;
 import std.stdio : write, writefln, writeln;
 import danode.functions : Msecs;
@@ -21,8 +21,7 @@ interface ClientInterface {
   @property long    port() const;
   @property string  ip() const;
 
-  @property void    set(Request req);
-  @property Request get();
+  @property ref Request get();
 
   void run(); 
 }
@@ -72,10 +71,13 @@ class Client : Thread, ClientInterface {
             if(response.ready && response.completed){                               // We've completed the request, response cycle
               router.logrequest(this, response);                                    // Log the response to the request
               if(!response.keepalive) stop();                                       // No keep alive, then stop this client
+              request.destroy();                                                    // Clear the request and uploaded files
               response.destroy();                                                   // Clear the response
               driver.inbuffer.destroy();                                            // Clear the input buffer
               driver.requests++;
             }
+          }else{
+            Thread.sleep(dur!"msecs"(1));
           }
           // writefln("[INFO]   connection %s:%s (%s msecs) %s", ip, port, Msecs(driver.starttime), to!string(driver.inbuffer.data));
           Thread.yield();
@@ -87,11 +89,7 @@ class Client : Thread, ClientInterface {
       driver.socket.close();
     }
 
-    final @property void    set(Request req) {
-      if(router.verbose >= DEBUG) writefln("[DEBUG]  set a request for the client %s:%s", ip, port);
-      request = req;
-    }
-    final @property Request get() { return(request); }
+    final @property ref Request get() { return(request); }
 
     final @property bool    running(){   synchronized { return(driver.socket.isAlive() && isRunning() && !terminated); } }          // Is the client still running ?
     final @property long    time(){      synchronized { return(Msecs(driver.starttime)); } }                                        // Time since start of request

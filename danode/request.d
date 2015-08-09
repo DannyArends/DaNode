@@ -2,6 +2,7 @@ module danode.request;
 
 import std.array : join, Appender;
 import std.conv : to;
+import std.file : exists, remove;
 import std.math : fmax;
 import std.stdio : write, writeln, writefln;
 import std.datetime;
@@ -75,6 +76,9 @@ struct Request {
     return params;
   }
 
+  ~this(){
+    foreach(f; postfiles){ if(exists(f)){ /* writefln("[INFO]   removing uploaded file at %s", f); */ remove(f); } }
+  }
 }
 
 bool internalredirect(in WebConfig config, ref Request request){
