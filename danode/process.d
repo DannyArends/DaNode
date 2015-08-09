@@ -37,6 +37,7 @@ class Process : Thread {
     string            command;              /// Command to execute
     string            path;                 /// Path of input file
     int               verbose = NORMAL;
+    bool              completed = false;
 
     File              pStdIn;               /// Input file stream
     Pipe              pStdOut;              /// Output pipe
@@ -75,6 +76,9 @@ class Process : Thread {
     final @property bool    running() const { 
       synchronized { return(!process.terminated); }                                                                               // Command still running ?
     }
+    final @property bool    finished() const { 
+      synchronized { return(this.completed); }                                                                               // Command still running ?
+    }
     final @property int     status() const { 
       synchronized { return(process.status); }                                                                                    // Exit status
     }
@@ -111,6 +115,7 @@ class Process : Thread {
           remove(path); 
         }
       }else{ writefln("[WARN]   no input path: %s", path); process.terminated = true; }
+      this.completed = true;
     }
 }
 
