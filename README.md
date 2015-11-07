@@ -24,31 +24,42 @@ To create a new local website running under http://domain.xxx/ create a new fold
 
 and redirect the domain using the .hosts file. 
 
-CREATE A WEBSITE
+CREATE A PHP ENABLED WEBSITE
 
-An example to create a simple PHP enabled web site:
+To create a simple PHP enabled web site download and compile the webserver:
+
+    git clone https://github.com/DannyArends/DaNode.git
+    cd DaNode
+    ./sh/compile
+
+Then start the webserver by running:
+
+    ./sh/run
+
+Confirm that the webserver is running by going to http://127.0.0.1/, if you see a website the webserver is running.
+The next step is to create a directory for the new website, by executing the following commands from the DaNode directory:
 
     mkdir www/domain.xxx
     touch www/domain.xxx/index.php
 
-Then add some php or html content to the index page, optionally you can create a web.config file:
+Add some php / html content to the index page, and create a web.config file:
 
     touch www/domain.xxx/web.config
 
-Add optional configuration settings to the web.config file, if you want to use PHP, you have to manually 
-enable the cgi execution in this file. An example:
+Add the following configuration settings to the web.config file, if you want to use scripting languages such as PHP, you have to 
+manually allow the execution of cgi file. Add the following lines in your web.cofig file to redirect to the index.php file, and 
+allow the webserver to execute the php script, and redirect the incomming requests to the index.php page:
 
-    shorturl     = yes
     allowcgi     = yes
     redirecturl  = index.php
 
 UPDATE THE HOSTS FILE
 
-If you don't own the domain, redirect the domain to your local IP address using the hosts file:
+If you do not own the domain you wish to host for, redirect the domain to your local IP address using the hosts file:
 
     sudo nano /etc/hosts
 
-Then add the lines to this file:
+Then add the following lines to this hostfile using your favourite editor:
 
     127.0.0.1   domain.xxx
     127.0.0.1   www.domain.xxx
@@ -58,15 +69,15 @@ should now see the content of your php / html file.
 
 API's
 
-             GET   POST    SERVER    FILE     CONFIG
-     PHP     V     V       V         ?        V
+             GET   POST    COOKIES     SERVER    FILE     CONFIG
+     PHP     V     V       V           V         ?        V
      PYTHON  V     V
-     D       V     V       V         ?
+     D       V     V       V           V         ?
      R       V     V
 
 For more information see: [api/README.md](api/README.md)
 
-TESTS
+WEBSITES TESTS
 
      PHP, PYTHON, D, R
 
@@ -75,12 +86,13 @@ ADVANCED
   - WEBSITE-CONFIG
    - Sub-domain redirecting, such as http://www.test.nl to http://test.nl
    - Directory browsing
-   - Custom index page
+   - Custom index and error pages
+   - Executing different languages and the API
    - Server overview page at http://127.0.0.1/
 
   - FILEBUFFER
-   - Buffer small files and serve from memory
-   - Stream large downloads using a flexible buffer
+   - Small files are buffered and served from memory
+   - Stream large downloads using a flexible resizable buffer
 
 LICENCE
 
