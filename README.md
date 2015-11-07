@@ -85,10 +85,10 @@ http://www.domain.xxx, you should now see the content of your php / html file.
 ###### webAPI's overview
 
              GET   POST    COOKIES     SERVER    FILE     CONFIG
-     PHP     V     V       V           V         ?        V
+     PHP     V     V       V           V         V        V
      PYTHON  V     V
-     D       V     V       V           V         ?
-     R       V     V
+     D       V     V       V           V         V
+     R       V     V                   V         V
 
 For more information see: [api/README.md](api/README.md)
 
