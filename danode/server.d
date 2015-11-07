@@ -85,12 +85,25 @@ class Server : Thread {
       }
     }
 
-    final @property bool      running(){ synchronized { return(socket.isAlive() && isRunning() && !terminated); } }                                           // Is the server still running ?
-    final @property void      stop(){ synchronized { foreach(ref Client client; clients){ client.stop(); } terminated = true;  } }                            // Stop the server
-    final @property Duration  time() const { return(Clock.currTime() - starttime); }                                                                          // Time so far
-    final @property void      info() { writefln("[INFO]   uptime %s\n[INFO]   # of connections: %d", time, connections); }                                    // Server information
-    final @property long      connections() { long sum = 0; foreach(Client client; clients){ if(client.running){ sum++; } } return sum; }                     // Number of connections
-    final @property int       verbose(string verbose = "") { return(router.verbose(verbose)); }                                                               // Verbose level
+    final @property bool running(){ synchronized { // Is the server still running ?
+      return(socket.isAlive() && !terminated); 
+    } }
+
+    final @property void stop(){ synchronized {  // Stop the server
+      foreach(ref Client client; clients){ client.stop(); } terminated = true;
+    } }
+
+    final @property Duration time() const { return(Clock.currTime() - starttime); } // Time so far
+
+    final @property void info() { // Server information
+      writefln("[INFO]   uptime %s\n[INFO]   # of connections: %d", time, connections);
+    }
+
+    final @property long connections() { // Number of connections
+      long sum = 0; foreach(Client client; clients){ if(client.running){ sum++; } } return sum; 
+    }
+
+    final @property int verbose(string verbose = "") { return(router.verbose(verbose)); } // Verbose level
 
     final void run() {
       int select;

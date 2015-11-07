@@ -54,7 +54,8 @@ class Log {
       statistics[key].ips[((rq.track)? cl.ip : "DNT")]++;
 
       // First to file
-      if(level >= INFO)  requests.writefln("[%d]    %s %s:%s %s%s %s %s|%s", rs.statuscode, htmltime(), cl.ip, cl.port, rq.shorthost, rq.uri, Msecs(rq.starttime), rs.header.length, rs.payload.length);
+      if(level >= INFO)  
+        requests.writefln("[%d]    %s %s:%s %s%s %s %s|%s", rs.statuscode, htmltime(), cl.ip, cl.port, rq.shorthost, rq.uri, Msecs(rq.starttime), rs.header.length, rs.payload.length);
 
       // Write the request to the requests file
       requests.flush();

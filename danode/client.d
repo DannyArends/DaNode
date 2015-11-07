@@ -91,7 +91,7 @@ class Client : Thread, ClientInterface {
 
     final @property ref Request get() { return(request); }
 
-    final @property bool    running(){   synchronized { return(driver.socket.isAlive() && isRunning() && !terminated); } }          // Is the client still running ?
+    final @property bool    running(){   synchronized { return(driver.socket.isAlive() && !terminated); } }          // Is the client still running ?
     final @property long    time(){      synchronized { return(Msecs(driver.starttime)); } }                                        // Time since start of request
     final @property long    modified(){  synchronized { return(Msecs(driver.modtime)); } }                                          // Time since last modified
     final @property void    stop(){

@@ -53,7 +53,12 @@ struct Request {
   }
 
   final @property string    host() const { string h = headers.from("Host"); long i = h.indexOf(":"); if(i > 0){ return( h[0 .. i]); } return(h); }
-  final @property ushort    serverport() const { string h = headers.from("Host"); long i = h.indexOf(":"); if(i > 0){ return( to!ushort(h[(i+1) .. $])); } return(to!ushort(80)); }
+  final @property ushort    serverport() const {
+    string h = headers.from("Host"); 
+    long i = h.indexOf(":");
+    if(i > 0){ return( to!ushort(h[(i+1) .. $])); } 
+    return(to!ushort(80));
+  }
   final @property string    path() const { long i = url.indexOf("?"); if(i > 0){ return(url[0 .. i]); }else{ return(url); } }
   final @property string    query() const { long i = uri.indexOf("?"); if(i > 0){ return(uri[i .. $]); }else{ return("?"); } }
   final @property string    uripath() const { long i = uri.indexOf("?"); if(i > 0){ return(uri[0 .. i]); }else{ return(uri); } }
