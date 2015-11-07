@@ -6,6 +6,7 @@ void main(string[] args){
   setGET(args);
   writeln("HTTP/1.1 200 OK");
   writeln("Content-Type: text/html; charset=utf-8");
+  writeln("Connection: Keep-Alive");
   writefln("Server: %s", SERVER["SERVER_SOFTWARE"]);
   writefln("X-Powered-By: %s %s.%s\n", std.compiler.name, version_major, version_minor);
 
