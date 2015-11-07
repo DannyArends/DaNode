@@ -64,7 +64,7 @@ class Process : Thread {
       super(&run);
     }
 
-    final @property char[]  output(long from) const { 
+    final @property const(char)[]  output(long from) const { 
       synchronized { if(errbuffer.data.length == 1){ return(outbuffer.data[from .. $]); } return errbuffer.data[from .. $]; }     // Output/Errors so far
     }
     final @property long    time() const {

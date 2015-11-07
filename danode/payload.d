@@ -22,7 +22,7 @@ interface Payload {
     @property SysTime             mtime();
     @property string              mimetype() const;
 
-    char[] bytes(long from, long maxsize = 1024);
+    const(char)[] bytes(long from, long maxsize = 1024);
 }
 
 class CGI : Payload {
@@ -61,7 +61,7 @@ class CGI : Payload {
       return(to!StatusCode(to!int(status)));
     }
 
-    char[] bytes(long from, long maxsize = 1024){ return(external.output(from)[0 .. to!long(fmin(from+maxsize, $))]); }
+    const(char)[] bytes(long from, long maxsize = 1024){ return(external.output(from)[0 .. to!long(fmin(from+maxsize, $))]); }
 
     final long endOfHeader() const {
       string outputSoFar = to!string(external.output(0));
