@@ -4,8 +4,8 @@ import std.array : Appender, appender;
 import std.compiler;
 import std.conv : to;
 import std.datetime : Clock;
-import std.stdio : writeln, writefln;
-import std.string : format, indexOf, split, strip;
+import std.stdio : writef, writeln, writefln;
+import std.string : format, indexOf, split, strip, toLower;
 import danode.process : Process;
 import danode.functions : htmltime;
 import danode.httpstatus : reason, StatusCode;
@@ -17,7 +17,7 @@ immutable string SERVERINFO = "DaNode/0.0.2 (Universal)";
 
 struct Response {
   string            protocol     = "HTTP/1.1";
-  string            connection   = "keep-alive";
+  string            connection   = "Keep-Alive";
   string            charset      = "UTF-8";
   long              maxage       = 0;
   string[string]    headers;
@@ -32,26 +32,34 @@ struct Response {
   final void customheader(string key, string value){ headers[key] = value; }
 
   @property final char[] header() {
-    if(hdr.data) return(hdr.data);                            // If we have build the header, no need to redo this
-    if(payload.type == PayLoadType.Script){                   // Scripts build their own header
-      connection = "Close";
-      if((cast(CGI)payload).header()){ return([]); }
+    if(hdr.data) return(hdr.data);                                                        // If we have build the header, no need to redo this
+    if(payload.type == PayLoadType.Script){                                               // Scripts build their own header
+      CGI script = to!CGI(payload);
+      connection = script.getHeader("Connection", "Close");                               // If scripts want to keep alive
+      long clength = script.getHeader("Content-Length", -1);                              // They need a content length
+      if(clength == -1) connection = "Close";
+      writef("[INFO]   script: status: %d, eoh: %d, content: %d", script.statuscode, script.endOfHeader(), clength);
+      writefln(", connection: %s -> %s", script.getHeader("Connection", "Close"), connection);
+      if(script.endOfHeader() > 0){
+        hdr.put(script.fullHeader());
+        return(hdr.data);
+      }
     }
-    hdr.put!string(format("%s %d %s\r\n", protocol, payload.statuscode, reason(payload.statuscode)));
-    foreach(key, value; headers){ hdr.put(format("%s: %s\r\n", key, value)); }
+    hdr.put(format("%s %d %s\r\n", protocol, payload.statuscode, reason(payload.statuscode)));
+    foreach(key, value; headers) { hdr.put(format("%s: %s\r\n", key, value)); }
     hdr.put(format("Date: %s\r\n", htmltime()));
-    if(payload.type != PayLoadType.Script && payload.length >= 0){                          // If we have any payload
-      hdr.put(format("Content-Length: %d\r\n", payload.length));                              // We can send the expected size
-      hdr.put(format("Last-Modified: %s\r\n", htmltime(payload.mtime)));                      // It could be modified long ago, lets inform the client
-      if(maxage > 0) hdr.put(format("Cache-Control: max-age=%d, public\r\n", maxage));        // Perhaps we can have the client cache it (when very old)
+    if(payload.type != PayLoadType.Script && payload.length >= 0){                        // If we have any payload
+      hdr.put(format("Content-Length: %d\r\n", payload.length));                          // We can send the expected size
+      hdr.put(format("Last-Modified: %s\r\n", htmltime(payload.mtime)));                  // It could be modified long ago, lets inform the client
+      if(maxage > 0) hdr.put(format("Cache-Control: max-age=%d, public\r\n", maxage));    // Perhaps we can have the client cache it (when very old)
     }
-    hdr.put(format("Content-Type: %s; charset=%s\r\n", payload.mimetype, charset));         // We just send our mime and an encoding
-    hdr.put(format("Connection: %s\r\n\r\n", connection));                                  // Client can choose to keep-alive
+    hdr.put(format("Content-Type: %s; charset=%s\r\n", payload.mimetype, charset));       // We just send our mime and an encoding
+    hdr.put(format("Connection: %s\r\n\r\n", connection));                                // Client can choose to keep-alive
     return(hdr.data);
   }
 
-  @property final StatusCode statuscode() { return payload.statuscode; }
-  @property final bool keepalive() const { return( connection == "keep-alive"); }
+  @property final StatusCode statuscode()  { return payload.statuscode; }
+  @property final bool keepalive() const { return( toLower(connection) == "keep-alive"); }
   @property final long length(){ if(payload.length >= 0){ return header.length + payload.length; }else{ return(long.max); } }
   @property final char[] bytes(in long maxsize = 1024){                                     // Return the bytes from index to the end
     long hsize = header.length;

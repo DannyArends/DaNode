@@ -28,30 +28,48 @@ interface Payload {
 class CGI : Payload {
   private:
     Process external;
-    long idx = 0;
 
   public:
     this(string command, string path, int verbose = NORMAL){ external = new Process(command, path, verbose); external.start(); }
 
     final @property PayLoadType   type(){ return(PayLoadType.Script); }
     final @property long          ready()  { return(external.finished); }
-    final @property long          length() const { if(!external.running){ return external.length; } return -1; }
+    final @property long          length() const { 
+      if(!external.running) return(getHeader!long("Content-Length", external.length));
+      return -1; 
+    }
     final @property SysTime       mtime() { return Clock.currTime(); }
     final @property string        mimetype() const { return "text/html"; } // Todo if there is a header parse it out of there
 
-    @property final StatusCode statuscode() {
-      foreach(line; header.split("\r\n")){
-        string[] elems = line.split(": ");
-        if(elems.length >= 2 && elems[0] == "Status") return to!StatusCode(to!int(elems[1].split(" ")[0]));
+    @property final T getHeader(T)(string key, T def = T.init) const {
+      if(endOfHeader > 0){
+        foreach(line; to!string(external.output(0))[0..endOfHeader()].split("\n")){
+          string[] elems = line.split(": ");
+          if(elems.length >= 2 && toLower(elems[0]) == toLower(key)) return to!T(elems[1].split(" ")[0]);
+        }
       }
-      return((external.status == 0)? StatusCode.Ok : StatusCode.ISE );
+      return(def);
     }
 
-    char[] bytes(long from, long maxsize = 1024){ return(external.output(from)[0 .. cast(ulong)fmin(from+maxsize, $)]); }
-    final string header() {
-      string content = to!string(bytes(0, 1024));
-      idx = content.indexOf("\r\n\r\n"); return((idx > 0)? format("%s\r\n\r\n", content[0 .. idx]) : "");
+    @property final string fullHeader() {
+      return(to!string( bytes(0, endOfHeader()) ));
     }
+
+    @property final StatusCode statuscode() {
+      long status = getHeader("status", -1);
+      if(status == -1) return((external.status == 0)? StatusCode.Ok : StatusCode.ISE );
+      return(to!StatusCode(to!int(status)));
+    }
+
+    char[] bytes(long from, long maxsize = 1024){ return(external.output(from)[0 .. to!long(fmin(from+maxsize, $))]); }
+
+    final long endOfHeader() const {
+      string outputSoFar = to!string(external.output(0));
+      long idx = outputSoFar.indexOf("\r\n\r\n");
+      if(idx <= 0) idx = outputSoFar.indexOf("\n\n");
+      return(idx);
+    }
+
 }
 
 class Message : Payload {
