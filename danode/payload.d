@@ -18,7 +18,7 @@ interface Payload {
     @property long                ready();
     @property StatusCode          statuscode();
     @property PayLoadType         type();
-    @property long                length();
+    @property long                length() const;
     @property SysTime             mtime();
     @property string              mimetype() const;
 
@@ -39,7 +39,7 @@ class CGI : Payload {
     final @property SysTime       mtime() { return Clock.currTime(); }
     final @property string        mimetype() const { return "text/html"; } // Todo if there is a header parse it out of there
 
-    @property final StatusCode statuscode(){
+    @property final StatusCode statuscode() {
       foreach(line; header.split("\r\n")){
         string[] elems = line.split(": ");
         if(elems.length >= 2 && elems[0] == "Status") return to!StatusCode(to!int(elems[1].split(" ")[0]));
@@ -48,7 +48,7 @@ class CGI : Payload {
     }
 
     char[] bytes(long from, long maxsize = 1024){ return(external.output(from)[0 .. cast(ulong)fmin(from+maxsize, $)]); }
-    final string header(){
+    final string header() {
       string content = to!string(bytes(0, 1024));
       idx = content.indexOf("\r\n\r\n"); return((idx > 0)? format("%s\r\n\r\n", content[0 .. idx]) : "");
     }
@@ -68,7 +68,7 @@ class Message : Payload {
     final @property long      length() const { return(message.length); }
     final @property SysTime   mtime() { return Clock.currTime(); }
     final @property string    mimetype() const { return mime; }
-    final @property StatusCode statuscode(){ return status; }
+    final @property StatusCode statuscode() const { return status; }
     char[] bytes(long from, long maxsize = 1024){ return(cast(char[])message[from .. cast(ulong)fmin(from+maxsize, $)]); }
 }
 

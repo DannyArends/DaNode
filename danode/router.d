@@ -24,13 +24,13 @@ class Router {
   public:
     this(int verbose = NORMAL){ logger = new Log(verbose); filesystem = new FileSystem(logger); }
 
-    void logrequest(ClientInterface client, Response response){ logger.write(client, response); }
+    void logrequest(in ClientInterface client, in Request request, Response response){ logger.write(client, request, response); }
 
     final bool parse(ClientInterface client, in string reqstr, ref Request request, ref Response response) const {
       long header = reqstr.indexOf("\r\n\r\n");
       if(header > 0){
         if(!response.created){
-          request   = Request(client, reqstr[0 .. header], reqstr[(header + 4) .. $]);
+          request   = Request(client, reqstr[0 .. header], reqstr[(header + 4) .. $], logger.verbose);
           response  = request.create();
         }else{
           request.content = reqstr[(header + 4) .. $];
@@ -40,16 +40,16 @@ class Router {
       return(false);
     }
 
-    final void route(ClientInterface client, ref Response response, in string reqstr) {
-      if(!response.routed && parse(client, reqstr, client.get(), response) ) {
-        if( parsepost(client.get(), response, filesystem, logger.verbose) ) {
-          route(client, client.get(), response);
+    final void route(ClientInterface client, ref Request request, ref Response response, in string reqstr) {
+      if(!response.routed && parse(client, reqstr, request, response) ) {
+        if( parsepost(request, response, filesystem, logger.verbose) ) {
+          route(client, request, response);
         }
       }
     }
 
     final void route(ClientInterface client, ref Request request, ref Response response, bool finalrewrite = false) {
-      if(verbose >= DEBUG) writefln("[DEBUG]  start to %s client %s:%s", (finalrewrite? "redirect" : "route"), client.ip,client.port);
+      if(logger.verbose >= DEBUG) writefln("[DEBUG]  start to %s client %s:%s", (finalrewrite? "redirect" : "route"), client.ip,client.port);
       string      localroot   = filesystem.localroot(request.shorthost());    // writefln("[INFO]   shorthost -> localroot: %s -> %s", request.shorthost(), localroot);
       if(request.shorthost() == "" || !exists(localroot)) {
         writefln("[WARN]   requested domain '%s', was not found", request.shorthost());
@@ -94,7 +94,7 @@ class Router {
         response.payload = new Message(StatusCode.NotFound, format("404 - The requested path does not exists on disk"));
         response.ready = true;
       }
-      if(verbose >= DEBUG) writefln("[DEBUG]  routing performed for client %s:%s", client.ip,client.port);
+      if(logger.verbose >= DEBUG) writefln("[DEBUG]  routing performed for client %s:%s", client.ip,client.port);
     }
 
     final @property int verbose(string verbose = "") {

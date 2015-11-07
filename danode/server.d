@@ -33,16 +33,16 @@ class Server : Thread {
 
   public:
     this(ushort port = 80, int backlog = 100, int verbose = NORMAL) {
-      this.starttime  = Clock.currTime();           // Start the timer
-      this.router     = new Router(verbose);        // Start the router
-      this.socket     = initialize(port, backlog);  // Create the HTTP socket
+      this.starttime = Clock.currTime();            // Start the timer
+      this.router = new Router(verbose);            // Start the router
+      this.socket = initialize(port, backlog);      // Create the HTTP socket
       version(SSL){
         this.sslsocket = initialize(443, backlog);  // Create the SSL / HTTPs socket
-        this.context   = initSSL();                 // Initialize the SSL certificates
+        this.context = initSSL();                   // Initialize the SSL certificates
         backlog = (backlog * 2) + 1;                // Enlarge the backlog, for N clients and 1 ssl server socket
       }
       backlog = backlog + 1;                        // Add room for the server socket
-      this.set        = new SocketSet(backlog);     // Create a socket set
+      this.set = new SocketSet(backlog);            // Create a socket set
       writefln("[SERVER] server created backlog: %d", backlog);
       super(&run);
     }

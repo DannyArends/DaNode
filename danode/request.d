@@ -13,15 +13,16 @@ import std.regex : regex, match;
 import danode.functions : interpreter, from, toD, mtoI;
 import danode.webconfig : WebConfig;
 import danode.post : PostItem, PostType;
+import danode.log : DEBUG;
 
-SysTime parseHtmlDate(string datestr){ // 21 Apr 2014 20:20:13 CET
+SysTime parseHtmlDate(const string datestr){ // 21 Apr 2014 20:20:13 CET
+  SysTime ts =  SysTime(DateTime(-7, 1, 1, 1, 0, 0));
   auto dateregex = regex(r"([0-9]{1,2}) ([a-z]{1,3}) ([0-9]{4}) ([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2}) cet", "g");
   auto m = match(datestr.toLower(), dateregex);
   if(m.captures.length == 7){
-    SysTime ts = SysTime(DateTime(to!int(m.captures[3]), mtoI(m.captures[2]), to!int(m.captures[1]), to!int(m.captures[4]), to!int(m.captures[5]), to!int(m.captures[6])));
-    return(ts);
+    ts = SysTime(DateTime(to!int(m.captures[3]), mtoI(m.captures[2]), to!int(m.captures[1]), to!int(m.captures[4]), to!int(m.captures[5]), to!int(m.captures[6])));
   }
-  return(SysTime(DateTime(-7, 1, 1, 1, 0, 0)));
+  return(ts);
 }
 
 struct Request {
@@ -36,7 +37,7 @@ struct Request {
   string            content;
   PostItem[string]  postinfo;
 
-  this(ClientInterface client, in string header, in string content){
+  this(ClientInterface client, in string header, in string content, int verbose){
     this.client = client;
     this.content = content;
     string[] parts;
@@ -49,6 +50,7 @@ struct Request {
         if(parts.length > 1){ headers[strip(parts[0])] = strip(join(parts[1 .. $], ":")); }
       }
     }
+    if(verbose == DEBUG) writefln("[DEBUG]  request header: %s", header);
     starttime = Clock.currTime();
   }
 
@@ -62,7 +64,7 @@ struct Request {
   final @property string    path() const { long i = url.indexOf("?"); if(i > 0){ return(url[0 .. i]); }else{ return(url); } }
   final @property string    query() const { long i = uri.indexOf("?"); if(i > 0){ return(uri[i .. $]); }else{ return("?"); } }
   final @property string    uripath() const { long i = uri.indexOf("?"); if(i > 0){ return(uri[0 .. i]); }else{ return(uri); } }
-  final @property bool      keepalive() const { return( headers.from("Connection") == "keep-alive"); }
+  final @property bool      keepalive() const { return( toLower(headers.from("Connection")) == "keep-alive"); }
   final @property SysTime   ifModified() const { return(parseHtmlDate(headers.from("If-Modified-Since"))); }
   final @property bool      track() const { return(  headers.from("DNT","0") == "0"); }
   final @property long      port() const { return(client.port); };

@@ -31,13 +31,13 @@ struct Response {
 
   final void customheader(string key, string value){ headers[key] = value; }
 
-  @property final char[] header(){
+  @property final char[] header() {
     if(hdr.data) return(hdr.data);                            // If we have build the header, no need to redo this
-    if(payload.type == PayLoadType.Script){
+    if(payload.type == PayLoadType.Script){                   // Scripts build their own header
       connection = "Close";
-      if((cast(CGI)payload).header()){ return([]); }          // Scripts can build their own header
+      if((cast(CGI)payload).header()){ return([]); }
     }
-    hdr.put(format("%s %d %s\r\n", protocol, payload.statuscode, reason(payload.statuscode)));
+    hdr.put!string(format("%s %d %s\r\n", protocol, payload.statuscode, reason(payload.statuscode)));
     foreach(key, value; headers){ hdr.put(format("%s: %s\r\n", key, value)); }
     hdr.put(format("Date: %s\r\n", htmltime()));
     if(payload.type != PayLoadType.Script && payload.length >= 0){                          // If we have any payload
