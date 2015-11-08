@@ -1,6 +1,7 @@
 module danode.server;
 
 import std.c.stdlib : exit;
+import std.c.stdio;
 import core.thread : Thread;
 import std.array : Appender, appender;
 import std.datetime : Clock, dur, SysTime, Duration;
@@ -150,6 +151,7 @@ void main(string[] args) {
         if(line.startsWith("info")) server.info();
         if(line.startsWith("verbose")) server.verbose(line);
       }
+      fflush(stdout);
       Thread.sleep(dur!"msecs"(2));
     }
     writefln("[INFO]   Server shutting down: %d", server.running);
