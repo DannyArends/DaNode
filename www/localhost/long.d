@@ -1,10 +1,9 @@
 #!rdmd -O
 import std.stdio, std.compiler, std.datetime;
+import core.thread : Thread;
 import api.danode;
 
-alias core.thread.Thread.sleep  Sleep;
-
 void main(string[] args){ setGET(args);
-  Sleep(15.seconds);
+  Thread.sleep(dur!"seconds"(12));
 }
 
