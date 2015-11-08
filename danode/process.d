@@ -52,7 +52,7 @@ class Process : Thread {
     Appender!(char[])  errbuffer;           /// Error appender buffer
 
   public:
-    this(string command, string path, int verbose = NORMAL, long maxtime = 15000) {
+    this(string command, string path, int verbose = NORMAL, long maxtime = 4500) {
       this.command    = command;
       this.path       = path;
       this.verbose    = verbose;

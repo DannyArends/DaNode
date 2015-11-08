@@ -5,11 +5,14 @@ import std.array : Appender, appender;
 import std.conv : to;
 import std.datetime : Clock, SysTime, msecs, dur;
 import std.socket : Address, Socket;
+import std.string;
 import std.stdio : write, writefln, writeln;
 import danode.functions : Msecs;
 import danode.router : Router;
+import danode.httpstatus : StatusCode;
 import danode.response : Response;
 import danode.request : Request;
+import danode.payload : Message;
 import danode.log : NORMAL, INFO, DEBUG;
 
 interface ClientInterface {
@@ -75,6 +78,7 @@ class Client : Thread, ClientInterface {
               if(!response.keepalive) stop();                                       // No keep alive, then stop this client
               response.destroy();                                                   // Clear the response
             }
+
           }else{
             Thread.sleep(dur!"msecs"(1));
           }

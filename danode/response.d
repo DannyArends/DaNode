@@ -47,9 +47,8 @@ struct Response {
         writef("[INFO]   script: status: %d, eoh: %d, content: %d", script.statuscode, script.endOfHeader(), clength);
         writefln(", connection: %s -> %s, to %s in %d bytes", script.getHeader("Connection", "Close"), connection, type, hdr.data.length);
         return(hdr.data);
-      }else{
-        writeln("[WARN]   no valid header detected, generating one");
       }
+      writeln("[WARN]   no valid header detected, generating one");
     }
     hdr.put(format("%s %d %s\r\n", protocol, payload.statuscode, reason(payload.statuscode)));
     foreach(key, value; headers) { hdr.put(format("%s: %s\r\n", key, value)); }

@@ -18,7 +18,7 @@ interface Payload {
   public:
     @property long                ready();
     @property StatusCode          statuscode() const;
-    @property PayLoadType         type();
+    @property PayLoadType         type() const;
     @property long                length() const;
     @property SysTime             mtime();
     @property string              mimetype() const;
@@ -33,8 +33,8 @@ class CGI : Payload {
   public:
     this(string command, string path, int verbose = NORMAL){ external = new Process(command, path, verbose); external.start(); }
 
-    final @property PayLoadType   type(){ return(PayLoadType.Script); }
-    final @property long          ready()  { return(external.finished); }
+    final @property PayLoadType   type() const { return(PayLoadType.Script); }
+    final @property long          ready() { return(external.finished); }
     final @property long          length() const { 
       if(!external.running) return(getHeader!long("Content-Length", external.length));
       return -1; 
@@ -92,8 +92,8 @@ class Message : Payload {
   public:
     this(StatusCode status, string message, string mime = "text/plain"){ this.status = status; this.message = message; this.mime = mime; }
 
-    final @property PayLoadType   type(){ return(PayLoadType.Message); }
-    final @property long      ready(){ return(true); }
+    final @property PayLoadType   type() const { return(PayLoadType.Message); }
+    final @property long      ready() { return(true); }
     final @property long      length() const { return(message.length); }
     final @property SysTime   mtime() { return Clock.currTime(); }
     final @property string    mimetype() const { return mime; }
