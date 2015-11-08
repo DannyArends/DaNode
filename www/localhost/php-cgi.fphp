@@ -1,11 +1,11 @@
 <?php
   include 'api/danode.php';
 
-  echo "HTTP/1.1 200 OK"."\n";
-  echo "Content-Type: text/html; charset=utf-8'"."\n";
-  echo "Server: " . $_SERVER["SERVER_SOFTWARE"]."\n";
-  echo "Set-Cookie: whowants=a non CGI cookie"."\n";
-  echo "Set-Cookie: anda=just plain php one"."\n\n";
+  header('Content-Type: text/html; charset=utf-8');
+  header('Server: ' . $_SERVER["SERVER_SOFTWARE"]);
+  setcookie("whowants", "a cgi-cookie");
+  setcookie("anda", "empty");
+  header('Status: 200 OK');
 ?>
 <html>
   <head>
@@ -16,9 +16,9 @@
     DaNode 'user defined' CGI (PHP) test script<br/>
     Config: <small><?php echo toS($_CONFIG); ?></small><br>
     Server: <small><?php echo toS($_SERVER); ?></small><br>
-    <form action='php.php' method='post' enctype='multipart/form-data'>
+    <form action='php-cgi.fphp' method='post' enctype='multipart/form-data'>
     <table>
-      <tr><td><a href='php.php?test=GET&do'>Get</a>:</td><td><?php echo toS($_GET); ?> </td></tr>
+      <tr><td><a href='php-cgi.fphp?test=GET&do'>Get</a>:</td><td><?php echo toS($_GET); ?> </td></tr>
       <tr><td>Post: </td><td> <?php echo toS($_POST); ?> </td></tr>
       <tr><td>Files: </td><td> <?php echo var_dump($_FILES); ?> </td></tr>
       <tr><td>Cookie: </td><td> <?php echo toS($_COOKIE); ?> </td></tr>

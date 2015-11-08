@@ -32,7 +32,7 @@ void main(string[] args){
 
   foreach(file; FILES){  // Handle any files that being uploaded
     string to = format("%s/%s", SERVER["DOCUMENT_ROOT"], FILES["file"].name);     // Choose a folder (here: root of the web folder) to save the uploads
-    copy(FILES["file"].loc, to);                                                  // Copy the tmp upload file
+    move_upload_file(FILES["file"].loc, to);                                      // Move the uploaded file to somewhere
     htmlpage.put(format("Uploaded: %s to %s", FILES["file"].loc, to));            // Add a message to the HTML
   }
 
