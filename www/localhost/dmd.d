@@ -32,9 +32,9 @@ void main(string[] args){
   writeln("    </form>");
 
   foreach(file; FILES){  // Handle any files that being uploaded
-    string to = format("%s/%s", SERVER["DOCUMENT_ROOT"], FILES["file"].name);     // Choose a folder (here: root of the web folder) to save the uploads
-    move_upload_file(FILES["file"].loc, to);                                      // Move the uploaded file to somewhere
-    writefln("Uploaded: %s to %s", FILES["file"].loc, to);                        // Add a message to the HTML
+    string to = format("%s/%s", SERVER["DOCUMENT_ROOT"], file.name);     // Choose a folder (here: root of the web folder) to save the uploads
+    move_upload_file(file.loc, to);                                      // Move the uploaded file to somewhere
+    writefln("Uploaded: %s to %s", file.loc, to);                        // Add a message to the HTML
   }
 
   writeln("  </body>");
