@@ -11,7 +11,7 @@ import danode.functions : htmltime;
 import danode.httpstatus : reason, StatusCode;
 import danode.request : Request;
 import danode.mimetypes : UNSUPPORTED_FILE;
-import danode.payload : Payload, PayLoadType, Empty, CGI;
+import danode.payload : Payload, PayLoadType, HeaderType, Empty, CGI;
 
 immutable string SERVERINFO = "DaNode/0.0.2 (Universal)";
 
@@ -35,14 +35,20 @@ struct Response {
     if(hdr.data) return(hdr.data);                                                        // If we have build the header, no need to redo this
     if(payload.type == PayLoadType.Script){                                               // Scripts build their own header
       CGI script = to!CGI(payload);
-      connection = script.getHeader("Connection", "Close");                               // If scripts want to keep alive
-      long clength = script.getHeader("Content-Length", -1);                              // They need a content length
-      if(clength == -1) connection = "Close";
-      //writef("[INFO]   script: status: %d, eoh: %d, content: %d", script.statuscode, script.endOfHeader(), clength);
-      //writefln(", connection: %s -> %s", script.getHeader("Connection", "Close"), connection);
-      if(script.endOfHeader() > 0){
+      this.connection = "Close";
+      HeaderType type = script.headerType();
+      if(type != HeaderType.None) {
+        long clength = script.getHeader("Content-Length", -1);                              // Is the content length provided ?
+        if(clength >= 0) connection = script.getHeader("Connection", "Close");              // Yes ? then the script, can try to keep alive
+        if(type == HeaderType.FastCGI){ // FastCGI type header, create our own HTTP headers based on the first Status: indicator
+          hdr.put(format("%s %s %s\n", "HTTP/1.1", script.getHeader("Status", 500), script.getHeader("Status", "Internal Server Error", 2)));
+        }
         hdr.put(script.fullHeader());
+        writef("[INFO]   script: status: %d, eoh: %d, content: %d", script.statuscode, script.endOfHeader(), clength);
+        writefln(", connection: %s -> %s, to %s in %d bytes", script.getHeader("Connection", "Close"), connection, type, hdr.data.length);
         return(hdr.data);
+      }else{
+        writeln("[WARN]   no valid header detected, generating one");
       }
     }
     hdr.put(format("%s %d %s\r\n", protocol, payload.statuscode, reason(payload.statuscode)));

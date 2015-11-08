@@ -12,6 +12,7 @@ import danode.mimetypes : UNSUPPORTED_FILE, mime;
 import danode.log : NORMAL, INFO, DEBUG;
 
 enum PayLoadType { Message, Script, File }
+enum HeaderType { None, FastCGI, HTTP10, HTTP11 }
 
 interface Payload {
   public:
@@ -41,14 +42,24 @@ class CGI : Payload {
     final @property SysTime       mtime() { return Clock.currTime(); }
     final @property string        mimetype() const { return "text/html"; } // Todo if there is a header parse it out of there
 
-    @property final T getHeader(T)(string key, T def = T.init) const {
+    final T getHeader(T)(string key, T def = T.init, long i = 1) const {
       if(endOfHeader > 0){
         foreach(line; to!string(external.output(0))[0..endOfHeader()].split("\n")){
           string[] elems = line.split(": ");
-          if(elems.length >= 2 && toLower(elems[0]) == toLower(key)) return to!T(elems[1].split(" ")[0]);
+          if(elems.length >= (i+1) && toLower(elems[0]) == toLower(key)) return to!T(elems[i].split(" ")[0]);
         }
       }
       return(def);
+    }
+
+    @property final HeaderType headerType() {
+      if(endOfHeader() <= 0) return HeaderType.None;
+      string respl = fullHeader().split("\n")[0];
+      string[] values = respl.split(" ");
+      if(values.length == 3 && values[0] == "HTTP/1.0") return HeaderType.HTTP10;
+      if(values.length == 3 && values[0] == "HTTP/1.1") return HeaderType.HTTP11;
+      if(getHeader("Status", "") != "") return HeaderType.FastCGI;
+      return HeaderType.None;
     }
 
     @property final string fullHeader() {
