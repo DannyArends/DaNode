@@ -1,5 +1,6 @@
 #!rdmd -O
 import std.stdio, std.compiler;
+import std.file : copy;
 import std.array : Appender, appender;
 import std.string : format, indexOf, split, strip, toLower;
 import api.danode;
@@ -7,9 +8,7 @@ import api.danode;
 void main(string[] args){
   setGET(args);
 
-  // Build the output before writing the headers
-
-  Appender!(char[]) htmlpage;
+  Appender!(char[]) htmlpage;  // Build the output before writing the headers
 
   htmlpage.put("<html>");
   htmlpage.put("  <head>");
@@ -24,11 +23,19 @@ void main(string[] args){
   htmlpage.put("    <table>");
   htmlpage.put(format("     <tr><td><a href='keepalive.d?test=GET&do'>GET</a>:  </td><td> %s</td></tr>", GET));
   htmlpage.put(format("     <tr><td>POST: </td><td> %s</td></tr>", POST));
+  htmlpage.put(format("     <tr><td>FILES: </td><td> %s</td></tr>", FILES));
   htmlpage.put("      <tr><td>Test: </td><td> <input name='test' type='text'></td></tr>");
   htmlpage.put("      <tr><td>File: </td><td> <input name='file' type='file'></td></tr>");
   htmlpage.put("      <tr><td>&nbsp;</td><td> <input type='submit' value='POST'></td></tr>");
   htmlpage.put("    </table>");
   htmlpage.put("    </form>");
+
+  foreach(file; FILES){  // Handle any files that being uploaded
+    string to = format("%s/%s", SERVER["DOCUMENT_ROOT"], FILES["file"].name);     // Choose a folder (here: root of the web folder) to save the uploads
+    copy(FILES["file"].loc, to);                                                  // Copy the tmp upload file
+    htmlpage.put(format("Uploaded: %s to %s", FILES["file"].loc, to));            // Add a message to the HTML
+  }
+
   htmlpage.put("  </body>");
   htmlpage.put("</html>");
 

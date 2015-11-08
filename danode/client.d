@@ -56,23 +56,24 @@ class Client : Thread, ClientInterface {
    final void run(){
       if(router.verbose >= DEBUG) writefln("[DEBUG]  new connection established %s:%d", ip(), port() );
       try{
-        Response response;
         Request request;
+        Response response;
         while(running && modified < maxtime){
-          if(driver.receive(driver.socket) > 0){                                              // We've received new data
-            if(!response.ready){                                                              // If we're not ready to respond yet
-              router.route(this, request, response, to!string(driver.inbuffer.data));         // Parse the data and try to create a response (Could fail multiple times)
+          if(driver.receive(driver.socket) > 0){                                                // We've received new data
+            if(!response.ready){                                                                // If we're not ready to respond yet
+              router.route(ip(), port(), request, response, to!string(driver.inbuffer.data));   // Parse the data and try to create a response (Could fail multiple times)
             }
             if(response.ready && !response.completed){                                        // We know what to respond, but haven't send all of it yet
               driver.send(response, driver.socket);                                           // Send the response, hit multiple times, send what you can and return
             }
             if(response.ready && response.completed){                               // We've completed the request, response cycle
               router.logrequest(this, request, response);                           // Log the response to the request
-              if(!response.keepalive) stop();                                       // No keep alive, then stop this client
+              request.clearUploadFiles();                                           // Remove any upload files left over
               request.destroy();                                                    // Clear the request and uploaded files
               response.destroy();                                                   // Clear the response
               driver.inbuffer.destroy();                                            // Clear the input buffer
               driver.requests++;
+              if(!response.keepalive) stop();                                       // No keep alive, then stop this client
             }
           }else{
             Thread.sleep(dur!"msecs"(1));

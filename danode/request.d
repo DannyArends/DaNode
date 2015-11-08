@@ -4,6 +4,7 @@ import std.array : join, Appender;
 import std.conv : to;
 import std.file : exists, remove;
 import std.math : fmax;
+import std.uuid : UUID, md5UUID;
 import std.stdio : write, writeln, writefln;
 import std.datetime;
 import std.string : split, strip, format, toLower, lastIndexOf, indexOf;
@@ -13,7 +14,7 @@ import std.regex : regex, match;
 import danode.functions : interpreter, from, toD, mtoI;
 import danode.webconfig : WebConfig;
 import danode.post : PostItem, PostType;
-import danode.log : DEBUG;
+import danode.log : INFO, DEBUG;
 
 SysTime parseHtmlDate(const string datestr){ // 21 Apr 2014 20:20:13 CET
   SysTime ts =  SysTime(DateTime(-7, 1, 1, 1, 0, 0));
@@ -26,7 +27,9 @@ SysTime parseHtmlDate(const string datestr){ // 21 Apr 2014 20:20:13 CET
 }
 
 struct Request {
-  ClientInterface   client;
+  UUID              requestid;
+  string            ip;
+  long              port;
   string            method = "GET";
   string            uri;
   string            url;
@@ -36,55 +39,80 @@ struct Request {
   SysTime           starttime;
   string            content;
   PostItem[string]  postinfo;
+  int               verbose;
 
-  this(ClientInterface client, in string header, in string content, int verbose){
-    this.client = client;
-    this.content = content;
+  final void parse(in string ip, long port, in string header, in string content, int verbose){
+    this.ip  = ip; this.port = port; this.content = content;
+    this.setHeader(header);
+    this.starttime = Clock.currTime();
+    this.requestid = md5UUID(format("%s:%d-%s", ip, port, starttime));
+    this.verbose = verbose;
+    if(verbose == INFO) writefln("[INFO]   request: %s to %s from %s:%d - %s", method, uri, ip, port, requestid);
+    if(verbose == DEBUG) writefln("[DEBUG]  request header: %s", header);
+  }
+
+  final void setHeader(in string header){
     string[] parts;
-    foreach(i, line; header.split("\r\n")){
-      if(i == 0) {                    // method uri protocol
+    foreach(i, line; header.split("\n")){
+      if(i == 0) {                    // first line: method uri protocol
         parts = line.split(" ");
-        if(parts.length == 3){ method = strip(parts[0]); uri = url = strip(parts[1]); protocol = strip(parts[2]); }
-      } else {                        // header-param: attribute 
+        if(parts.length == 3){ 
+          this.method = strip(parts[0]); 
+          this.uri = this.url = strip(parts[1]); 
+          this.protocol = strip(parts[2]); }
+      } else {                        // next lines: header-param: attribute 
         parts = line.split(":");
-        if(parts.length > 1){ headers[strip(parts[0])] = strip(join(parts[1 .. $], ":")); }
+        if(parts.length > 1) this.headers[strip(parts[0])] = strip(join(parts[1 .. $], ":"));
       }
     }
-    if(verbose == DEBUG) writefln("[DEBUG]  request header: %s", header);
-    starttime = Clock.currTime();
   }
 
-  final @property string    host() const { string h = headers.from("Host"); long i = h.indexOf(":"); if(i > 0){ return( h[0 .. i]); } return(h); }
-  final @property ushort    serverport() const {
-    string h = headers.from("Host"); 
-    long i = h.indexOf(":");
-    if(i > 0){ return( to!ushort(h[(i+1) .. $])); } 
+  final void update(in string content){ this.content = content; }
+
+  final @property string host() const { 
+    long i = headers.from("Host").indexOf(":");
+    if(i > 0) return(headers.from("Host")[0 .. i]);
+    return(headers.from("Host")); 
+  }
+
+  final @property ushort serverport() const {
+    long i = headers.from("Host").indexOf(":");
+    if(i > 0){ return( to!ushort(headers.from("Host")[(i+1) .. $])); } 
     return(to!ushort(80));
   }
+
+  final @property string inputfile(in FileSystem filesystem) const {
+    return format("%s/%s.in", filesystem.localroot(shorthost()), this.requestid);
+  }
+
+  final @property string uploadfile(in FileSystem filesystem, in string name) const {
+    return format("%s/%s.up", filesystem.localroot(shorthost()), md5UUID(format("%s:%d-%s-%s", ip, port, starttime, name)));
+  }
+
+  final string[string] get() const {
+    string[string] params;
+    foreach(param; query[1 .. $].split("&")){ string[] elems = param.split("="); if(elems.length == 1){ elems ~= "TRUE"; } params[elems[0]] = elems[1]; }
+    return params;
+  }
+
   final @property string    path() const { long i = url.indexOf("?"); if(i > 0){ return(url[0 .. i]); }else{ return(url); } }
   final @property string    query() const { long i = uri.indexOf("?"); if(i > 0){ return(uri[i .. $]); }else{ return("?"); } }
   final @property string    uripath() const { long i = uri.indexOf("?"); if(i > 0){ return(uri[0 .. i]); }else{ return(uri); } }
   final @property bool      keepalive() const { return( toLower(headers.from("Connection")) == "keep-alive"); }
   final @property SysTime   ifModified() const { return(parseHtmlDate(headers.from("If-Modified-Since"))); }
   final @property bool      track() const { return(  headers.from("DNT","0") == "0"); }
-  final @property long      port() const { return(client.port); };
-  final @property string    ip() const { return(client.ip); };
   final @property string    params() const { Appender!string str; foreach(k; get.byKey()){ str.put(format(" \"%s=%s\"", k, get[k])); } return(str.data); }
-  final @property string    inputfile(in FileSystem filesystem) const { return format("%s/tmp%s%s", filesystem.localroot(shorthost()), port, ".in"); }
-  final @property string    uploadfile(FileSystem filesystem, in string name) const { return format("%s/tmp_%s_%s%s", filesystem.localroot(shorthost()), name, port, ".up"); }
   final @property string    cookies() const { return(headers.from("Cookie")); }
   final @property string    useragent() const { return(headers.from("User-Agent", "Unknown")); }
   final @property string[]  postfiles() const { string[] files; foreach(p; postinfo){ if(p.type == PostType.File && p.size > 0) files ~= p.value; } return(files); }
   final string              shorthost() const { return( (host.indexOf("www.") >= 0)? host[4 .. $] : host ); }
   final string              command(string localpath) const { return(format("%s %s%s", localpath.interpreter(), localpath, params())); }
-  final string[string]      get() const {
-    string[string] params;
-    foreach(param; query[1 .. $].split("&")){ string[] elems = param.split("="); if(elems.length == 1){ elems ~= "TRUE"; } params[elems[0]] = elems[1]; }
-    return params;
-  }
 
-  ~this(){
-    foreach(f; postfiles){ if(exists(f)){ /* writefln("[INFO]   removing uploaded file at %s", f); */ remove(f); } }
+  final void clearUploadFiles() const {
+    foreach(f; postfiles) { if(exists(f)) {
+      if(verbose == DEBUG) writefln("[DEBUG]  Removing uploaded file at %s", f); 
+      remove(f);
+    } }
   }
 }
 

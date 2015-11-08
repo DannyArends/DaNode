@@ -1,7 +1,7 @@
 module danode.post;
 
 import std.array : Appender, split, join;
-import std.stdio : write, writeln, writefln, File;
+import std.stdio : write, writef, writeln, writefln, File;
 import std.file : exists, isFile;
 import std.datetime : SysTime;
 import std.string : format, lastIndexOf, strip, chomp, indexOf;
@@ -30,7 +30,7 @@ struct PostItem {
   long      size = 0;
 }
 
-final bool parsepost(ref Request request, ref Response response, FileSystem filesystem, int verbose = NORMAL){
+final bool parsepost(ref Request request, ref Response response, in FileSystem filesystem, int verbose = NORMAL){
   if(response.havepost || request.method != "POST"){ response.havepost = true; return(true); }
   long expectedlength = to!long(from(request.headers, "Content-Length"));
   if(expectedlength == 0){
@@ -53,7 +53,7 @@ final bool parsepost(ref Request request, ref Response response, FileSystem file
 
   }else if(contenttype.indexOf(MPHEADER) >= 0){             // Multipart
     string mpid = split(contenttype, "boundary=")[1];
-    if(verbose >= INFO) writefln("[MPART]  header: %s, parsing %d bytes", mpid, expectedlength);
+    if(verbose >= INFO) writef("[MPART]  header: %s, parsing %d bytes", mpid, expectedlength);
     foreach(int i, part; chomp(request.content).split(mpid)){
       string[] elem = strip(part).split("\r\n");
       if(elem[0] != "--"){
@@ -62,14 +62,19 @@ final bool parsepost(ref Request request, ref Response response, FileSystem file
         if(mphdr.length == 2){
           request.postinfo[key] = PostItem(PostType.Input, key, "", join(elem[2 .. ($-1)]));
         }else if(mphdr.length == 3){
-          string localpath = request.uploadfile(filesystem, key);
-          string content = join(elem[3 .. ($-1)], "\r\n");
-          request.postinfo[key] = PostItem(PostType.File, key, mphdr[2][10 .. ($-1)], localpath, split(elem[1],": ")[1], content.length);
-          writefile(localpath, content);
+          string fname = mphdr[2][10 .. ($-1)];
+          if(fname != ""){
+            string localpath = request.uploadfile(filesystem, key);
+            string content = join(elem[3 .. ($-1)], "\r\n");
+            request.postinfo[key] = PostItem(PostType.File, key, mphdr[2][10 .. ($-1)], localpath, split(elem[1],": ")[1], content.length);
+            writefile(localpath, content);
+          }else{
+            request.postinfo[key] = PostItem(PostType.Input, key, "");
+          }
         }
       }
     }
-    if(verbose >= INFO) writefln("[MPART]  # of items: %s", request.postinfo.length);
+    if(verbose >= INFO) writefln(", # of items: %s", request.postinfo.length);
   }else{ 
     writefln("[WARN]   unsupported post content type: %s [%s] -> %s", contenttype, expectedlength, request.content);
   }

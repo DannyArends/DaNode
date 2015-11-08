@@ -19,7 +19,7 @@ while(length(line <- readLines(f,1)) > 0) {
         POST <- c(POST, URLdecode(elems[3]))
       }else{ 
         POST <- c(POST, "") 
-    } }      
+    } }
     if(elems[1] == "S"){
       snames <- c(snames, elems[2])
       if(length(elems) == 3){

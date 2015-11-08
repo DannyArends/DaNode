@@ -39,9 +39,15 @@ class Log {
     }
 
     @property int verbose() const { return(level); }
-    @property int verbose(int verbose = NOTSET){ if(verbose != NOTSET){ level = verbose; } return(level); }
+    @property int verbose(int verbose = NOTSET){
+      if(verbose != NOTSET) {
+        writefln("Changing verbose level from %s to %s", level, verbose);
+        level = verbose;
+      }
+      return(level); 
+    }
 
-    void write(in ClientInterface cl, in Request rq, Response rs){
+    void write(in ClientInterface cl, in Request rq, in Response rs){
       string    key = format("%s%s", rq.shorthost, rq.uripath);
       if(!statistics.has(key)) statistics[key] = Info();    // Unknown key, create new Info statistics object
       // Fill run-time statistics

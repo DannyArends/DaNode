@@ -24,33 +24,38 @@ class Router {
   public:
     this(int verbose = NORMAL){ logger = new Log(verbose); filesystem = new FileSystem(logger); }
 
-    void logrequest(in ClientInterface client, in Request request, Response response){ logger.write(client, request, response); }
+    void logrequest(in ClientInterface client, in Request request, in Response response){ logger.write(client, request, response); }
 
-    final bool parse(ClientInterface client, in string reqstr, ref Request request, ref Response response) const {
-      long header = reqstr.indexOf("\r\n\r\n");
-      if(header > 0){
-        if(!response.created){
-          request   = Request(client, reqstr[0 .. header], reqstr[(header + 4) .. $], logger.verbose);
-          response  = request.create();
-        }else{
-          request.content = reqstr[(header + 4) .. $];
+    final bool parse(in string ip, long port, ref Request request, ref Response response, in string inputSoFar) const {
+      long idx = inputSoFar.indexOf("\r\n\r\n");
+      if(idx <= 0) idx = inputSoFar.indexOf("\n\n");
+      if(idx > 0){
+        if(!response.created) {
+          request.parse(ip, port, inputSoFar[0 .. idx], inputSoFar[(idx + 4) .. $], logger.verbose);
+          response = request.create();
+        } else {
+          request.update(inputSoFar[(idx + 4) .. $]);
         }
         return(true);
       }
       return(false);
     }
 
-    final void route(ClientInterface client, ref Request request, ref Response response, in string reqstr) {
-      if(!response.routed && parse(client, reqstr, request, response) ) {
+    final void route(in string ip, long port, ref Request request, ref Response response, in string inputSoFar) {
+      if(!response.routed && parse(ip, port, request, response, inputSoFar) ) {
         if( parsepost(request, response, filesystem, logger.verbose) ) {
-          route(client, request, response);
+          route(request, response);
         }
       }
     }
 
-    final void route(ClientInterface client, ref Request request, ref Response response, bool finalrewrite = false) {
-      if(logger.verbose >= DEBUG) writefln("[DEBUG]  start to %s client %s:%s", (finalrewrite? "redirect" : "route"), client.ip,client.port);
-      string      localroot   = filesystem.localroot(request.shorthost());    // writefln("[INFO]   shorthost -> localroot: %s -> %s", request.shorthost(), localroot);
+    final void route(ref Request request, ref Response response, bool finalrewrite = false) {
+      if(logger.verbose >= DEBUG) writefln("[DEBUG]  %s client %s:%s", (finalrewrite? "redirecting" : "routing"), request.ip, request.port);
+
+      string localroot   = filesystem.localroot(request.shorthost());
+
+      if(logger.verbose >= DEBUG) writefln("[INFO]   shorthost -> localroot: %s -> %s", request.shorthost(), localroot);
+
       if(request.shorthost() == "" || !exists(localroot)) {
         writefln("[WARN]   requested domain '%s', was not found", request.shorthost());
         response.payload = new Message(StatusCode.NotFound, format("404 - No such domain is available"));
@@ -79,7 +84,7 @@ class Router {
           }
           response.ready = true;
         }else if(localpath.isDIR() && config.isAllowed(localroot, localpath)){                          // Directory
-          if(config.internalredirect(request)) return route(client, request, response);
+          if(config.internalredirect(request)) return route(request, response);
           response.payload = new Message(StatusCode.Ok, browsedir(localroot, localpath), "text/html");
           response.ready = true;
         }else{                                                                                          // Forbidden to access from the web
@@ -89,12 +94,12 @@ class Router {
       }else if(config.redirect && !finalrewrite){                                                     // Try to re-route this request to the index page
         request.page = request.uripath();                                                             // Save the URL path
         request.url  = format("%s?%s", config.index, request.query);
-        return route(client, request, response, true);
+        return route(request, response, true);
       }else{                                                                                          // Request is not hosted on this server
         response.payload = new Message(StatusCode.NotFound, format("404 - The requested path does not exists on disk"));
         response.ready = true;
       }
-      if(logger.verbose >= DEBUG) writefln("[DEBUG]  routing performed for client %s:%s", client.ip,client.port);
+      if(logger.verbose >= DEBUG) writefln("[DEBUG]  routing performed for client %s:%s", request.ip, request.port);
     }
 
     final @property int verbose(string verbose = "") {

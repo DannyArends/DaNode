@@ -38,8 +38,8 @@ struct Response {
       connection = script.getHeader("Connection", "Close");                               // If scripts want to keep alive
       long clength = script.getHeader("Content-Length", -1);                              // They need a content length
       if(clength == -1) connection = "Close";
-      writef("[INFO]   script: status: %d, eoh: %d, content: %d", script.statuscode, script.endOfHeader(), clength);
-      writefln(", connection: %s -> %s", script.getHeader("Connection", "Close"), connection);
+      //writef("[INFO]   script: status: %d, eoh: %d, content: %d", script.statuscode, script.endOfHeader(), clength);
+      //writefln(", connection: %s -> %s", script.getHeader("Connection", "Close"), connection);
       if(script.endOfHeader() > 0){
         hdr.put(script.fullHeader());
         return(hdr.data);
@@ -58,7 +58,7 @@ struct Response {
     return(hdr.data);
   }
 
-  @property final StatusCode statuscode()  { return payload.statuscode; }
+  @property final StatusCode statuscode() const { return payload.statuscode; }
   @property final bool keepalive() const { return( toLower(connection) == "keep-alive"); }
   @property final long length(){ if(payload.length >= 0){ return header.length + payload.length; }else{ return(long.max); } }
   @property final const(char)[] bytes(in long maxsize = 1024){                                     // Return the bytes from index to the end

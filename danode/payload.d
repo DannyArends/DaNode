@@ -16,7 +16,7 @@ enum PayLoadType { Message, Script, File }
 interface Payload {
   public:
     @property long                ready();
-    @property StatusCode          statuscode();
+    @property StatusCode          statuscode() const;
     @property PayLoadType         type();
     @property long                length() const;
     @property SysTime             mtime();
@@ -55,7 +55,7 @@ class CGI : Payload {
       return(to!string( bytes(0, endOfHeader()) ));
     }
 
-    @property final StatusCode statuscode() {
+    @property final StatusCode statuscode() const {
       long status = getHeader("status", -1);
       if(status == -1) return((external.status == 0)? StatusCode.Ok : StatusCode.ISE );
       return(to!StatusCode(to!int(status)));
