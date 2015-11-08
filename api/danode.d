@@ -22,6 +22,10 @@ void setCONFIG(){
   }
 }
 
+void move_upload_file(string tmp, string to){
+  if(tmp != "") return copy(tmp, to);
+}
+
 struct FileInfo{
   string name;
   string mime;

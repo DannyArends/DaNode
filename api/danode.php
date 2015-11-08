@@ -29,9 +29,15 @@
     return $config;
   }
 
+  function move_upload_file($tmp, $to){
+    if($tmp != '') return copy($tmp, $to);
+  }
+
   $_REQUEST = $_GET;
   $_SERVER = Array();
   $_COOKIE = Array();
+  $_FILES = Array();
+
   $_CONFIG = readConfig($argv);
   $f = fopen( 'php://stdin', 'r' );
   stream_set_blocking($f, 0);
@@ -42,8 +48,12 @@
         $_SERVER[urldecode($marray[1])] = urldecode(chop(join(array_slice($marray, 2),"=")));
       }else if($marray[0] == "C"){
         $_COOKIE[urldecode($marray[1])] = urldecode(chop(join(array_slice($marray, 2),"=")));
+      }else if($marray[0] == "F"){
+        $_FILES[urldecode($marray[1])]["name"] = urldecode(chop($marray[2]));
+        $_FILES[urldecode($marray[1])]["mime"] = urldecode(chop($marray[3]));
+        $_FILES[urldecode($marray[1])]["tmp_name"] = urldecode(chop($marray[4]));
       }else{
-        $_POST[urldecode($marray[1])]   = urldecode(chop(join(array_slice($marray, 2),"=")));
+        $_POST[urldecode($marray[1])] = urldecode(chop(join(array_slice($marray, 2),"=")));
       }
     }
   }
