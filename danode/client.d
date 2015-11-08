@@ -70,10 +70,10 @@ class Client : Thread, ClientInterface {
               router.logrequest(this, request, response);                           // Log the response to the request
               request.clearUploadFiles();                                           // Remove any upload files left over
               request.destroy();                                                    // Clear the request and uploaded files
-              response.destroy();                                                   // Clear the response
               driver.inbuffer.destroy();                                            // Clear the input buffer
               driver.requests++;
               if(!response.keepalive) stop();                                       // No keep alive, then stop this client
+              response.destroy();                                                   // Clear the response
             }
           }else{
             Thread.sleep(dur!"msecs"(1));
