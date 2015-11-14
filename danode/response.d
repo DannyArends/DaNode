@@ -37,6 +37,7 @@ struct Response {
       CGI script = to!CGI(payload);
       this.connection = "Close";
       HeaderType type = script.headerType();
+      writefln("[INFO]   header type: %s", type);
       if(type != HeaderType.None) {
         long clength = script.getHeader("Content-Length", -1);                              // Is the content length provided ?
         if(clength >= 0) connection = script.getHeader("Connection", "Close");              // Yes ? then the script, can try to keep alive

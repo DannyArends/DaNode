@@ -1,10 +1,11 @@
 module danode.webconfig;
 
 import std.stdio : writeln, writefln;
-import std.string : chomp, format, split, strip, toLower, join, indexOf;
+import std.string : chomp, format, split, strip, toLower, lastIndexOf, join, indexOf;
 import std.file : DirEntry, dirEntries, exists, isDir, SpanMode, readText;
 import danode.functions : has, from;
 import danode.filesystem : FileInfo;
+import danode.request : Request;
 
 struct WebConfig {
   string[string]  data;
@@ -28,6 +29,7 @@ struct WebConfig {
   final @property bool      allowcgi() const { if(data.from("allowcgi", "no") == "yes"){ return(true); } return(false); }
   final @property string    localpath(in string localroot, in string path) const { return(format("%s%s", localroot, path)); }
   final @property bool      redirect() const { return(data.from("redirect", "/") != "/"); }
+  final @property bool      redirectdir() const { return(data.from("redirectdir", "no") != "no"); }
   final @property string    index() const {
     string to = data.from("redirect", "/");
     if(to[0] != '/') return(format("/%s", to));

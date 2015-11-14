@@ -6,7 +6,7 @@ import std.uri : encode;
 import std.string : indexOf;
 import danode.client : ClientInterface;
 import danode.httpstatus : StatusCode;
-import danode.request : Request, internalredirect;
+import danode.request : Request;
 import danode.response : SERVERINFO, Response, redirect, create, notmodified;
 import danode.webconfig : WebConfig;
 import danode.payload : Message, CGI;
@@ -65,26 +65,39 @@ class Router {
       FileInfo    configfile  = filesystem.file(localroot, "/web.config");    writefln("[INFO]   configfile at: %s%s", localroot, "/web.config");
       WebConfig   config      = WebConfig(configfile);                        writefln("[INFO]   parsed config file");
       string      fqdn        = config.domain(request.shorthost());           writefln("[INFO]   fqdn: %s", fqdn);
-      string      localpath   = config.localpath(localroot, request.path);    writefln("[INFO]   localpath: %s", localpath);
+      string      localpath   = config.localpath(localroot, request.path);    writefln("[INFO]   localpath: %s, exists ? %s", localpath, localpath.exists());
 
+      writefln("[INFO]   if(%s != %s)", request.host, fqdn);
       if(request.host != fqdn){                                                                       // Requested the wrong shortdomain
+        writeln("[INFO]   redirecting request");
         response.redirect(request, fqdn);
         response.ready = true;
+        writeln("[INFO]   redirection complete");
       } else if(localpath.exists()) {                                                                 // Requested an existing resource
         if(localpath.isCGI() && config.allowcgi){                                                       // CGI File
+          writeln("[INFO]   requested a cgi file, execution allowed");
           if(!response.routed){              // Check, and store POST data (could fail multiple times)
+            writeln("[INFO]   writing server variables");
             filesystem.servervariables(config, request, response, logger.verbose);
+            writeln("[INFO]   creating CGI payload");
             response.payload = new CGI(request.command(localpath), request.inputfile(filesystem), logger.verbose);
             response.ready = true;
+            writeln("[INFO]   CGI response complete");
           }
         }else if(localpath.isFILE() && !localpath.isCGI() && localpath.isAllowed()){                    // Static File
+          writeln("[INFO]   serving a static file");
           response.payload = filesystem.file(localroot, request.path);
           if(request.ifModified >= response.payload.mtime()){                            // Non modified static content
+            writeln("[INFO]   static file has not changed, sending notmodified");
             response.notmodified(request, response.payload.mimetype);
           }
           response.ready = true;
+          writeln("[INFO]   static file complete");
         }else if(localpath.isDIR() && config.isAllowed(localroot, localpath)){                          // Directory
-          if(config.internalredirect(request)) return route(request, response);
+          if(config.redirectdir()){
+            request.redirectdir(config);
+            return route(request, response, true);
+          }
           response.payload = new Message(StatusCode.Ok, browsedir(localroot, localpath), "text/html");
           response.ready = true;
         }else{                                                                                          // Forbidden to access from the web
