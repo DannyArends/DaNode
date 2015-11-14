@@ -56,8 +56,8 @@ class CGI : Payload {
       if(endOfHeader() <= 0) return HeaderType.None;
       string respl = fullHeader().split("\n")[0];
       string[] values = respl.split(" ");
-      if(values.length == 3 && values[0] == "HTTP/1.0") return HeaderType.HTTP10;
-      if(values.length == 3 && values[0] == "HTTP/1.1") return HeaderType.HTTP11;
+      if(values.length >= 3 && values[0] == "HTTP/1.0") return HeaderType.HTTP10;
+      if(values.length >= 3 && values[0] == "HTTP/1.1") return HeaderType.HTTP11;
       if(getHeader("Status", "") != "") return HeaderType.FastCGI;
       return HeaderType.None;
     }
