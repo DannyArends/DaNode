@@ -3,10 +3,10 @@ module danode.request;
 import std.array : join, Appender;
 import std.conv : to;
 import std.file : exists, remove;
-import std.math : fmax;
 import std.uuid : UUID, md5UUID;
 import std.stdio : write, writeln, writefln;
 import std.datetime;
+import std.math : fmax;
 import std.string : split, strip, format, toLower, lastIndexOf, indexOf;
 import danode.filesystem : FileSystem;
 import danode.client : ClientInterface;
@@ -34,6 +34,7 @@ struct Request {
   string            uri;
   string            url;
   string            page;         // Used when redirecting
+  string            dir;          // Used when redirecting
   string            protocol;
   string[string]    headers;
   SysTime           starttime;
@@ -108,19 +109,20 @@ struct Request {
   final string              shorthost() const { return( (host.indexOf("www.") >= 0)? host[4 .. $] : host ); }
   final string              command(string localpath) const { return(format("%s %s%s", localpath.interpreter(), localpath, params())); }
 
+  final void redirectdir(in WebConfig config) {
+    if(config.redirectdir() && config.redirect){
+      this.dir = this.path()[1..$];   // Save the URL path
+      this.url = config.index;  
+    }
+  }
+
+
   final void clearUploadFiles() const {
     foreach(f; postfiles) { if(exists(f)) {
       if(verbose == DEBUG) writefln("[DEBUG]  Removing uploaded file at %s", f); 
       remove(f);
     } }
   }
-}
-
-bool internalredirect(in WebConfig config, ref Request request){
-  if(!config.redirect) return false;
-  long folders = request.path.lastIndexOf("/");
-  request.url = format("%s%s", request.path[0 .. cast(ulong)fmax(folders, 0)], config.index);
-  return(config.redirect);
 }
 
 unittest {

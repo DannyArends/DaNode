@@ -8,7 +8,7 @@ import std.string : format, lastIndexOf, strip, chomp, indexOf;
 import std.math : fmax;
 import std.conv : to;
 import danode.httpstatus : StatusCode;
-import danode.request : Request, internalredirect;
+import danode.request : Request;
 import danode.response : SERVERINFO, Response, redirect, create, notmodified;
 import danode.webconfig : WebConfig;
 import danode.payload : Message, CGI;
@@ -101,6 +101,7 @@ final void servervariables(in FileSystem filesystem, in WebConfig config, in Req
   content.put(format("S=REMOTE_ADDR=%s\n",          request.ip));
   content.put(format("S=REMOTE_PORT=%s\n",          request.port));
   content.put(format("S=REMOTE_PAGE=%s\n",          request.page));
+  content.put(format("S=REQUEST_DIR=%s\n",          request.dir));
   content.put(format("S=SCRIPT_FILENAME=%s\n",      config.localpath(filesystem.localroot(request.shorthost()), request.path)));
   content.put(format("S=SERVER_PORT=%s\n",          request.serverport));
   content.put(format("S=REQUEST_URI=%s\n",          request.uripath));
