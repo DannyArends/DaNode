@@ -64,29 +64,45 @@ class Process : Thread {
       super(&run);
     }
 
-    final @property const(char)[]  output(long from) const { 
-      synchronized { if(errbuffer.data.length == 1){ return(outbuffer.data[from .. $]); } return errbuffer.data[from .. $]; }     // Output/Errors so far
+     // Output/Errors so far
+    final @property const(char)[] output(long from) const { 
+      synchronized { if(errbuffer.data.length == 1){ return(outbuffer.data[from .. $]); } return errbuffer.data[from .. $]; }
     }
-    final @property long    time() const {
-      synchronized { return(Msecs(starttime)); }                                                                                  // Runtime so far
-    }
-    final @property long    lastmodified() const {
-      synchronized { return(Msecs(modified)); }                                                                                   // Last time modified
-    }
-    final @property bool    running() const { 
-      synchronized { return(!process.terminated); }                                                                               // Command still running ?
-    }
-    final @property bool    finished() const { 
-      synchronized { return(this.completed); }                                                                               // Command still running ?
-    }
-    final @property int     status() const { 
-      synchronized { return(process.status); }                                                                                    // Exit status
-    }
-    final @property long    length() const { 
-      synchronized { if(errbuffer.data.length == 1){ return(outbuffer.data.length); } return errbuffer.data.length; }             // Length of output/error
-    }
-    final @property string  inputpath() const { synchronized { return path; } }
 
+    // Runtime so far
+    final @property long time() const {
+      synchronized { return(Msecs(starttime)); }
+    }
+
+    // Last time modified
+    final @property long lastmodified() const {
+      synchronized { return(Msecs(modified)); }
+    }
+
+    // Command still running ?
+    final @property bool running() const { 
+      synchronized { return(!process.terminated); }
+    }
+
+    // Command finished ?
+    final @property bool finished() const { 
+      synchronized { return(this.completed); }
+    }
+
+    // Exit status
+    final @property int status() const {
+      synchronized { return(process.status); }
+    }
+
+    // Length of output/error
+    final @property long length() const { 
+      synchronized { if(errbuffer.data.length == 1){ return(outbuffer.data.length); } return errbuffer.data.length; }
+    }
+
+    // Path to the input file
+    final @property string inputpath() const { synchronized { return path; } }
+
+    // Execute the process
     final void run() {
       int  ch;
       if(exists(path)){
