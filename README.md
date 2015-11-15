@@ -5,82 +5,105 @@ master: [![Build Status](https://travis-ci.org/DannyArends/DaNode.svg?branch=mas
 
 development: [![Build Status](https://travis-ci.org/DannyArends/DaNode.svg?branch=development)](https://travis-ci.org/DannyArends/DaNode)
 
-STRUCTURE
+##### STRUCTURE
 
-The DaNode server is designed to handle multiple websites independent and simultaneously. The DaNode 
-front-end routes incoming HTTP requests to the correct web folder. It allows for multiple index pages 
-and executes scripts in other languages (PHP, Python, D and R). Results from CGI scripts monitored and 
-parsed back into the DaNode system, (e.g. check errors, infinite loops) and if correct are send to the 
-requesting client.
+The DaNode server is designed to handle multiple websites independent and simultaneously. 
+The DaNode front-end routes incoming HTTP requests to the correct web folder. It allows 
+for multiple index pages and executes scripts in other languages (PHP, Python, D and R). 
+Results from CGI scripts monitored and parsed back into the DaNode web server, (e.g. 
+possible header errors, infinite execution of scripts) and results are send to the 
+requesting client via HTTP.
 
-EXAMPLES
+##### GETTING DaNode
 
-See the [www/](www/) folder for a couple example web sites, such as: [www/localhost/](www/localhost/) while is actively running 
-under http://localhost/ or http://127.0.0.1/. For the other examples you might need to update your host file.
+Download and compile the webserver:
 
-To create a new local website running under http://domain.xxx/ create a new folder: 
+    git clone https://github.com/DannyArends/DaNode.git
+    cd DaNode
+    ./sh/compile
 
-    mkdir www/domain.xxx
+To start the webserver at any port above 
 
-and redirect the domain using the .hosts file. 
+    ./danode/server -p 8080
 
-CREATE A WEBSITE
+To start the web server at port 80, authbind is used. If authbind is installed and allows 
+you to connect to port 80, simply start the webserver by running:
 
-An example to create a simple PHP enabled web site:
+    ./sh/run
+
+Confirm that the webserver is running by going to http://127.0.0.1:8080/ or http://127.0.0.1/
+
+##### EXAMPLE WEBSITES
+
+See the [www/](www/) folder for a number of example web sites. After compiling the web 
+server, run the web server and the [www/localhost/](www/localhost/) folder is available 
+at http://localhost/ or http://127.0.0.1/ from the browser. For the other examples in 
+the [www/](www/) folder you will have to update your hosts file.
+
+##### CREATE A PHP ENABLED WEBSITE
+
+To create a simple PHP enabled web site first download and install DaNode, the next 
+step is to create a directory for the new website, by executing the following commands 
+from the DaNode directory:
 
     mkdir www/domain.xxx
     touch www/domain.xxx/index.php
 
-Then add some php or html content to the index page, optionally you can create a web.config file:
+Add some php / html content to the index page, and create a web.config file:
 
     touch www/domain.xxx/web.config
 
-Add optional configuration settings to the web.config file, if you want to use PHP, you have to manually 
-enable the cgi execution in this file. An example:
+Add the following configuration settings to the web.config file, if you want to use 
+scripting languages such as PHP, you have to manually allow the execution of cgi file. 
+Add the following lines in your web.cofig file to redirect to the index.php file, and 
+allow the webserver to execute the php script, and redirect the incomming requests to 
+the index.php page:
 
-    shorturl     = yes
     allowcgi     = yes
     redirecturl  = index.php
 
-UPDATE THE HOSTS FILE
+###### UPDATE THE HOSTS FILE
 
-If you don't own the domain, redirect the domain to your local IP address using the hosts file:
+If you do not own the domain you wish to host for, redirect the domain to your local 
+IP address using the hosts file:
 
     sudo nano /etc/hosts
 
-Then add the lines to this file:
+Then add the following lines to this hostfile using your favourite editor:
 
     127.0.0.1   domain.xxx
     127.0.0.1   www.domain.xxx
 
-Save the file with these lines added, then open a browser and navigate to: http://www.domain.xxx, you 
-should now see the content of your php / html file.
+Save the file with these lines added, then open a browser and navigate to: 
+http://www.domain.xxx, you should now see the content of your php / html file.
 
-API's
 
-             GET   POST    SERVER    FILE     CONFIG
-     PHP     V     V       V         ?        V
-     PYTHON  V     V
-     D       V     V       V         ?
-     R       V     V
-
-For more information see: [api/README.md](api/README.md)
-
-TESTS
+##### Languages with web API supported
 
      PHP, PYTHON, D, R
 
-ADVANCED
+###### webAPI's overview
+
+             GET   POST    COOKIES     SERVER    FILE     CONFIG
+     PHP     V     V       V           V         V        V
+     PYTHON  V     V
+     D       V     V       V           V         V
+     R       V     V                   V         V
+
+For more information see: [api/README.md](api/README.md)
+
+##### Advanced config options
 
   - WEBSITE-CONFIG
    - Sub-domain redirecting, such as http://www.test.nl to http://test.nl
    - Directory browsing
-   - Custom index page
+   - Custom index and error pages
+   - Executing different languages and the API
    - Server overview page at http://127.0.0.1/
 
   - FILEBUFFER
-   - Buffer small files and serve from memory
-   - Stream large downloads using a flexible buffer
+   - Small files are buffered and served from memory
+   - Stream large downloads using a flexible resizable buffer
 
 LICENCE
 

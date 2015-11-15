@@ -1,1 +1,2 @@
 language: d
+sudo: false

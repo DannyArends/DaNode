@@ -3,13 +3,16 @@ module danode.client;
 import core.thread : Thread;
 import std.array : Appender, appender;
 import std.conv : to;
-import std.datetime : Clock, SysTime, msecs;
+import std.datetime : Clock, SysTime, msecs, dur;
 import std.socket : Address, Socket;
+import std.string;
 import std.stdio : write, writefln, writeln;
 import danode.functions : Msecs;
 import danode.router : Router;
+import danode.httpstatus : StatusCode;
 import danode.response : Response;
 import danode.request : Request;
+import danode.payload : Message;
 import danode.log : NORMAL, INFO, DEBUG;
 
 interface ClientInterface {
@@ -20,9 +23,6 @@ interface ClientInterface {
 
   @property long    port() const;
   @property string  ip() const;
-
-  @property void    set(Request req);
-  @property Request get();
 
   void run(); 
 }
@@ -47,7 +47,6 @@ class Client : Thread, ClientInterface {
     Router              router;              /// Router class from server
     DriverInterface     driver;              /// Driver
     long                maxtime;             /// Maximum quiet time before we cut the connection
-    Request             request;             /// Request structure
   public:
     bool                terminated;          /// Is the client / connection terminated
 
@@ -59,42 +58,72 @@ class Client : Thread, ClientInterface {
     }
 
    final void run(){
-      if(router.verbose >= INFO) writefln("[INFO]   connection established %s %d", ip(), port() );
+      if(router.verbose >= DEBUG) writefln("[DEBUG]  new connection established %s:%d", ip(), port() );
       try{
+        Request request;
         Response response;
         while(running && modified < maxtime){
-          if(driver.receive(driver.socket) > 0){                                    // We've received new data
-            if(!response.ready){                                                    // If we're not ready to respond yet
-              router.route(this, response, to!string(driver.inbuffer.data));        // Parse the data and try to create a response (Could fail multiple times)
+          if(driver.receive(driver.socket) > 0){                                                // We've received new data
+            if(!response.ready){                                                                // If we're not ready to respond yet
+              router.route(ip(), port(), request, response, to!string(driver.inbuffer.data));   // Parse the data and try to create a response (Could fail multiple times)
             }
-            if(response.ready && !response.completed){                              // We know what to respond, but haven't send all of it yet
-              driver.send(response, driver.socket);                                 // Send the response, this function gets hit multiple times, so just send what you can and return
+            if(response.ready && !response.completed){                                        // We know what to respond, but haven't send all of it yet
+              driver.send(response, driver.socket);                                           // Send the response, hit multiple times, send what you can and return
             }
             if(response.ready && response.completed){                               // We've completed the request, response cycle
-              router.logrequest(this, response);                                    // Log the response to the request
-              if(!response.keepalive) stop();                                       // No keep alive, then stop this client
-              response.destroy();                                                   // Clear the response
+              router.logrequest(this, request, response);                           // Log the response to the request
+              request.clearUploadFiles();                                           // Remove any upload files left over
+              request.destroy();                                                    // Clear the request and uploaded files
               driver.inbuffer.destroy();                                            // Clear the input buffer
               driver.requests++;
+              if(!response.keepalive) stop();                                       // No keep alive, then stop this client
+              response.destroy();                                                   // Clear the response
             }
+
+          }else{
+            Thread.sleep(dur!"msecs"(1));
           }
+          // writefln("[INFO]   connection %s:%s (%s msecs) %s", ip, port, Msecs(driver.starttime), to!string(driver.inbuffer.data));
           Thread.yield();
         }
       }catch(Exception e){ writefln("[WARN]   unknown client exception: %s", e.msg); }
-      if(router.verbose >= INFO) writefln("[INFO]   connection %s:%s (%s) closed after %d requests %s (%s msecs)", ip, port, driver.isSecure(), driver.requests, driver.senddata, Msecs(driver.starttime));
+      if(router.verbose >= INFO){
+        writefln("[INFO]   connection %s:%s (%s) closed after %d requests %s (%s msecs)", ip, port, driver.isSecure(), 
+                                                                                          driver.requests, driver.senddata, Msecs(driver.starttime));
+      }
       driver.socket.close();
     }
 
-    final @property void    set(Request req) { request = req; }
-    final @property Request get() { return(request); }
+    final @property bool running() {
+      return(driver.socket.isAlive() && !terminated);
+    }
 
-    final @property bool    running(){   synchronized { return(driver.socket.isAlive() && isRunning() && !terminated); } }          // Is the client still running ?
-    final @property long    time(){      synchronized { return(Msecs(driver.starttime)); } }                                        // Time since start of request
-    final @property long    modified(){  synchronized { return(Msecs(driver.modtime)); } }                                          // Time since last modified
-    final @property void    stop(){      synchronized { terminated = true; } }                                               // Stop the client
+    final @property long time(){
+      return(Msecs(driver.starttime));
+    }
 
-    final @property long    port() const { if(driver.address !is null){ return(to!long(driver.address.toPortString())); } return(-1); }    // Client port
-    final @property string  ip() const { if(driver.address !is null){ return(driver.address.toAddrString()); } return("0.0.0.0"); }        // Client IP
+    final @property long modified(){
+      return(Msecs(driver.modtime));
+    }
+
+    final @property void stop(){
+      if(router.verbose >= DEBUG) writefln("[DEBUG]  connection %s:%s stop called", ip, port);
+      terminated = true; 
+    }
+
+    final @property long port() const { 
+      if(driver.address !is null){ 
+        return(to!long(driver.address.toPortString())); 
+      } 
+      return(-1); 
+    }
+
+    final @property string ip() const {
+      if(driver.address !is null){
+        return(driver.address.toAddrString()); 
+      }
+      return("0.0.0.0"); 
+    }
 }
 
 class HTTP : DriverInterface {
@@ -109,22 +138,24 @@ class HTTP : DriverInterface {
       }catch(Exception e){ writefln("[WARN]   unable to resolve requesting origin"); }
     }
 
-    override long receive(Socket socket, long maxsize = 4096){ synchronized {
+    override long receive(Socket socket, long maxsize = 4096) {
       long received;
       char[] tmpbuffer = new char[](maxsize);
-      if((received = socket.receive(tmpbuffer)) > 0){
+      if((received = socket.receive(tmpbuffer)) > 0) {
         inbuffer.put(tmpbuffer[0 .. received]); modtime = Clock.currTime();
       }
+      // if(received > 0) writefln("[INFO]   received %d bytes of data", received);
       return(inbuffer.data.length);
-    } }
+    }
 
-    override void send(ref Response response, Socket socket, long maxsize = 4096){ synchronized {
+    override void send(ref Response response, Socket socket, long maxsize = 4096) {
       long send = socket.send(response.bytes(maxsize));
-      if(send >= 0){
+      if(send >= 0) {
         response.index += send; modtime = Clock.currTime(); senddata[requests] += send;
         if(response.index >= response.length) response.completed = true;
       }
-    } }
+      // if(send > 0) writefln("[INFO]   send %d bytes of data", send);
+    }
 
     override bool isSecure(){ return(false); }
 }

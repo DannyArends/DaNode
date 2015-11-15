@@ -38,14 +38,18 @@ class Log {
       requests = File(path, "a");
     }
 
-    @property int verbose(int verbose = NOTSET) { if(verbose != NOTSET){ level = verbose; } return(level); }
+    @property int verbose() const { return(level); }
+    @property int verbose(int verbose = NOTSET){
+      if(verbose != NOTSET) {
+        writefln("Changing verbose level from %s to %s", level, verbose);
+        level = verbose;
+      }
+      return(level); 
+    }
 
-    void write(ClientInterface cl, Response rs){
-      Request   rq  = cl.get();
+    void write(in ClientInterface cl, in Request rq, in Response rs){
       string    key = format("%s%s", rq.shorthost, rq.uripath);
-
       if(!statistics.has(key)) statistics[key] = Info();    // Unknown key, create new Info statistics object
-
       // Fill run-time statistics
       statistics[key].responses[rs.statuscode]++;
       statistics[key].starttimes.put(rq.starttime.toUnixTime());
@@ -53,8 +57,8 @@ class Log {
       statistics[key].keepalives.put(rs.keepalive);
       statistics[key].ips[((rq.track)? cl.ip : "DNT")]++;
 
-      // First to file
-      if(level >= INFO)  requests.writefln("[%d]    %s %s:%s %s%s %s %s|%s", rs.statuscode, htmltime(), cl.ip, cl.port, rq.shorthost, rq.uri, Msecs(rq.starttime), rs.header.length, rs.payload.length);
+      if(level >= INFO)
+        requests.writefln("[%d]    %s %s:%s %s%s %s %s", rs.statuscode, htmltime(), cl.ip, cl.port, rq.shorthost, rq.uri, Msecs(rq.starttime), rs.payload.length);
 
       // Write the request to the requests file
       requests.flush();

@@ -1,12 +1,13 @@
 module danode.server;
 
 import std.c.stdlib : exit;
+import std.c.stdio;
 import core.thread : Thread;
-import std.array : Appender, appender, chomp;
+import std.array : Appender, appender;
 import std.datetime : Clock, dur, SysTime, Duration;
 import std.socket : AddressFamily, InternetAddress, ProtocolType, Socket, SocketSet, SocketType, SocketOption, SocketOptionLevel;
 import std.stdio : writefln, stdin;
-import std.string : startsWith, format;
+import std.string : startsWith, format, chomp;
 import danode.functions : Msecs, sISelect;
 import danode.client : Client, HTTP;
 import danode.router : Router;
@@ -33,16 +34,16 @@ class Server : Thread {
 
   public:
     this(ushort port = 80, int backlog = 100, int verbose = NORMAL) {
-      this.starttime  = Clock.currTime();           // Start the timer
-      this.router     = new Router(verbose);        // Start the router
-      this.socket     = initialize(port, backlog);  // Create the HTTP socket
+      this.starttime = Clock.currTime();            // Start the timer
+      this.router = new Router(verbose);            // Start the router
+      this.socket = initialize(port, backlog);      // Create the HTTP socket
       version(SSL){
         this.sslsocket = initialize(443, backlog);  // Create the SSL / HTTPs socket
-        this.context   = initSSL();                 // Initialize the SSL certificates
+        this.context = initSSL();                   // Initialize the SSL certificates
         backlog = (backlog * 2) + 1;                // Enlarge the backlog, for N clients and 1 ssl server socket
       }
       backlog = backlog + 1;                        // Add room for the server socket
-      this.set        = new SocketSet(backlog);     // Create a socket set
+      this.set = new SocketSet(backlog);            // Create a socket set
       writefln("[SERVER] server created backlog: %d", backlog);
       super(&run);
     }
@@ -85,12 +86,25 @@ class Server : Thread {
       }
     }
 
-    final @property bool      running(){ synchronized { return(socket.isAlive() && isRunning() && !terminated); } }                                           // Is the server still running ?
-    final @property void      stop(){ synchronized { foreach(ref Client client; clients){ client.stop(); } terminated = true;  } }                            // Stop the server
-    final @property Duration  time() const { return(Clock.currTime() - starttime); }                                                                          // Time so far
-    final @property void      info() { writefln("[INFO]   uptime %s\n[INFO]   # of connections: %d", time, connections); }                                    // Server information
-    final @property long      connections() { long sum = 0; foreach(Client client; clients){ if(client.running){ sum++; } } return sum; }                     // Number of connections
-    final @property int       verbose(string verbose = "") { return(router.verbose(verbose)); }                                                               // Verbose level
+    final @property bool running(){ synchronized { // Is the server still running ?
+      return(socket.isAlive() && !terminated); 
+    } }
+
+    final @property void stop(){ synchronized {  // Stop the server
+      foreach(ref Client client; clients){ client.stop(); } terminated = true;
+    } }
+
+    final @property Duration time() const { return(Clock.currTime() - starttime); } // Time so far
+
+    final @property void info() { // Server information
+      writefln("[INFO]   uptime %s\n[INFO]   # of connections: %d", time, connections);
+    }
+
+    final @property long connections() { // Number of connections
+      long sum = 0; foreach(Client client; clients){ if(client.running){ sum++; } } return sum; 
+    }
+
+    final @property int verbose(string verbose = "") { return(router.verbose(verbose)); } // Verbose level
 
     final void run() {
       int select;
@@ -136,10 +150,12 @@ void main(string[] args) {
         if(line.startsWith("quit")) server.stop();
         if(line.startsWith("info")) server.info();
         if(line.startsWith("verbose")) server.verbose(line);
-      }else{
-        Thread.sleep(dur!"msecs"(10));
       }
+      fflush(stdout);
+      Thread.sleep(dur!"msecs"(2));
     }
+    writefln("[INFO]   Server shutting down: %d", server.running);
+    server.info();
   }
 }
 

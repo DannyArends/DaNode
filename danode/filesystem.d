@@ -51,12 +51,12 @@ class FileInfo : Payload {
     final @property string        content(){ return(cast(string)bytes(0, length)); }
     final @property bool          realfile() const { return(path.exists()); }
     final @property SysTime       mtime() const { if(!realfile){ return btime; } return path.timeLastModified(); }
-    final @property long          ready(){ return(true); }
-    final @property PayLoadType   type(){ return(PayLoadType.Message); }
+    final @property long          ready() { return(true); }
+    final @property PayLoadType   type() const { return(PayLoadType.Message); }
     final @property long          length() const { if(!realfile){ return 0; } return cast(long)(path.getSize()); }
     final @property long          buffersize() const { return cast(long)(buf.length); }
     final @property string        mimetype() const { return mime(path); }
-    final @property StatusCode    statuscode(){ return StatusCode.Ok; }
+    final @property StatusCode    statuscode() const { return StatusCode.Ok; }
 
     final char[] bytes(long from, long maxsize = 1024){ synchronized {
       if(!realfile){ return []; }

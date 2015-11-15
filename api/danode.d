@@ -22,11 +22,22 @@ void setCONFIG(){
   }
 }
 
+void move_upload_file(string tmp, string to){
+  if(tmp != "") return copy(tmp, to);
+}
+
+struct FileInfo{
+  string name;
+  string mime;
+  string loc;
+}
+
 string[string] CONFIG;
 string[string] COOKIES;
 string[string] GET;
 string[string] POST;
 string[string] SERVER;
+FileInfo[string] FILES;
 
 void setPOST(){
   char[] buf;
@@ -38,7 +49,10 @@ void setPOST(){
     if(splitted.length > 2){
       if(splitted[0] == "S")  SERVER[decode(splitted[1])]  = chomp(strip(splitted[2]));
       if(splitted[0] == "P")  POST[decode(splitted[1])]    = chomp(strip(splitted[2]));
-      if(splitted[0] == "F")  POST[decode(splitted[1])]    = chomp(strip(splitted[2]));
+      if(splitted[0] == "F"){
+        POST[decode(splitted[1])] = chomp(strip(splitted[2]));
+        FILES[decode(splitted[1])] = FileInfo(chomp(strip(splitted[2])), chomp(strip(splitted[3])),chomp(strip(splitted[4])));
+      }
       if(splitted[0] == "C")  COOKIES[decode(splitted[1])] = chomp(strip(splitted[2]));
     }
   }

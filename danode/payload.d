@@ -12,17 +12,18 @@ import danode.mimetypes : UNSUPPORTED_FILE, mime;
 import danode.log : NORMAL, INFO, DEBUG;
 
 enum PayLoadType { Message, Script, File }
+enum HeaderType { None, FastCGI, HTTP10, HTTP11 }
 
 interface Payload {
   public:
     @property long                ready();
-    @property StatusCode          statuscode();
-    @property PayLoadType         type();
-    @property long                length();
+    @property StatusCode          statuscode() const;
+    @property PayLoadType         type() const;
+    @property long                length() const;
     @property SysTime             mtime();
     @property string              mimetype() const;
 
-    char[] bytes(long from, long maxsize = 1024);
+    const(char)[] bytes(long from, long maxsize = 1024);
 }
 
 class CGI : Payload {
@@ -32,26 +33,54 @@ class CGI : Payload {
   public:
     this(string command, string path, int verbose = NORMAL){ external = new Process(command, path, verbose); external.start(); }
 
-
-    final @property PayLoadType   type(){ return(PayLoadType.Script); }
-    final @property long          ready()  { if(external.running){ return(header != ""); } return(!external.running); }
-    final @property long          length() const { if(!external.running){ return external.length; } return -1; }
+    final @property PayLoadType   type() const { return(PayLoadType.Script); }
+    final @property long          ready() { return(external.finished); }
+    final @property long          length() const { 
+      if(!external.running) return(getHeader!long("Content-Length", external.length));
+      return -1; 
+    }
     final @property SysTime       mtime() { return Clock.currTime(); }
     final @property string        mimetype() const { return "text/html"; } // Todo if there is a header parse it out of there
 
-    @property final StatusCode statuscode(){
-      foreach(line; header.split("\r\n")){
-        string[] elems = line.split(": ");
-        if(elems.length >= 2 && elems[0] == "Status") return to!StatusCode(to!int(elems[1].split(" ")[0]));
+    final T getHeader(T)(string key, T def = T.init, long i = 1) const {
+      if(endOfHeader > 0){
+        foreach(line; to!string(external.output(0))[0..endOfHeader()].split("\n")){
+          string[] elems = line.split(": ");
+          if(elems.length >= (i+1) && toLower(elems[0]) == toLower(key)) return to!T(strip(elems[i].split(" ")[0]));
+        }
       }
-      return((external.status == 0)? StatusCode.Ok : StatusCode.ISE );
+      return(def);
     }
 
-    char[] bytes(long from, long maxsize = 1024){ return(external.output(from)[0 .. cast(ulong)fmin(from+maxsize, $)]); }
-    final string header(){
-      string content = to!string(bytes(0, 1024));
-      long idx = content.indexOf("\r\n\r\n"); return((idx > 0)? content[0 .. idx] : "");
+    @property final HeaderType headerType() {
+      if(endOfHeader() <= 0) return HeaderType.None;
+      string respl = fullHeader().split("\n")[0];
+      string[] values = respl.split(" ");
+      if(values.length >= 3 && values[0] == "HTTP/1.0") return HeaderType.HTTP10;
+      if(values.length >= 3 && values[0] == "HTTP/1.1") return HeaderType.HTTP11;
+      if(getHeader("Status", "") != "") return HeaderType.FastCGI;
+      return HeaderType.None;
     }
+
+    @property final string fullHeader() {
+      return(to!string( bytes(0, endOfHeader()) ));
+    }
+
+    @property final StatusCode statuscode() const {
+      long status = getHeader("status", -1);
+      if(status == -1) return((external.status == 0)? StatusCode.Ok : StatusCode.ISE );
+      return(to!StatusCode(to!int(status)));
+    }
+
+    const(char)[] bytes(long from, long maxsize = 1024){ return(external.output(from)[0 .. to!long(fmin(from+maxsize, $))]); }
+
+    final long endOfHeader() const {
+      string outputSoFar = to!string(external.output(0));
+      long idx = outputSoFar.indexOf("\r\n\r\n");
+      if(idx <= 0) idx = outputSoFar.indexOf("\n\n");
+      return(idx);
+    }
+
 }
 
 class Message : Payload {
@@ -63,12 +92,12 @@ class Message : Payload {
   public:
     this(StatusCode status, string message, string mime = "text/plain"){ this.status = status; this.message = message; this.mime = mime; }
 
-    final @property PayLoadType   type(){ return(PayLoadType.Message); }
-    final @property long      ready(){ return(true); }
+    final @property PayLoadType   type() const { return(PayLoadType.Message); }
+    final @property long      ready() { return(true); }
     final @property long      length() const { return(message.length); }
     final @property SysTime   mtime() { return Clock.currTime(); }
     final @property string    mimetype() const { return mime; }
-    final @property StatusCode statuscode(){ return status; }
+    final @property StatusCode statuscode() const { return status; }
     char[] bytes(long from, long maxsize = 1024){ return(cast(char[])message[from .. cast(ulong)fmin(from+maxsize, $)]); }
 }
 

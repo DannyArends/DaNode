@@ -37,6 +37,7 @@ class Process : Thread {
     string            command;              /// Command to execute
     string            path;                 /// Path of input file
     int               verbose = NORMAL;
+    bool              completed = false;
 
     File              pStdIn;               /// Input file stream
     Pipe              pStdOut;              /// Output pipe
@@ -51,7 +52,7 @@ class Process : Thread {
     Appender!(char[])  errbuffer;           /// Error appender buffer
 
   public:
-    this(string command, string path, int verbose = NORMAL, long maxtime = 15000) {
+    this(string command, string path, int verbose = NORMAL, long maxtime = 4500) {
       this.command    = command;
       this.path       = path;
       this.verbose    = verbose;
@@ -63,12 +64,27 @@ class Process : Thread {
       super(&run);
     }
 
-    final @property char[]  output(long from) { synchronized { if(errbuffer.data.length == 1){ return(outbuffer.data[from .. $]); } return errbuffer.data[from .. $]; } }   // Output/Errors so far
-    final @property long    time() const { synchronized { return(Msecs(starttime)); } }                                                                                     // Time so far
-    final @property long    lastmodified() const { synchronized { return(Msecs(modified)); } }                                                                              // Last time modified
-    final @property bool    running() const { synchronized { return(!process.terminated); } }                                                                               // Command still running ?
-    final @property int     status() const { synchronized { return(process.status); } }                                                                                     // Command still running ?
-    final @property long    length() const { synchronized { if(errbuffer.data.length == 1){ return(outbuffer.data.length); } return errbuffer.data.length; } }              // Length of output/error
+    final @property const(char)[]  output(long from) const { 
+      synchronized { if(errbuffer.data.length == 1){ return(outbuffer.data[from .. $]); } return errbuffer.data[from .. $]; }     // Output/Errors so far
+    }
+    final @property long    time() const {
+      synchronized { return(Msecs(starttime)); }                                                                                  // Runtime so far
+    }
+    final @property long    lastmodified() const {
+      synchronized { return(Msecs(modified)); }                                                                                   // Last time modified
+    }
+    final @property bool    running() const { 
+      synchronized { return(!process.terminated); }                                                                               // Command still running ?
+    }
+    final @property bool    finished() const { 
+      synchronized { return(this.completed); }                                                                               // Command still running ?
+    }
+    final @property int     status() const { 
+      synchronized { return(process.status); }                                                                                    // Exit status
+    }
+    final @property long    length() const { 
+      synchronized { if(errbuffer.data.length == 1){ return(outbuffer.data.length); } return errbuffer.data.length; }             // Length of output/error
+    }
     final @property string  inputpath() const { synchronized { return path; } }
 
     final void run() {
@@ -93,12 +109,13 @@ class Process : Thread {
         while((ch = readpipe(pStdOut)) != EOF){ modified = Clock.currTime(); outbuffer.put(cast(char)ch); }  // Non blocking slurp of stdout
         while((ch = readpipe(pStdErr)) != EOF){ modified = Clock.currTime(); errbuffer.put(cast(char)ch); }  // Non blocking slurp of stderr
         pStdIn.close();
-        if(verbose >= DEBUG) writefln("[INFO]   command finished after %s msecs", time());
-        if(exists(path)){ if(verbose >= DEBUG) writefln("[INFO]   removing process input file %s", path);
+        if(verbose >= DEBUG) writefln("[DEBUG]  command finished %d after %s msecs", status(), time());
+        if(exists(path)){ if(verbose >= DEBUG) writefln("[DEBUG]  removing process input file %s", path);
           import std.file : remove;
           remove(path); 
         }
       }else{ writefln("[WARN]   no input path: %s", path); process.terminated = true; }
+      this.completed = true;
     }
 }
 

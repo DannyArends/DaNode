@@ -4,12 +4,18 @@ import std.array : Appender;
 import std.datetime : Clock, SysTime, dur;
 import std.string : format, indexOf, split, endsWith, toLower;
 import std.conv : to;
-import std.file : File, exists, isFile, isDir, dirEntries, SpanMode, DirEntry;
+import std.stdio : File;
+import std.file : exists, isFile, isDir, dirEntries, SpanMode, DirEntry;
 import std.socket : Socket, SocketSet;
 import danode.mimetypes : CGI_FILE, mime, UNSUPPORTED_FILE;
 
 immutable string timeFmt =  "%s %s %s %s:%s:%s %s";
-immutable string[int] months; static this(){   months = [ 1: "Jan", 2: "Feb", 3: "Mar", 4 : "Apr", 5 : "May", 6 : "Jun", 7: "Jul", 8: "Aug", 9: "Sep", 10: "Oct", 11: "Nov", 12: "Dec"]; }
+immutable string[int] months; 
+static this(){
+  months = [ 1 : "Jan", 2 : "Feb", 3 : "Mar", 4 : "Apr",
+             5 : "May", 6 : "Jun", 7 : "Jul", 8 : "Aug",
+             9 : "Sep", 10: "Oct", 11: "Nov", 12: "Dec"];
+}
 
 pure int mtoI(string m) { for(int x = 1; x < 12; ++x){ if(m == months[x].toLower()) return x; } return 1; }
 pure string toD(T, U)(in T x, in U digits = 6){ string s = to!string(x); while(s.length < digits){ s = "0" ~ s; } return s; }
@@ -51,7 +57,7 @@ string browsedir(in string root, in string localpath){
   Appender!(string) content;
   content.put(format("Content of: %s<br>\n", localpath));
   foreach (DirEntry d; dirEntries(localpath, SpanMode.shallow)){ content.put(format("<a href='%s'>%s</a><br>", d.name[root.length .. $], d.name[root.length .. $])); }
-  return(content.data);
+  return(format("<html><head><title>200 - Allowed directory</title></head><body>%s</body></html>", content.data));
 }
 
 int sISelect(SocketSet set, Socket socket, int timeout = 10) {         // Reset the socketset and add a server socket to listen to
