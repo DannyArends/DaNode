@@ -57,11 +57,11 @@ struct Request {
     foreach(i, line; header.split("\n")){
       if(i == 0) {                    // first line: method uri protocol
         parts = line.split(" ");
-        if(parts.length >= 3){ 
+        if(parts.length >= 3) {
           this.method = strip(parts[0]);
           this.uri = this.url = strip(join(parts[1 .. ($-1)], " "));
-          this.protocol = strip(parts[$]);
-        }else{
+          this.protocol = strip(parts[($-1)]);
+        } else {
           writefln("[WARN]   Could not decode header line for client");
         }
       } else {                        // next lines: header-param: attribute 
