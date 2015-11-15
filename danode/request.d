@@ -115,10 +115,9 @@ struct Request {
   final void redirectdir(in WebConfig config) {
     if(config.redirectdir() && config.redirect){
       this.dir = this.path()[1..$];   // Save the URL path
-      this.url = config.index;  
+      this.url = config.index;
     }
   }
-
 
   final void clearUploadFiles() const {
     foreach(f; postfiles) { if(exists(f)) {

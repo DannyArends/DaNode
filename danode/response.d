@@ -11,7 +11,12 @@ import danode.functions : htmltime;
 import danode.httpstatus : reason, StatusCode;
 import danode.request : Request;
 import danode.mimetypes : UNSUPPORTED_FILE;
-import danode.payload : Payload, PayLoadType, HeaderType, Empty, CGI;
+import danode.payload : Payload, PayLoadType, HeaderType, Empty, CGI, Message;
+import danode.log;
+import danode.webconfig;
+import danode.filesystem;
+import danode.post : servervariables;
+import danode.router;
 
 immutable string SERVERINFO = "DaNode/0.0.2 (Universal)";
 
@@ -86,13 +91,66 @@ Response create(in Request request, in StatusCode statuscode = StatusCode.Ok, in
   return(response);
 }
 
-void redirect(ref Response response, in Request request, in string fqdn){
+void redirect(ref Response response, in Request request, in string fqdn, int verbose) {
+  if(verbose >= DEBUG) writefln("[DEBUG]  redirecting request to %s", fqdn);
   response.payload = new Empty(StatusCode.MovedPermanently);
   response.customheader("Location", format("http://%s:%d%s%s", fqdn, request.serverport, request.path, request.query));
+  response.ready = true;
 }
 
-void notmodified(ref Response response, in Request request, in string mimetype = UNSUPPORTED_FILE){
+void notmodified(ref Response response, in Request request, in string mimetype = UNSUPPORTED_FILE) {
   response.payload = new Empty(StatusCode.NotModified, mimetype);
+  response.ready = true;
+}
+
+void domainNotFound(ref Response response, in Request request) {
+  writefln("[WARN]   requested domain '%s', was not found", request.shorthost());
+  response.payload = new Message(StatusCode.NotFound, format("404 - No such domain is available\n"));
+  response.ready = true;
+}
+
+void serveCGI(ref Response response, in Request request, in WebConfig config, in FileSystem fs, int verbose) {
+  if(verbose >= DEBUG) writeln("[DEBUG]  requested a cgi file, execution allowed");
+  string localroot = fs.localroot(request.shorthost());
+  string localpath = config.localpath(localroot, request.path);
+  if(!response.routed) { // Store POST data (could fail multiple times)
+    if(verbose >= DEBUG)  writeln("[DEBUG]  writing server variables");
+    fs.servervariables(config, request, response, verbose);
+    if(verbose >= DEBUG)  writeln("[DEBUG]  creating CGI payload");
+    response.payload = new CGI(request.command(localpath), request.inputfile(fs), verbose);
+    response.ready = true;
+  }
+}
+
+void serveStaticFile(ref Response response, in Request request, FileSystem fs, int verbose) {
+  if(verbose >= DEBUG) writeln("[DEBUG]  serving a static file");
+  string localroot = fs.localroot(request.shorthost());
+  response.payload = fs.file(localroot, request.path);
+  if(request.ifModified >= response.payload.mtime()) {                                        // Non modified static content
+    if(verbose >= DEBUG) writeln("[DEBUG]  static file has not changed, sending notmodified");
+    response.notmodified(request, response.payload.mimetype);
+  }
+  response.ready = true;
+}
+
+void serveDirectory(ref Response response, ref Request request, in WebConfig config, in FileSystem fs, int verbose) {
+  if(verbose >= DEBUG) writeln("[DEBUG]  sending browse directory");
+  string localroot = fs.localroot(request.shorthost());
+  string localpath = config.localpath(localroot, request.path);
+  response.payload = new Message(StatusCode.Ok, browsedir(localroot, localpath), "text/html");
+  response.ready = true;
+}
+
+void serveForbidden(ref Response response, in Request request, int verbose) {
+  if(verbose >= DEBUG) writefln("[DEBUG]  resource is restricted from being accessed");
+  response.payload = new Message(StatusCode.Forbidden, format("403 - Access to this resource has been restricted\n"));
+  response.ready = true;
+}
+
+void notFound(ref Response response, int verbose){
+  if(verbose >= DEBUG) writefln("[DEBUG]  resource not found");
+  response.payload = new Message(StatusCode.NotFound, format("404 - The requested path does not exists on disk\n"));
+  response.ready = true;
 }
 
 unittest {

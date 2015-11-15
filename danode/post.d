@@ -82,7 +82,7 @@ final bool parsepost(ref Request request, ref Response response, in FileSystem f
   return(response.havepost);
 }
 
-final void servervariables(in FileSystem filesystem, in WebConfig config, in Request request, in Response response, int verbose = NORMAL) {
+final void servervariables(in FileSystem filesystem, in WebConfig config, in Request request, in Response response, int verbose = NORMAL)  {
   Appender!(string) content;
 
   content.put(format("S=PHP_SELF=%s\n",             request.path));
