@@ -85,7 +85,7 @@ class Router {
           if(config.redirectdir() && !finalrewrite)  // Route this directory request to the index page
             return this.redirectDirectory(request, response, config);
 
-          if(config.redirect && !finalrewrite)  // Modify request to the index page
+          if(config.redirect && !finalrewrite)  // Modify request as canonical to the index page
             return this.redirectCanonical(request, response, config);
 
           return response.serveDirectory(request, config, filesystem, logger.verbose);
@@ -93,7 +93,7 @@ class Router {
         return response.serveForbidden(request, logger.verbose);
       }
 
-      if(config.redirect && !finalrewrite)  // Try to re-route this request to the index page
+      if(config.redirect && !finalrewrite)  // Route this request as canonical request the index page
         return this.redirectCanonical(request, response, config);
 
       return response.notFound(logger.verbose);  // Request is not hosted on this server
