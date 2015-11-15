@@ -46,7 +46,7 @@ class CGI : Payload {
       if(endOfHeader > 0){
         foreach(line; to!string(external.output(0))[0..endOfHeader()].split("\n")){
           string[] elems = line.split(": ");
-          if(elems.length >= (i+1) && toLower(elems[0]) == toLower(key)) return to!T(elems[i].split(" ")[0]);
+          if(elems.length >= (i+1) && toLower(elems[0]) == toLower(key)) return to!T(strip(elems[i].split(" ")[0]));
         }
       }
       return(def);

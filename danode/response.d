@@ -37,7 +37,7 @@ struct Response {
       CGI script = to!CGI(payload);
       this.connection = "Close";
       HeaderType type = script.headerType();
-      writefln("[INFO]   header type: %s", type);
+      writefln("[INFO]   script header type: %s", type);
       if(type != HeaderType.None) {
         long clength = script.getHeader("Content-Length", -1);                              // Is the content length provided ?
         if(clength >= 0) connection = script.getHeader("Connection", "Close");              // Yes ? then the script, can try to keep alive
@@ -45,8 +45,8 @@ struct Response {
           hdr.put(format("%s %s %s\n", "HTTP/1.1", script.getHeader("Status", 500), script.getHeader("Status", "Internal Server Error", 2)));
         }
         hdr.put(script.fullHeader());
-        writef("[INFO]   script: status: %d, eoh: %d, content: %d", script.statuscode, script.endOfHeader(), clength);
-        writefln(", connection: %s -> %s, to %s in %d bytes", script.getHeader("Connection", "Close"), connection, type, hdr.data.length);
+        writefln("[INFO]   script: status: %d, eoh: %d, content: %d", script.statuscode, script.endOfHeader(), clength);
+        writefln("[INFO]   connection: %s -> %s, to %s in %d bytes", strip(script.getHeader("Connection", "Close")), connection, type, hdr.data.length);
         return(hdr.data);
       }
       writeln("[WARN]   no valid header detected, generating one");
