@@ -88,7 +88,7 @@ class Client : Thread, ClientInterface {
         }
       }catch(Exception e){ writefln("[WARN]   unknown client exception: %s", e.msg); }
       if(router.verbose >= INFO){
-        writefln("[INFO]   connection %s:%s (%s) closed after %d requests %s (%s msecs)", ip, port, driver.isSecure(), 
+        writefln("[INFO]   connection %s:%s (%s) closed after %d requests %s (%s msecs)", ip, port, (driver.isSecure() ? "⚐" : "⚑"), 
                                                                                           driver.requests, driver.senddata, Msecs(driver.starttime));
       }
       driver.socket.close();
@@ -135,7 +135,9 @@ class HTTP : DriverInterface {
       this.modtime          = Clock.currTime();           /// Time in ms since this process was modified
       try{
         this.address        = socket.remoteAddress();
-      }catch(Exception e){ writefln("[WARN]   unable to resolve requesting origin"); }
+      } catch(Exception e){
+        writefln("[WARN]   unable to resolve requesting origin");
+      }
     }
 
     override long receive(Socket socket, long maxsize = 4096) {
