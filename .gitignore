@@ -1,6 +1,6 @@
-www/dannyarends.nl/apps
-www/dannyarends.nl/games
-www/dannyarends.nl/pdf
+www/dannyarends.nl
+www/rotationz.nl
+www/grassland.test
 www/localhost/ddoc
 danode/server
 server
@@ -11,7 +11,9 @@ server.key
 server.key.org
 
 .ssl
+.vscode
 
+test/ssl.conf/dannyarends.nl.cnf
 test/stress
 stress
 
