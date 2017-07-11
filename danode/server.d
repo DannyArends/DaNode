@@ -1,7 +1,7 @@
 module danode.server;
 
-import std.c.stdlib : exit;
-import std.c.stdio;
+import core.stdc.stdlib : exit;
+import core.stdc.stdio;
 import core.thread : Thread;
 import std.array : Appender, appender;
 import std.datetime : Clock, dur, SysTime, Duration;
