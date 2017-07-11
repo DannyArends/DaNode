@@ -52,6 +52,11 @@ pure string mime(string i){
     case ".xlsx"  : return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
     case ".xltx"  : return "application/vnd.openxmlformats-officedocument.spreadsheetml.template";
 
+    case ".comp"  : return "x-shader/x-compute";
+    case ".vert"  : return "x-shader/x-vertex";
+    case ".frag"  : return "x-shader/x-fragment";
+    case ".geom"  : return "x-shader/x-geometry";
+
     case ".scss" : return CGI_FILE ~ "sass -t compact"; //nested (default), compact, compressed, or expanded
     case ".cgi"  : return CGI_FILE ~ "perl";
     case ".d"    : return CGI_FILE ~ "rdmd";
