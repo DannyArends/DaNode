@@ -1,6 +1,6 @@
 module danode.mimetypes;
 
-import std.file : extension;
+import std.path : extension;
 import std.string : toLower;
 
 immutable string      UNSUPPORTED_FILE = "file/unknown";                            /// Unsupported file mime
