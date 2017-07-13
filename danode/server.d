@@ -15,7 +15,7 @@ import danode.log;
 import danode.serverconfig : ServerConfig;
 version(SSL){
   import deimos.openssl.ssl;
-  import danode.ssl : HTTPS, SSLcontext, initSSL, closeSSL;
+  import danode.ssl : HTTPS, initSSL, closeSSL;
 }
 import std.getopt : getopt;
 
@@ -27,8 +27,7 @@ class Server : Thread {
     bool              terminated;       // Server running
     SysTime           starttime;        // Start time of the server
     Router            router;           // Router to route requests
-    version(SSL){
-      SSLcontext[]    contexts;          // SSL / HTTPs context
+    version(SSL) {
       Socket          sslsocket;        // SSL / HTTPs socket
     }
 
@@ -39,7 +38,7 @@ class Server : Thread {
       this.socket = initialize(port, backlog);      // Create the HTTP socket
       version(SSL) {
         this.sslsocket = initialize(443, backlog);  // Create the SSL / HTTPs socket
-        this.contexts = initSSL(this);                   // Initialize the SSL certificates
+        initSSL(this);                              // Initialize the SSL certificates
         backlog = (backlog * 2) + 1;                // Enlarge the backlog, for N clients and 1 ssl server socket
       }
       backlog = backlog + 1;                        // Add room for the server socket
@@ -64,17 +63,13 @@ class Server : Thread {
       return socket;
     }
 
-    version(SSL){
-      SSLcontext[] getSSLContexts(){ return contexts; }
-    }
-
     final Client accept(Socket socket, bool secure = false) {     // Create a connection to a client
       if (set.isSet(socket)) {
         try {
           DriverInterface driver = null;
           if(!secure) driver = new HTTP(socket.accept());
           version(SSL) {
-            if(secure) driver = new HTTPS(socket.accept(), contexts);
+            if(secure) driver = new HTTPS(socket.accept(), 0);
           }
           if(driver is null) return(null);
           Client client = new Client(router, driver);
@@ -127,7 +122,7 @@ class Server : Thread {
       }
       socket.close();
       version(SSL) {
-        closeSSL(sslsocket, contexts);
+        closeSSL(sslsocket);
       }
     }
 }
