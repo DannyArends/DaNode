@@ -16,29 +16,41 @@ requesting client via HTTP.
 
 ##### GETTING DaNode
 
-Download and compile the webserver:
+Download and compile the web server:
 
     git clone https://github.com/DannyArends/DaNode.git
     cd DaNode
     ./sh/compile
 
-To start the webserver at a specific port type:
+To start the web server at a specific port (e.g. 8080) type:
 
     ./danode/server -p 8080
 
-Confirm that the webserver is running by going to: http://127.0.0.1:8080/
+Confirm that the web server is running by going to: http://127.0.0.1:8080/
 
 To compile the server with https support (binds to port 443), use the following command:
 
     ./sh/compile ssl
+    ./danode/server
 
-To start the web server at port 80, I use nohup and authbind. First, install nohup and 
-authbind and configure authbind to allow connections to port 80 (and 443, when using the ssl
+Starting the server on port 80 and 443 might fail, when you do not have appropriate 
+rights on the system.
+
+To start the web server at port 80, I use $nohup$ and $authbind$. First, install $nohup$ and 
+$authbind$ and configure $authbind$ to allow connections to port 80 (and 443, when using the ssl
 version), then start the webserver by running:
 
     ./sh/run
 
-Confirm that the webserver is running by going to http://127.0.0.1/ and https://127.0.0.1/
+The content of the ./sh/run shell script:
+
+    nohup authbind danode/server -k -b 100 -v 2 > server.log 2>&1 &
+
+This starts the server, does not allow for keyboard command (-k) has a backlog (-b) 
+of 100 simultanious connection (per port), and produces more log output (-v 2)
+
+After starting the server, confirm that the web server is running by going 
+to http://127.0.0.1/ and https://127.0.0.1/
 
 ##### EXAMPLE WEBSITES
 
