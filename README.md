@@ -22,16 +22,22 @@ Download and compile the webserver:
     cd DaNode
     ./sh/compile
 
-To start the webserver at any port above 
+To start the webserver at a specific port type:
 
     ./danode/server -p 8080
 
-To start the web server at port 80, authbind is used. If authbind is installed and allows 
-you to connect to port 80, simply start the webserver by running:
+Confirm that the webserver is running by going to http://127.0.0.1:8080/ or http://127.0.0.1/
+To compile the server with https support (binds to port 443), use the following command:
+
+    ./sh/compile ssl
+
+To start the web server at port 80, I use nohup and authbind. First, install nohup and 
+authbind and configure authbind to allow connections to port 80 (and 443, when using the ssl
+version), then start the webserver by running:
 
     ./sh/run
 
-Confirm that the webserver is running by going to http://127.0.0.1:8080/ or http://127.0.0.1/
+Confirm that the webserver is running by going to http://127.0.0.1/ and https://127.0.0.1/
 
 ##### EXAMPLE WEBSITES
 
