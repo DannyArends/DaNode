@@ -36,8 +36,8 @@ To compile the server with https support (binds to port 443), use the following 
 Starting the server on port 80 and 443 might fail, when you do not have appropriate 
 rights on the system.
 
-To start the web server at port 80, I use $nohup$ and $authbind$. First, install $nohup$ and 
-$authbind$ and configure $authbind$ to allow connections to port 80 (and 443, when using the ssl
+To start the web server at port 80, I use _nohup_ and _authbind_. First, install _nohup_ and 
+_authbind_ and configure _authbind_ to allow connections to port 80 (and 443, when using the ssl
 version), then start the webserver by running:
 
     ./sh/run
