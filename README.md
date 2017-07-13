@@ -83,8 +83,8 @@ the index.php page:
 
 ###### UPDATE THE HOSTS FILE
 
-If you do not own the domain you wish to host for, redirect the domain to your local 
-IP address using the hosts file:
+If you do not own the domain name you want to host, use the /etc/hosts file to redirect 
+requests from the domain name to your local IP address using the hosts file:
 
     sudo nano /etc/hosts
 
@@ -95,7 +95,6 @@ Then add the following lines to this hostfile using your favourite editor:
 
 Save the file with these lines added, then open a browser and navigate to: 
 http://www.domain.xxx, you should now see the content of your php / html file.
-
 
 ##### Languages with web API supported
 
