@@ -26,7 +26,8 @@ To start the webserver at a specific port type:
 
     ./danode/server -p 8080
 
-Confirm that the webserver is running by going to http://127.0.0.1:8080/ or http://127.0.0.1/
+Confirm that the webserver is running by going to: http://127.0.0.1:8080/
+
 To compile the server with https support (binds to port 443), use the following command:
 
     ./sh/compile ssl
