@@ -2,8 +2,6 @@ module danode.ssl;
 
 version(SSL){
 
-
-
   import std.socket;
   import std.file;
   import std.traits;
@@ -62,8 +60,8 @@ version(SSL){
       SSL*                ssl;
 
     public:
-      this(Socket socket, int ctx, bool blocking = false) {
-        this.ssl = SSL_new(contexts[ctx].context);            // writefln("[INFO]   SSL created, using standard certificate contexts[0].context");
+      this(Socket socket, bool blocking = false) {
+        this.ssl = SSL_new(contexts[0].context);            // writefln("[INFO]   SSL created, using standard certificate contexts[0].context");
         writefln("[HTTPS]  initial SSL tunnel created, cert: %d", ctx);
         SSL_set_fd(this.ssl, socket.handle());              // writefln("[INFO]   Added socket handle");
         sslAssert(SSL_accept(this.ssl) != -1);
