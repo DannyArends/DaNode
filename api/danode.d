@@ -1,10 +1,10 @@
 module api.danode;
-import std.stdio, std.getopt, std.conv, std.string, std.uri, std.file;
+import std.stdio, std.getopt, std.conv,std.utf, std.string, std.file;
 
 void setGET(string[] args){
   foreach(arg;args[1..$]){
     string[] s = arg.split("=");
-    if(s.length > 1) GET[decode(s[0])] = decode(s[1]);
+    if(s.length > 1) GET[toUTF8(s[0])] = toUTF8(s[1]);
   }
 }
 
@@ -43,17 +43,17 @@ void setPOST(){
   char[] buf;
   if(ftell(stdin.getFP()) == -1) return;
   while(stdin.readln(buf)){
-    string s = chomp(to!string(buf));
+    string s = toUTF8(chomp(to!string(buf)));
     if(s == "") return;
-    string[] splitted = decodeComponent(s).split("=");
+    string[] splitted = s.split("=");
     if(splitted.length > 2){
-      if(splitted[0] == "S")  SERVER[decode(splitted[1])]  = chomp(strip(splitted[2]));
-      if(splitted[0] == "P")  POST[decode(splitted[1])]    = chomp(strip(splitted[2]));
+      if(splitted[0] == "S")  SERVER[splitted[1]]  = chomp(strip(splitted[2]));
+      if(splitted[0] == "P")  POST[splitted[1]]    = chomp(strip(splitted[2]));
       if(splitted[0] == "F"){
-        POST[decode(splitted[1])] = chomp(strip(splitted[2]));
-        FILES[decode(splitted[1])] = FileInfo(chomp(strip(splitted[2])), chomp(strip(splitted[3])),chomp(strip(splitted[4])));
+        POST[splitted[1]] = chomp(strip(splitted[2]));
+        FILES[splitted[1]] = FileInfo(chomp(strip(splitted[2])), chomp(strip(splitted[3])),chomp(strip(splitted[4])));
       }
-      if(splitted[0] == "C")  COOKIES[decode(splitted[1])] = chomp(strip(splitted[2]));
+      if(splitted[0] == "C")  COOKIES[splitted[1]] = chomp(strip(splitted[2]));
     }
   }
 }

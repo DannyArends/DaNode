@@ -8,7 +8,7 @@ import std.array : Appender, appender;
 import core.thread : Thread;
 import std.process : Config, Pipe, pipe, spawnShell, tryWait, wait, kill;
 import danode.functions : Msecs;
-import std.c.linux.linux : fcntl, F_SETFL, O_NONBLOCK;
+import core.sys.posix.fcntl : fcntl, F_SETFL, O_NONBLOCK;
 import core.stdc.stdio : fileno;
 import danode.log : NORMAL, INFO, DEBUG;
 

@@ -16,7 +16,7 @@ import danode.log;
 import danode.webconfig;
 import danode.filesystem;
 import danode.post : servervariables;
-import danode.router;
+import danode.router : browsedir;
 
 immutable string SERVERINFO = "DaNode/0.0.2 (Universal)";
 

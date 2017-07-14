@@ -16,22 +16,41 @@ requesting client via HTTP.
 
 ##### GETTING DaNode
 
-Download and compile the webserver:
+Download and compile the web server:
 
     git clone https://github.com/DannyArends/DaNode.git
     cd DaNode
     ./sh/compile
 
-To start the webserver at any port above 
+To start the web server at a specific port (e.g. 8080) type:
 
     ./danode/server -p 8080
 
-To start the web server at port 80, authbind is used. If authbind is installed and allows 
-you to connect to port 80, simply start the webserver by running:
+Confirm that the web server is running by going to: http://127.0.0.1:8080/
+
+To compile the server with https support (binds to port 443), use the following command:
+
+    ./sh/compile ssl
+    ./danode/server
+
+Starting the server on port 80 and 443 might fail, when you do not have appropriate 
+rights on the system.
+
+To start the web server in deamon (background) mode at port 80, I use _nohup_ and _authbind_. 
+First, install _nohup_ and _authbind_ via your package manager, configure _authbind_ to allow 
+connections to port 80 (and 443, when using the ssl version), then start the webserver by running:
 
     ./sh/run
 
-Confirm that the webserver is running by going to http://127.0.0.1:8080/ or http://127.0.0.1/
+The content of the ./sh/run shell script:
+
+    nohup authbind danode/server -k -b 100 -v 2 > server.log 2>&1 &
+
+This starts the server, does not allow for keyboard command (-k) has a backlog (-b) 
+of 100 simultaneous connection (per port), and produces more log output (-v 2)
+
+After starting the server, confirm that the web server is running by going 
+to http://127.0.0.1/ and https://127.0.0.1/
 
 ##### EXAMPLE WEBSITES
 
@@ -64,8 +83,8 @@ the index.php page:
 
 ###### UPDATE THE HOSTS FILE
 
-If you do not own the domain you wish to host for, redirect the domain to your local 
-IP address using the hosts file:
+If you do not own the domain name you want to host, use the /etc/hosts file to redirect 
+requests from the domain name to your local IP address using the hosts file:
 
     sudo nano /etc/hosts
 
@@ -76,7 +95,6 @@ Then add the following lines to this hostfile using your favourite editor:
 
 Save the file with these lines added, then open a browser and navigate to: 
 http://www.domain.xxx, you should now see the content of your php / html file.
-
 
 ##### Languages with web API supported
 

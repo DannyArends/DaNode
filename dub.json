@@ -1,5 +1,5 @@
 {
-	"name": "DaNode",
+	"name": "danode",
 	"description": "Small and flexible HTTP server for the D language.",
 	"authors": ["Danny Arends"],
 	"homepage": "http://www.dannyarends.nl",
@@ -13,7 +13,7 @@
 		"targetType": "executable",
 	},
   {
-		"name": "SSL",
+		"name": "ssl",
 		"targetType": "executable",
 		"versions": ["SSL"],
 		"dependencies": {
