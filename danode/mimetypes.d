@@ -31,7 +31,7 @@ pure string mime(string i){
     case ".avi"  : return "video/x-msvideo";
     case ".movie": return "video/x-sgi-movie";
     
-    case ".bin", ".class", ".dll", ".exe"  : return "application/octet-stream";
+    case ".bin", ".class", ".dll", ".exe",".rdata"  : return "application/octet-stream";
     case ".gz"   : return "application/x-gzip";
     case ".js"   : return "application/x-javascript";
     case ".pdf"  : return "application/pdf";
