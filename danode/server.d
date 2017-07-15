@@ -122,7 +122,7 @@ class Server : Thread {
       }
       socket.close();
       version(SSL) {
-        closeSSL(sslsocket);
+        sslsocket.closeSSL();
       }
     }
 }
@@ -150,7 +150,7 @@ void main(string[] args) {
         if(line.startsWith("verbose")) server.verbose(line);
       }
       fflush(stdout);
-      Thread.sleep(dur!"msecs"(2));
+      Thread.sleep(dur!"msecs"(250));
     }
     writefln("[INFO]   Server shutting down: %d", server.running);
     server.info();

@@ -35,7 +35,7 @@ abstract class DriverInterface {
     long[long]          senddata;            /// Size of data send per request
     SysTime             starttime;           /// Time in ms since this process came alive
     SysTime             modtime;             /// Time in ms since this process was last modified
-    Address             address;             /// Private  address field
+    Address             address;             /// Private address field
 
     long receive(Socket conn, long maxsize = 4096);
     void send(ref Response response, Socket conn, long maxsize = 4096);
@@ -129,13 +129,13 @@ class Client : Thread, ClientInterface {
 class HTTP : DriverInterface {
   public:
     this(Socket socket, bool blocking = false){ // writefln("[HTTP]   driver constructor");
-      this.socket           = socket;
-      this.socket.blocking  = blocking;
-      this.starttime        = Clock.currTime();           /// Time in ms since this process came alive
-      this.modtime          = Clock.currTime();           /// Time in ms since this process was modified
-      try{
+      this.socket = socket;
+      this.socket.blocking = blocking;
+      this.starttime = Clock.currTime();           /// Time in ms since this process came alive
+      this.modtime = Clock.currTime();           /// Time in ms since this process was modified
+      try {
         this.address        = socket.remoteAddress();
-      } catch(Exception e){
+      } catch(Exception e) {
         writefln("[WARN]   unable to resolve requesting origin");
       }
     }
@@ -143,6 +143,7 @@ class HTTP : DriverInterface {
     override long receive(Socket socket, long maxsize = 4096) {
       long received;
       char[] tmpbuffer = new char[](maxsize);
+      if(!socket.isAlive()) return(-1);
       if((received = socket.receive(tmpbuffer)) > 0) {
         inbuffer.put(tmpbuffer[0 .. received]); modtime = Clock.currTime();
       }
@@ -151,6 +152,7 @@ class HTTP : DriverInterface {
     }
 
     override void send(ref Response response, Socket socket, long maxsize = 4096) {
+      if(!socket.isAlive()) return;
       long send = socket.send(response.bytes(maxsize));
       if(send >= 0) {
         response.index += send; modtime = Clock.currTime(); senddata[requests] += send;
