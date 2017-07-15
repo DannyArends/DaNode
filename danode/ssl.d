@@ -62,7 +62,7 @@ version(SSL){
     public:
       this(Socket socket, bool blocking = false) {
         this.ssl = SSL_new(contexts[0].context);            // writefln("[INFO]   SSL created, using standard certificate contexts[0].context");
-        writefln("[HTTPS]  initial SSL tunnel created, cert: %d", ctx);
+        writefln("[HTTPS]  initial SSL tunnel created");
         SSL_set_fd(this.ssl, socket.handle());              // writefln("[INFO]   Added socket handle");
         sslAssert(SSL_accept(this.ssl) != -1);
         this.socket           = socket;
