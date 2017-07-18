@@ -32,7 +32,7 @@ struct Response {
   bool              routed       = false;
   bool              completed    = false;
   Appender!(char[]) hdr;
-  long              index        = 0;
+  ptrdiff_t         index        = 0;
 
   final void customheader(string key, string value){ headers[key] = value; }
 
@@ -72,8 +72,8 @@ struct Response {
   @property final StatusCode statuscode() const { return payload.statuscode; }
   @property final bool keepalive() const { return( toLower(connection) == "keep-alive"); }
   @property final long length(){ if(payload.length >= 0){ return header.length + payload.length; }else{ return(long.max); } }
-  @property final const(char)[] bytes(in long maxsize = 1024){                                     // Return the bytes from index to the end
-    long hsize = header.length;
+  @property final const(char)[] bytes(in long maxsize = 1024){                              // Return the bytes from index to the end
+    ptrdiff_t hsize = header.length;
     if(index <= hsize) return(header[index .. hsize] ~ payload.bytes(0, maxsize-hsize));    // We haven't completed the header yet
     return(payload.bytes(index-hsize));                                                     // Header completed, just stream bytes from the payload
   }
