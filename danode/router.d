@@ -32,7 +32,7 @@ class Router {
     }
 
     final bool parse(in string ip, long port, ref Request request, ref Response response, in string inputSoFar) const {
-      long idx = inputSoFar.indexOf("\r\n\r\n");
+      ptrdiff_t idx = inputSoFar.indexOf("\r\n\r\n");
       if(idx <= 0) idx = inputSoFar.indexOf("\n\n");
       if(idx <= 0) return(false);
       if(!response.created) {
