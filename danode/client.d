@@ -37,7 +37,7 @@ abstract class DriverInterface {
     SysTime             modtime;             /// Time in ms since this process was last modified
     Address             address;             /// Private address field
 
-    long receive(Socket conn, long maxsize = 4096);
+    ptrdiff_t receive(Socket conn, ptrdiff_t maxsize = 4096);
     void send(ref Response response, Socket conn, long maxsize = 4096);
     bool isSecure();
 }
@@ -140,8 +140,8 @@ class HTTP : DriverInterface {
       }
     }
 
-    override long receive(Socket socket, long maxsize = 4096) {
-      long received;
+    override ptrdiff_t receive(Socket socket, ptrdiff_t maxsize = 4096) {
+      ptrdiff_t received;
       char[] tmpbuffer = new char[](maxsize);
       if(!socket.isAlive()) return(-1);
       if((received = socket.receive(tmpbuffer)) > 0) {

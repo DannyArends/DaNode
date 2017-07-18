@@ -82,8 +82,8 @@ version(SSL){
         writeln("[HTTPS]  HTTPS driver finished");
       }
 
-      override long receive(Socket socket, long maxsize = 4096){ synchronized {
-        long received;
+      override ptrdiff_t receive(Socket socket, ptrdiff_t maxsize = 4096){ synchronized {
+        ptrdiff_t received;
         if(ssl is null) return -1;
         char[] tmpbuffer = new char[](maxsize);
         if((received = SSL_read(ssl, cast(void*) tmpbuffer, cast(int)maxsize)) > 0) {
