@@ -8,9 +8,12 @@ import std.array : Appender, appender;
 import core.thread : Thread;
 import std.process : Config, Pipe, pipe, spawnShell, tryWait, wait, kill;
 import danode.functions : Msecs;
-import core.sys.posix.fcntl : fcntl, F_SETFL, O_NONBLOCK;
 import core.stdc.stdio : fileno;
 import danode.log : NORMAL, INFO, DEBUG;
+version(Posix) {
+  import core.sys.posix.fcntl : fcntl, F_SETFL, O_NONBLOCK;
+}
+
 
 struct WaitResult {
   bool terminated;           // Is the process terminated
@@ -21,10 +24,13 @@ int readpipe(ref Pipe pipe){
   File fp = pipe.readEnd;
   try{
     if(fp.isOpen()){
-      if(nonblocking(fp)) return(fgetc(fp.getFP()));
-      writeln("[WARN]   unable to create nonblocking pipe for command");
+      if(!nonblocking(fp)) writeln("[WARN]   unable to create nonblocking pipe for command");
+      return(fgetc(fp.getFP()));
     }
-  }catch(Exception e){ writefln("[WARN]   exception during readpipe command"); }
+  }catch(Exception e){
+    writefln("[WARN]   exception during readpipe command");
+    fp.close();
+  }
   return(EOF);
 }
 
