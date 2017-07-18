@@ -110,7 +110,8 @@ class FileSystem {
     final Domain scan(string dname){ synchronized {
       Domain domain;
       foreach (DirEntry f; dirEntries(dname, SpanMode.depth)){ if(f.isFile()){
-        string shortname = f.name[dname.length .. $];
+        string shortname = replace(f.name[dname.length .. $], "\\", "/");
+        writefln("File: %s -> %s", f.name, shortname);
         if(!domain.files.has(shortname)){
           domain.files[shortname] = new FileInfo(f.name);
           domain.entries++;
@@ -125,6 +126,7 @@ class FileSystem {
     final string localroot(string hostname) const { return(format("%s%s",this.root, hostname)); }
 
     final FileInfo file(string localroot, string path, int verbose = NORMAL){ synchronized {
+      writeln(domains[localroot].files);
       if(!domains[localroot].files.has(path) && exists(format("%s%s", localroot, path))){
         if(logger.verbose >= INFO) writefln("[FILES]  new file %s, rescanning index: %s", path, localroot);
         domains[localroot] = scan(localroot);
