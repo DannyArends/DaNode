@@ -38,7 +38,7 @@ abstract class DriverInterface {
     Address             address;             /// Private address field
 
     ptrdiff_t receive(Socket conn, ptrdiff_t maxsize = 4096);
-    void send(ref Response response, Socket conn, long maxsize = 4096);
+    void send(ref Response response, Socket conn, ptrdiff_t maxsize = 4096);
     bool isSecure();
 }
 
@@ -151,9 +151,9 @@ class HTTP : DriverInterface {
       return(inbuffer.data.length);
     }
 
-    override void send(ref Response response, Socket socket, long maxsize = 4096) {
+    override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096) {
       if(!socket.isAlive()) return;
-      long send = socket.send(response.bytes(maxsize));
+      ptrdiff_t send = socket.send(response.bytes(maxsize));
       if(send >= 0) {
         response.index += send; modtime = Clock.currTime(); senddata[requests] += send;
         if(response.index >= response.length) response.completed = true;

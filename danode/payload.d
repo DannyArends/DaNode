@@ -19,11 +19,11 @@ interface Payload {
     @property long                ready();
     @property StatusCode          statuscode() const;
     @property PayLoadType         type() const;
-    @property long                length() const;
+    @property ptrdiff_t           length() const;
     @property SysTime             mtime();
     @property string              mimetype() const;
 
-    const(char)[] bytes(ptrdiff_t from, long maxsize = 1024);
+    const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 1024);
 }
 
 class CGI : Payload {
@@ -35,8 +35,8 @@ class CGI : Payload {
 
     final @property PayLoadType   type() const { return(PayLoadType.Script); }
     final @property long          ready() { return(external.finished); }
-    final @property long          length() const { 
-      if(!external.running) return(getHeader!long("Content-Length", external.length));
+    final @property ptrdiff_t     length() const { 
+      if(!external.running) return(getHeader!ptrdiff_t("Content-Length", to!ptrdiff_t(external.length)));
       return -1; 
     }
     final @property SysTime       mtime() { return Clock.currTime(); }
@@ -72,7 +72,7 @@ class CGI : Payload {
       return(to!StatusCode(to!int(status)));
     }
 
-    const(char)[] bytes(ptrdiff_t from, long maxsize = 1024){ return(external.output(from)[0 .. to!ptrdiff_t(fmin(from+maxsize, $))]); }
+    const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 1024){ return(external.output(from)[0 .. to!ptrdiff_t(fmin(from+maxsize, $))]); }
 
     final ptrdiff_t endOfHeader() const {
       string outputSoFar = to!string(external.output(0));
@@ -93,12 +93,12 @@ class Message : Payload {
     this(StatusCode status, string message, string mime = "text/plain"){ this.status = status; this.message = message; this.mime = mime; }
 
     final @property PayLoadType   type() const { return(PayLoadType.Message); }
-    final @property long      ready() { return(true); }
-    final @property long      length() const { return(message.length); }
-    final @property SysTime   mtime() { return Clock.currTime(); }
-    final @property string    mimetype() const { return mime; }
-    final @property StatusCode statuscode() const { return status; }
-    char[] bytes(ptrdiff_t from, long maxsize = 1024){ return(cast(char[])message[from .. to!ptrdiff_t(fmin(from+maxsize, $))]); }
+    final @property long          ready() { return(true); }
+    final @property ptrdiff_t     length() const { return(message.length); }
+    final @property SysTime       mtime() { return Clock.currTime(); }
+    final @property string        mimetype() const { return mime; }
+    final @property StatusCode    statuscode() const { return status; }
+    char[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 1024){ return(cast(char[])message[from .. to!ptrdiff_t(fmin(from+maxsize, $))]); }
 }
 
 class Empty : Message {
