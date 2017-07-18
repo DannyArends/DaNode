@@ -34,8 +34,12 @@ int readpipe(ref Pipe pipe){
   return(EOF);
 }
 
-bool nonblocking(ref File file){
- return(fcntl(fileno(file.getFP()), F_SETFL, O_NONBLOCK) != -1); 
+bool nonblocking(ref File file) {
+  version(Posix) {
+    return(fcntl(fileno(file.getFP()), F_SETFL, O_NONBLOCK) != -1); 
+  }else{
+    return(false);
+  }
 }
 
 class Process : Thread {
