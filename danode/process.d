@@ -14,7 +14,6 @@ version(Posix) {
   import core.sys.posix.fcntl : fcntl, F_SETFL, O_NONBLOCK;
 }
 
-
 struct WaitResult {
   bool terminated;           // Is the process terminated
   int status;                // Exit status when terminated
@@ -75,7 +74,7 @@ class Process : Thread {
     }
 
      // Output/Errors so far
-    final @property const(char)[] output(long from) const { 
+    final @property const(char)[] output(ptrdiff_t from) const { 
       synchronized { if(errbuffer.data.length == 1){ return(outbuffer.data[from .. $]); } return errbuffer.data[from .. $]; }
     }
 
