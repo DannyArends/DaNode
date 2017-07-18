@@ -53,12 +53,12 @@ class FileInfo : Payload {
     final @property SysTime       mtime() const { if(!realfile){ return btime; } return path.timeLastModified(); }
     final @property long          ready() { return(true); }
     final @property PayLoadType   type() const { return(PayLoadType.Message); }
-    final @property long          length() const { if(!realfile){ return 0; } return cast(long)(path.getSize()); }
+    final @property ptrdiff_t     length() const { if(!realfile){ return 0; } return to!ptrdiff_t(path.getSize()); }
     final @property long          buffersize() const { return cast(long)(buf.length); }
     final @property string        mimetype() const { return mime(path); }
     final @property StatusCode    statuscode() const { return StatusCode.Ok; }
 
-    final char[] bytes(long from, long maxsize = 1024){ synchronized {
+    final char[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 1024){ synchronized {
       if(!realfile){ return []; }
       if(needsupdate) buffer();
       if(!buffered){
@@ -71,7 +71,7 @@ class FileInfo : Payload {
         }catch(Exception e){ writefln("[WARN]   exception %s while streaming file: %s", e.msg, path); }
         return(slice);
       }else if(from < buf.length){
-        return(cast(char[]) buf[from .. cast(ulong)fmin(from+maxsize, $)]);
+        return(cast(char[]) buf[from .. to!ptrdiff_t(fmin(from+maxsize, $))]);
       }
       return([]);
     } }
