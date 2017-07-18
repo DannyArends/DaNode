@@ -23,7 +23,7 @@ interface Payload {
     @property SysTime             mtime();
     @property string              mimetype() const;
 
-    const(char)[] bytes(long from, long maxsize = 1024);
+    const(char)[] bytes(ptrdiff_t from, long maxsize = 1024);
 }
 
 class CGI : Payload {
