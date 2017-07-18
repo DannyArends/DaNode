@@ -92,10 +92,10 @@ version(SSL){
         return(inbuffer.data.length);
       } }
 
-      override void send(ref Response response, Socket socket, long maxsize = 4096){ synchronized {
+      override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096){ synchronized {
         auto slice = response.bytes(maxsize);
         if(ssl is null) return;
-        long send = SSL_write(ssl, cast(void*) slice, cast(int) slice.length);
+        ptrdiff_t send = SSL_write(ssl, cast(void*) slice, cast(int) slice.length);
         if(send >= 0) {
           response.index += send; modtime = Clock.currTime(); senddata[requests] += send;
           if(response.index >= response.length) response.completed = true;
