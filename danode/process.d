@@ -19,15 +19,15 @@ struct WaitResult {
   int status;                // Exit status when terminated
 }
 
-int readpipe(ref Pipe pipe){
+int readpipe(ref Pipe pipe, int verbose = NORMAL){
   File fp = pipe.readEnd;
   try{
     if(fp.isOpen()){
-      if(!nonblocking(fp)) writeln("[WARN]   unable to create nonblocking pipe for command");
+      if(!nonblocking(fp) && verbose >= DEBUG) writeln("[WARN]   unable to create nonblocking pipe for command");
       return(fgetc(fp.getFP()));
     }
   }catch(Exception e){
-    writefln("[WARN]   exception during readpipe command");
+    writefln("[WARN]   Exception during readpipe command: %s", e.msg);
     fp.close();
   }
   return(EOF);

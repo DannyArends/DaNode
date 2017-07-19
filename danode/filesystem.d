@@ -11,7 +11,7 @@ class FileInfo : Payload {
     string    path;
     SysTime   btime;
     bool      buffered = false;
-    ubyte[]   buf;
+    char[]    buf;
     char[]    slice;
 
   public:
@@ -26,14 +26,14 @@ class FileInfo : Payload {
     }
 
     final void unbuffer(int verbose = NORMAL) {
-      ubyte[]   buf   = null;
+      char[]    buf   = null;
       char[]    slice = null;
       buffered        = false;
     }
 
     final bool buffer(long maxsize = 4096, int verbose = NORMAL) { synchronized {
       if(length > 0 && length < maxsize && needsupdate(verbose)){
-        buf = new ubyte[](length);
+        buf = new char[](length);
         try{
           auto fp = new File(path, "rb");
           fp.rawRead(buf);
@@ -48,7 +48,7 @@ class FileInfo : Payload {
       return(false);
     } }
 
-    final @property string        content(){ return(cast(string)bytes(0, length)); }
+    final @property string        content(){ return( to!string(bytes(0, length)) ); }
     final @property bool          realfile() const { return(path.exists()); }
     final @property SysTime       mtime() const { if(!realfile){ return btime; } return path.timeLastModified(); }
     final @property long          ready() { return(true); }
@@ -62,16 +62,16 @@ class FileInfo : Payload {
       if(!realfile){ return []; }
       if(needsupdate) buffer();
       if(!buffered){
-        buf = new ubyte[](maxsize);
+        buf = new char[](maxsize);
         try{
           auto fp = new File(path, "rb");
           fp.seek(from);
-          slice = cast(char[])fp.rawRead(buf);
+          slice = fp.rawRead!char(buf);
           fp.close();
         }catch(Exception e){ writefln("[WARN]   exception %s while streaming file: %s", e.msg, path); }
         return(slice);
       }else if(from < buf.length){
-        return(cast(char[]) buf[from .. to!ptrdiff_t(fmin(from+maxsize, $))]);
+        return( buf[from .. to!ptrdiff_t(fmin(from+maxsize, $))] );
       }
       return([]);
     } }
@@ -111,7 +111,7 @@ class FileSystem {
       Domain domain;
       foreach (DirEntry f; dirEntries(dname, SpanMode.depth)){ if(f.isFile()){
         string shortname = replace(f.name[dname.length .. $], "\\", "/");
-        writefln("File: %s -> %s", f.name, shortname);
+        writefln("[SCAN]   File: %s -> %s", f.name, shortname);
         if(!domain.files.has(shortname)){
           domain.files[shortname] = new FileInfo(f.name);
           domain.entries++;
@@ -126,7 +126,6 @@ class FileSystem {
     final string localroot(string hostname) const { return(format("%s%s",this.root, hostname)); }
 
     final FileInfo file(string localroot, string path, int verbose = NORMAL){ synchronized {
-      writeln(domains[localroot].files);
       if(!domains[localroot].files.has(path) && exists(format("%s%s", localroot, path))){
         if(logger.verbose >= INFO) writefln("[FILES]  new file %s, rescanning index: %s", path, localroot);
         domains[localroot] = scan(localroot);

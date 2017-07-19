@@ -6,7 +6,7 @@ import core.thread : Thread;
 import std.array : Appender, appender;
 import std.datetime : Clock, dur, SysTime, Duration;
 import std.socket : AddressFamily, InternetAddress, ProtocolType, Socket, SocketSet, SocketType, SocketOption, SocketOptionLevel;
-import std.stdio : writefln, stdin;
+import std.stdio : writeln, writefln, stdin;
 import std.string : startsWith, format, chomp;
 import danode.functions : Msecs, sISelect;
 import danode.client : DriverInterface, Client, HTTP;
@@ -127,6 +127,13 @@ class Server : Thread {
     }
 }
 
+void parseKeyInput(ref Server server){
+  string line = chomp(stdin.readln());
+  if(line.startsWith("quit")) server.stop();
+  if(line.startsWith("info")) server.info();
+  if(line.startsWith("verbose")) server.verbose(line);
+}
+
 void main(string[] args) {
   version(unittest){ ushort port     = 8080; }else{ ushort port     = 80; }
   int    backlog  = 100;
@@ -141,13 +148,13 @@ void main(string[] args) {
   }else{
     auto server = new Server(port, backlog, verbose);
     server.start();
-    string line;
+    version(Windows) {
+      writeln("[WARN]   -k has been set to true, we cannot handle keyboard input under windows at the moment");
+      keyoff = true;
+    }
     while(server.running){
       if(!keyoff){
-        line = chomp(stdin.readln());
-        if(line.startsWith("quit")) server.stop();
-        if(line.startsWith("info")) server.info();
-        if(line.startsWith("verbose")) server.verbose(line);
+        server.parseKeyInput();
       }
       fflush(stdout);
       Thread.sleep(dur!"msecs"(250));
