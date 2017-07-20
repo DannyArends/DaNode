@@ -32,9 +32,9 @@ class Server : Thread {
     }
 
   public:
-    this(ushort port = 80, int backlog = 100, int verbose = NORMAL) {
+    this(ushort port = 80, int backlog = 100, string wwwRoot = "./www/", int verbose = NORMAL) {
       this.starttime = Clock.currTime();            // Start the timer
-      this.router = new Router(verbose);            // Start the router
+      this.router = new Router(wwwRoot, verbose);   // Start the router
       this.socket = initialize(port, backlog);      // Create the HTTP socket
       version(SSL) {
         this.sslsocket = initialize(443, backlog);  // Create the SSL / HTTPs socket
@@ -151,7 +151,7 @@ void main(string[] args) {
   version(unittest){
     // Do nothing, unittests will run
   }else{
-    auto server = new Server(port, backlog, verbose);
+    auto server = new Server(port, backlog, wwwRoot, verbose);
     version(SSL) {
       server.initSSL(certDir, keyFile);  // Load SSL certificates, using the server key
     }

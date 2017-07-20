@@ -22,9 +22,9 @@ class Router {
     Log             logger;
 
   public:
-    this(int verbose = NORMAL){
+    this(string wwwRoot = "./www/", int verbose = NORMAL){
       this.logger = new Log(verbose);
-      this.filesystem = new FileSystem(logger);
+      this.filesystem = new FileSystem(logger, wwwRoot);
     }
 
     void logrequest(in ClientInterface client, in Request request, in Response response) {
