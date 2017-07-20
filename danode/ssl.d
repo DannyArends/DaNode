@@ -75,8 +75,8 @@ version(SSL){
           writeln("[HTTPS]  HTTPS driver failed, reason: no certificate");
           socket.close();
         }
-        this.starttime = Clock.currTime();           /// Time in ms since this process came alive
-        this.modtime = Clock.currTime();           /// Time in ms since this process was modified
+        this.starttime = Clock.currTime();            /// Time in ms since this process came alive
+        this.modtime = Clock.currTime();              /// Time in ms since this process was modified
         try {
           this.address = socket.remoteAddress();
         } catch(Exception e) {
@@ -133,7 +133,7 @@ version(SSL){
 
   // loads all crt files in the certDir, using keyfile: server.key
   SSLcontext* initSSL(Server server, string certDir = ".ssl/", string keyFile = ".ssl/server.key", VERSION v = SSL23) {
-    writefln("[HTTPS]  loading Deimos.openSSL, from %s using key: %s, SSL:%s", certDir, certDir, v);
+    writefln("[HTTPS]  loading Deimos.openSSL, certificate: %s, priv.key: %s, SSL:%s", certDir, keyFile, v);
     SSL_library_init();
     OpenSSL_add_all_algorithms();
     SSL_load_error_strings();
@@ -145,6 +145,14 @@ version(SSL){
     }
     if (!isDir(certDir)) {
       writefln("[WARN]   SSL certificate folder '%s' not a folder", certDir);
+      return contexts;
+    }
+    if (!exists(keyFile)) {
+      writefln("[WARN]   SSL private key file: '%s' not found", certDir);
+      return contexts;
+    }
+    if (!isFile(keyFile)) {
+      writefln("[WARN]   SSL private key file: '%s' not a file", certDir);
       return contexts;
     }
     string hostname;

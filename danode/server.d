@@ -38,7 +38,6 @@ class Server : Thread {
       this.socket = initialize(port, backlog);      // Create the HTTP socket
       version(SSL) {
         this.sslsocket = initialize(443, backlog);  // Create the SSL / HTTPs socket
-        initSSL(this);                              // Initialize the SSL certificates
         backlog = (backlog * 2) + 1;                // Enlarge the backlog, for N clients and 1 ssl server socket
       }
       backlog = backlog + 1;                        // Add room for the server socket
@@ -139,14 +138,23 @@ void main(string[] args) {
   int    backlog  = 100;
   int    verbose  = NORMAL;
   bool   keyoff   = false;
+  string certDir  = ".ssl/";
+  string keyFile  = ".ssl/server.key";
+  string wwwRoot  = "www";
   getopt(args, "port|p",     &port,         // Port to listen on
                "backlog|b",  &backlog,      // Backlog of clients supported
                "keyoff|k",   &keyoff,       // Keyboard on or off
+               "certDir",    &certDir,      // Location of SSL certificates
+               "keyFile",    &keyFile,      // Server private key
+               "wwwRoot",    &wwwRoot,      // Server www root folder
                "verbose|v",  &verbose);     // Verbose level (via commandline)
   version(unittest){
     // Do nothing, unittests will run
   }else{
     auto server = new Server(port, backlog, verbose);
+    version(SSL) {
+      server.initSSL(certDir, keyFile);  // Load SSL certificates, using the server key
+    }
     server.start();
     version(Windows) {
       writeln("[WARN]   -k has been set to true, we cannot handle keyboard input under windows at the moment");
