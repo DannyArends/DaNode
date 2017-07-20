@@ -121,12 +121,9 @@ Then add the following lines to this hostfile using your favourite editor:
 Save the file with these lines added, then open a browser and navigate to: 
 http://www.domain.xxx, you should now see the content of your php / html file.
 
-##### Languages with supported API
+###### Supported API overview
 
-     PHP, PYTHON, D, R
-
-
-###### supported API overview
+Languages with supported APIs: PHP, PYTHON, D, R
 
 See: [api/README.md](api/README.md)
 
