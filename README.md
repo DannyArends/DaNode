@@ -5,7 +5,7 @@ master: [![Build Status](https://travis-ci.org/DannyArends/DaNode.svg?branch=mas
 
 development: [![Build Status](https://travis-ci.org/DannyArends/DaNode.svg?branch=development)](https://travis-ci.org/DannyArends/DaNode)
 
-##### STRUCTURE
+##### Structure
 
 The DaNode server is designed to handle multiple websites independent and simultaneously. 
 The DaNode front-end routes incoming HTTP requests to the correct web folder. It allows 
@@ -14,7 +14,7 @@ Results from CGI scripts monitored and parsed back into the DaNode web server, (
 possible header errors, infinite execution of scripts) and results are send to the 
 requesting client via HTTP.
 
-##### GETTING DaNode
+##### Get DaNode
 
 Download and compile the web server:
 
@@ -77,14 +77,14 @@ The content of the ./sh/run shell script:
 This starts the server, does not allow for keyboard command (-k) has a backlog (-b) 
 of 100 simultaneous connection (per port), and produces more log output (-v 2)
 
-##### EXAMPLE WEBSITES
+##### Example websites
 
 See the [www/](www/) folder for a number of example web sites. After compiling the web 
 server, run the web server and the [www/localhost/](www/localhost/) folder is available 
 at http://localhost/ or http://127.0.0.1/ from the browser. For the other examples in 
 the [www/](www/) folder you will have to update your hosts file.
 
-##### CREATE A PHP ENABLED WEBSITE
+##### Create a PHP enabled website
 
 To create a simple PHP enabled web site first download and install DaNode, the next 
 step is to create a directory for the new website, by executing the following commands 
@@ -106,7 +106,7 @@ the index.php page:
     allowcgi     = yes
     redirecturl  = index.php
 
-###### UPDATE THE HOSTS FILE
+##### Update the hosts file
 
 If you do not own the domain name you want to host, use the /etc/hosts file to redirect 
 requests from the domain name to your local IP address using the hosts file:
@@ -121,24 +121,11 @@ Then add the following lines to this hostfile using your favourite editor:
 Save the file with these lines added, then open a browser and navigate to: 
 http://www.domain.xxx, you should now see the content of your php / html file.
 
-###### Supported API overview
+##### Supported back-end languages
 
 Languages with supported APIs: PHP, PYTHON, D, R
 
 See: [api/README.md](api/README.md)
-
-##### Advanced config options
-
-  - WEBSITE-CONFIG
-   - Sub-domain redirecting, such as http://www.test.nl to http://test.nl
-   - Directory browsing
-   - Custom index and error pages
-   - Executing different languages and the API
-   - Server overview page at http://127.0.0.1/
-
-  - FILEBUFFER
-   - Small files are buffered and served from memory
-   - Stream large downloads using a flexible resizable buffer
 
 ##### Contributing
 
@@ -149,7 +136,7 @@ Fell free to also post comments on commits.
 
 Or be a maintainer, and adopt (the documentation of) a function.
 
-##### LICENCE
+##### Licence
 
 (c) 2010-2016 Danny Arends
 
