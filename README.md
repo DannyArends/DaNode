@@ -37,9 +37,9 @@ Confirm that the web server is running by going to: http://127.0.0.1:8080/
 
 ##### Enable HTTPs support
 
-To compile the server with HTTPS support (binds to port 443), use the following command:
+To compile the server with HTTPS support (binds to port 443), use the dub sll configuration:
 
-    dub build --config=ssl --force
+    dub build --config=ssl
 
 or, compile using the compile script:
 
