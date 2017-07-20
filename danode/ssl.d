@@ -4,6 +4,7 @@ version(SSL){
 
   import std.socket;
   import std.file;
+  import std.path : baseName;
   import std.traits;
   import std.string;
   import std.algorithm;
@@ -19,6 +20,8 @@ version(SSL){
   import danode.server;
   import danode.client : Response, Clock;
 
+  // SSL context structure, stored relation between hostname 
+  // and the SSL context, should be allocated only once available to C, and deallocated at exit
   struct SSLcontext {
     char[256]   hostname;
     SSL_CTX*    context;
@@ -31,10 +34,10 @@ version(SSL){
 
   extern (C)
   {
-    __gshared int             ncontext;
-    __gshared SSLcontext*     contexts;         // SSL / HTTPs context
+    __gshared int             ncontext;         // How many contexts are available
+    __gshared SSLcontext*     contexts;         // SSL / HTTPs contexts (allocated globally from C)
 
-    /* Switch SSL contexts by hostname lookup */
+    // C callback function to switch SSL contexts after hostname lookup
     static void switchContext(SSL* ssl, int *ad, void *arg){
       string hostname = to!(string)(cast(const(char*)) SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name));
       writefln("[HTTPS]  Looking for hostname: %s", hostname);
@@ -114,19 +117,21 @@ version(SSL){
     return ctx;
   }
 
-  SSLcontext loadContext(string name, string certDir, string keyFile){
+  // loads an SSL context for hostname from the .crt file at path;
+  SSLcontext loadContext(string path, string hostname, string keyFile){
     SSLcontext ctx;
-    size_t certNameEnd = (name.length - 4);
-    for(size_t x = certDir.length; x < certNameEnd; x++) {
-      ctx.hostname[x - certDir.length] = name[x];
+    size_t certNameEnd = (path.length - 4);
+    for(size_t x = 0; x < hostname.length; x++) {
+      ctx.hostname[x] = hostname[x];
     }
-    ctx.hostname[certNameEnd - certDir.length] = '\0';
-    ctx.context = getCTX(name, keyFile);
+    ctx.hostname[hostname.length] = '\0';
+    ctx.context = getCTX(path, keyFile);
     writefln("[INFO]   context created for certificate: %s", to!string(ctx.hostname.ptr));
     SSL_CTX_callback_ctrl(ctx.context,SSL_CTRL_SET_TLSEXT_SERVERNAME_CB, cast(ExternC!(void function())) &switchContext);
     return(ctx);
   }
 
+  // loads all crt files in the certDir, using keyfile: server.key
   SSLcontext* initSSL(Server server, string certDir = ".ssl/", string keyFile = ".ssl/server.key", VERSION v = SSL23) {
     writefln("[HTTPS]  loading Deimos.openSSL, from %s using key: %s, SSL:%s", certDir, certDir, v);
     SSL_library_init();
@@ -142,13 +147,17 @@ version(SSL){
       writefln("[WARN]   SSL certificate folder '%s' not a folder", certDir);
       return contexts;
     }
+    string hostname;
     foreach (DirEntry d; dirEntries(certDir, SpanMode.shallow)) {
-      if(d.name.endsWith(".crt")){
-        writefln("[INFO]   loading certificate from file: %s", d.name);
-        contexts = cast(SSLcontext*) realloc(contexts, (ncontext+1) * SSLcontext.sizeof);
-        contexts[ncontext] = loadContext(d.name, certDir,keyFile);
-        writefln("[HTTPS]  stored certificate: %s in context: %d", to!string(contexts[ncontext].hostname.ptr), ncontext);
-        ncontext++;
+      if(d.name.endsWith(".crt")) {
+        hostname = baseName(d.name, ".crt");
+        if(hostname.length < 255) {
+          writefln("[INFO]   loading certificate from file: %s", d.name);
+          contexts = cast(SSLcontext*) realloc(contexts, (ncontext+1) * SSLcontext.sizeof);
+          contexts[ncontext] = loadContext(d.name, hostname, keyFile);
+          writefln("[HTTPS]  stored certificate: %s in context: %d", to!string(contexts[ncontext].hostname.ptr), ncontext);
+          ncontext++;
+        }
       }
     }
     writefln("[HTTPS]  loaded %s SSL certificates", ncontext);
