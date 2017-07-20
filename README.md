@@ -50,9 +50,10 @@ Start the web server on port 80 and 443:
 
     ./danode/server
 
-Make sure to have rights to port 80 and 443, also you need a server private key and domain 
-certificates. I use Let's Encrypt to secure my own homepage. Setup instructions for Let's 
-Encrypt can be found at the [sh/letsEncrypt](sh/letsEncrypt) sh file
+After starting the server, confirm that the web server is running by going to http://127.0.0.1/ 
+and https://127.0.0.1/ and make sure you have enough user rights to bind port 80 and 443, a server 
+private key and domain certificates are required. I use Let's Encrypt to secure my own homepage. 
+Setup instructions for Let's Encrypt can be found in the [sh/letsEncrypt](sh/letsEncrypt) file.
 
 ##### Troubleshooting: [ERROR]  unable to bind socket on port 80
 
@@ -67,15 +68,14 @@ connections to port 80 (and 443, when using the ssl version), then start the web
 
     ./sh/run
 
+##### Command-line parameters
+
 The content of the ./sh/run shell script:
 
     nohup authbind danode/server -k -b 100 -v 2 > server.log 2>&1 &
 
 This starts the server, does not allow for keyboard command (-k) has a backlog (-b) 
 of 100 simultaneous connection (per port), and produces more log output (-v 2)
-
-After starting the server, confirm that the web server is running by going 
-to http://127.0.0.1/ and https://127.0.0.1/
 
 ##### EXAMPLE WEBSITES
 
