@@ -105,42 +105,49 @@ version(SSL){
       override bool isSecure() { return(true); }
   }
 
-  SSL_CTX* getCTX(string CertFile, string KeyFile) {
+  SSL_CTX* getCTX(string CertFile, string keyFile) {
     SSL_CTX *ctx = SSL_CTX_new(SSLv23_server_method());
     sslAssert(!(ctx is null));
     sslAssert(SSL_CTX_use_certificate_file(ctx, cast(const char*) toStringz(CertFile), SSL_FILETYPE_PEM) > 0);
-    sslAssert(SSL_CTX_use_PrivateKey_file(ctx, cast(const char*) KeyFile, SSL_FILETYPE_PEM) > 0);
+    sslAssert(SSL_CTX_use_PrivateKey_file(ctx, cast(const char*) keyFile, SSL_FILETYPE_PEM) > 0);
     sslAssert(SSL_CTX_check_private_key(ctx) > 0);
     return ctx;
   }
 
-  SSLcontext* initSSL(Server server, string CertDir = ".ssl/", string KeyFile = ".ssl/server.key", VERSION v = SSL23) {
-    writefln("[HTTPS]  loading Deimos.openSSL, from %s using key: %s, SSL:%s", CertDir, KeyFile, v);
+  SSLcontext loadContext(string name, string certDir, string keyFile){
+    SSLcontext ctx;
+    size_t certNameEnd = (name.length - 4);
+    for(size_t x = certDir.length; x < certNameEnd; x++) {
+      ctx.hostname[x - certDir.length] = name[x];
+    }
+    ctx.hostname[certNameEnd - certDir.length] = '\0';
+    ctx.context = getCTX(name, keyFile);
+    writefln("[INFO]   context created for certificate: %s", to!string(ctx.hostname.ptr));
+    SSL_CTX_callback_ctrl(ctx.context,SSL_CTRL_SET_TLSEXT_SERVERNAME_CB, cast(ExternC!(void function())) &switchContext);
+    return(ctx);
+  }
+
+  SSLcontext* initSSL(Server server, string certDir = ".ssl/", string keyFile = ".ssl/server.key", VERSION v = SSL23) {
+    writefln("[HTTPS]  loading Deimos.openSSL, from %s using key: %s, SSL:%s", certDir, certDir, v);
     SSL_library_init();
     OpenSSL_add_all_algorithms();
     SSL_load_error_strings();
     contexts = cast(SSLcontext*) malloc(0 * SSLcontext.sizeof);
-    writefln("[HTTPS]  Certificate folder: %d", exists(CertDir));
-    if (!exists(CertDir)) {
-      writefln("[WARN]   SSL certificate folder '%s' not found", CertDir);
+    writefln("[HTTPS]  Certificate folder: %d", exists(certDir));
+    if (!exists(certDir)) {
+      writefln("[WARN]   SSL certificate folder '%s' not found", certDir);
       return contexts;
     }
-    if (!isDir(CertDir)) {
-      writefln("[WARN]   SSL certificate folder '%s' not a folder", CertDir);
+    if (!isDir(certDir)) {
+      writefln("[WARN]   SSL certificate folder '%s' not a folder", certDir);
       return contexts;
     }
-    foreach (DirEntry d; dirEntries(CertDir, SpanMode.shallow)) {
+    foreach (DirEntry d; dirEntries(certDir, SpanMode.shallow)) {
       if(d.name.endsWith(".crt")){
         writefln("[INFO]   loading certificate from file: %s", d.name);
-        SSLcontext ctx;
-        ctx.hostname = d.name[CertDir.length .. ($-4)] ~ "\0";
-        ctx.context = getCTX(d.name, KeyFile);
-        writefln("[INFO]   context created for certificate: %s", to!string(ctx.hostname.ptr));
-
-        SSL_CTX_set_tlsext_servername_callback(ctx.context, cast(ExternC!(void function())) &switchContext);
         contexts = cast(SSLcontext*) realloc(contexts, (ncontext+1) * SSLcontext.sizeof);
-        contexts[ncontext] = ctx;
-        writefln("[HTTPS]  stored certificate: %s in context: %d", to!string(ctx.hostname.ptr), ncontext);
+        contexts[ncontext] = loadContext(d.name, certDir,keyFile);
+        writefln("[HTTPS]  stored certificate: %s in context: %d", to!string(contexts[ncontext].hostname.ptr), ncontext);
         ncontext++;
       }
     }
