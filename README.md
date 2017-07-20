@@ -20,23 +20,47 @@ Download and compile the web server:
 
     git clone https://github.com/DannyArends/DaNode.git
     cd DaNode
+
+Build DaNode using the dub package manager:
+
+    dub build
+
+or, compile using the compile script:
+
     ./sh/compile
 
-To start the web server at a specific port (e.g. 8080) type:
+Then, start the web server at a specific port (e.g. 8080) type:
 
     ./danode/server -p 8080
 
 Confirm that the web server is running by going to: http://127.0.0.1:8080/
 
-To compile the server with https support (binds to port 443), use the following command:
+##### Create HTTPs support
+
+To compile the server with HTTPS support (binds to port 443), use the following command:
+
+    dub build --config=ssl --force
+
+or, compile using the compile script:
 
     ./sh/compile ssl
+
+Start the web server on port 80 and 443:
+
     ./danode/server
 
-Starting the server on port 80 and 443 might fail, when you do not have appropriate 
-rights on the system.
+Make sure to have rights to port 80 and 443, also you need a server private key and domain 
+certificates. I use Let's Encrypt to secure my own homepage. Setup instructions for Let's 
+Encrypt can be found at the [sh/letsEncrypt](sh/letsEncrypt) sh file
 
-To start the web server in deamon (background) mode at port 80, I use _nohup_ and _authbind_. 
+##### Troubleshooting: [ERROR]  unable to bind socket on port 80
+
+Starting the server on port 80 and 443 might fail, when you do not have appropriate 
+rights on the system. First check if you can start the server on another port:
+
+    ./danode/server -p 8080
+
+I use _nohup_ and _authbind_ to start the web server in deamon (background) mode at port 80, and 443 (SSL). 
 First, install _nohup_ and _authbind_ via your package manager, configure _authbind_ to allow 
 connections to port 80 (and 443, when using the ssl version), then start the webserver by running:
 
@@ -96,19 +120,13 @@ Then add the following lines to this hostfile using your favourite editor:
 Save the file with these lines added, then open a browser and navigate to: 
 http://www.domain.xxx, you should now see the content of your php / html file.
 
-##### Languages with web API supported
+##### Languages with supported API
 
      PHP, PYTHON, D, R
 
-###### webAPI's overview
+###### supported API overview
 
-             GET   POST    COOKIES     SERVER    FILE     CONFIG
-     PHP     V     V       V           V         V        V
-     PYTHON  V     V
-     D       V     V       V           V         V
-     R       V     V                   V         V
-
-For more information see: [api/README.md](api/README.md)
+See: [api/README.md](api/README.md)
 
 ##### Advanced config options
 
@@ -123,7 +141,16 @@ For more information see: [api/README.md](api/README.md)
    - Small files are buffered and served from memory
    - Stream large downloads using a flexible resizable buffer
 
-LICENCE
+##### Contributing
 
-(c) 2010-2014 Danny Arends
+Want to contribute? Great! Contribute to DaNode by starring or forking on Github, 
+and feel free to start an issue or sending a pull request.
+
+Fell free to also post comments on commits.
+
+Or be a maintainer, and adopt (the documentation of) a function.
+
+##### LICENCE
+
+(c) 2010-2016 Danny Arends
 
