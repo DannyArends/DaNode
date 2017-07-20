@@ -35,7 +35,7 @@ Then, start the web server at a specific port (e.g. 8080) type:
 
 Confirm that the web server is running by going to: http://127.0.0.1:8080/
 
-##### Create HTTPs support
+##### Enable HTTPs support
 
 To compile the server with HTTPS support (binds to port 443), use the following command:
 
