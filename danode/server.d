@@ -140,7 +140,7 @@ void main(string[] args) {
   bool   keyoff   = false;
   string certDir  = ".ssl/";
   string keyFile  = ".ssl/server.key";
-  string wwwRoot  = "www";
+  string wwwRoot  = "./www/";
   getopt(args, "port|p",     &port,         // Port to listen on
                "backlog|b",  &backlog,      // Backlog of clients supported
                "keyoff|k",   &keyoff,       // Keyboard on or off
