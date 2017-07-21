@@ -6,15 +6,14 @@ import core.thread : Thread;
 import std.array : Appender, appender;
 import std.datetime : Clock, dur, SysTime, Duration;
 import std.socket : AddressFamily, InternetAddress, ProtocolType, Socket, SocketSet, SocketType, SocketOption, SocketOptionLevel;
-import std.stdio : writefln, stdin;
+import std.stdio : writeln, writefln, stdin;
 import std.string : startsWith, format, chomp;
 import danode.functions : Msecs, sISelect;
 import danode.client : DriverInterface, Client, HTTP;
 import danode.router : Router;
 import danode.log;
 import danode.serverconfig : ServerConfig;
-version(SSL){
-  import deimos.openssl.ssl;
+version(SSL) {
   import danode.ssl : HTTPS, initSSL, closeSSL;
 }
 import std.getopt : getopt;
@@ -32,13 +31,12 @@ class Server : Thread {
     }
 
   public:
-    this(ushort port = 80, int backlog = 100, int verbose = NORMAL) {
+    this(ushort port = 80, int backlog = 100, string wwwRoot = "./www/", int verbose = NORMAL) {
       this.starttime = Clock.currTime();            // Start the timer
-      this.router = new Router(verbose);            // Start the router
+      this.router = new Router(wwwRoot, verbose);   // Start the router
       this.socket = initialize(port, backlog);      // Create the HTTP socket
       version(SSL) {
         this.sslsocket = initialize(443, backlog);  // Create the SSL / HTTPs socket
-        initSSL(this);                              // Initialize the SSL certificates
         backlog = (backlog * 2) + 1;                // Enlarge the backlog, for N clients and 1 ssl server socket
       }
       backlog = backlog + 1;                        // Add room for the server socket
@@ -122,9 +120,16 @@ class Server : Thread {
       }
       socket.close();
       version(SSL) {
-        closeSSL(sslsocket);
+        sslsocket.closeSSL();
       }
     }
+}
+
+void parseKeyInput(ref Server server){
+  string line = chomp(stdin.readln());
+  if(line.startsWith("quit")) server.stop();
+  if(line.startsWith("info")) server.info();
+  if(line.startsWith("verbose")) server.verbose(line);
 }
 
 void main(string[] args) {
@@ -132,25 +137,34 @@ void main(string[] args) {
   int    backlog  = 100;
   int    verbose  = NORMAL;
   bool   keyoff   = false;
+  string certDir  = ".ssl/";
+  string keyFile  = ".ssl/server.key";
+  string wwwRoot  = "./www/";
   getopt(args, "port|p",     &port,         // Port to listen on
                "backlog|b",  &backlog,      // Backlog of clients supported
                "keyoff|k",   &keyoff,       // Keyboard on or off
+               "certDir",    &certDir,      // Location of SSL certificates
+               "keyFile",    &keyFile,      // Server private key
+               "wwwRoot",    &wwwRoot,      // Server www root folder
                "verbose|v",  &verbose);     // Verbose level (via commandline)
   version(unittest){
     // Do nothing, unittests will run
   }else{
-    auto server = new Server(port, backlog, verbose);
+    auto server = new Server(port, backlog, wwwRoot, verbose);
+    version(SSL) {
+      server.initSSL(certDir, keyFile);  // Load SSL certificates, using the server key
+    }
     server.start();
-    string line;
+    version(Windows) {
+      writeln("[WARN]   -k has been set to true, we cannot handle keyboard input under windows at the moment");
+      keyoff = true;
+    }
     while(server.running){
       if(!keyoff){
-        line = chomp(stdin.readln());
-        if(line.startsWith("quit")) server.stop();
-        if(line.startsWith("info")) server.info();
-        if(line.startsWith("verbose")) server.verbose(line);
+        server.parseKeyInput();
       }
       fflush(stdout);
-      Thread.sleep(dur!"msecs"(2));
+      Thread.sleep(dur!"msecs"(250));
     }
     writefln("[INFO]   Server shutting down: %d", server.running);
     server.info();

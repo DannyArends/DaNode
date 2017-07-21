@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# Setup some dependancies for the certbot-auto executable
+sudo apt-get install python-pip python-dev build-essential libffi-dev
+sudo pip install virtualenv
+
+# Download the certbot from eff.org
+wget https://dl.eff.org/certbot-auto
+
+# Make the script executable
+chmod a+x certbot-auto
+
+# Create a folder holding all the .ssl related files
+mkdir .ssl
+
+# Generate a Server Private key (ONLY ONCE, Backup your key !!)
+# [uncomment] openssl genrsa 4096 > .ssl/server.key
+# Create a backup of your key !
+# [uncomment] cp .ssl/server.key <backup>/server.key.backup
+
+# Secure via SSL the domain: mydomain.com using Let's Encrypt
+# - Generate certificate signing request for domain (? only once ?)
+# - Run the script in stand-alone mode, and request certificate for mydomain.com
+# - Copy the received certificate to the correct location and use the name: mydomain.com.crt
+# - Create folder, and move all the received files (cert, chain and parent) to a safe location
+
+openssl req -new -sha256 -key .ssl/server.key -subj "/" -reqexts SAN -config <(cat /etc/ssl/openssl.cnf <(printf "[SAN]\nsubjectAltName=DNS:mydomain.com,DNS:www.mydomain.com")) > .ssl/mydomain.nl.csr
+~/downloads/certbot-auto certonly --no-bootstrap --csr .ssl/mydomain.com.csr --standalone --email MyEmail@EMail.com --agree-tos
+cp 0000_cert.pem .ssl/mydomain.com.crt
+mkdir .ssl/mydomain.com/
+mv *.pem .ssl/mydomain.com/
+

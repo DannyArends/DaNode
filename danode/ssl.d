@@ -4,11 +4,12 @@ version(SSL){
 
   import std.socket;
   import std.file;
+  import std.path : baseName;
   import std.traits;
   import std.string;
   import std.algorithm;
   import core.thread;
-  import core.stdc.stdlib : malloc, realloc;
+  import core.stdc.stdlib : malloc, realloc, free;
   import std.conv : to;
   import std.stdio : writefln, writeln;
   import core.stdc.stdio;
@@ -19,6 +20,8 @@ version(SSL){
   import danode.server;
   import danode.client : Response, Clock;
 
+  // SSL context structure, stored relation between hostname 
+  // and the SSL context, should be allocated only once available to C, and deallocated at exit
   struct SSLcontext {
     char[256]   hostname;
     SSL_CTX*    context;
@@ -31,10 +34,10 @@ version(SSL){
 
   extern (C)
   {
-    __gshared int             ncontext;
-    __gshared SSLcontext*     contexts;         // SSL / HTTPs context
+    __gshared int             ncontext;         // How many contexts are available
+    __gshared SSLcontext*     contexts;         // SSL / HTTPs contexts (allocated globally from C)
 
-    /* Switch SSL contexts by hostname lookup */
+    // C callback function to switch SSL contexts after hostname lookup
     static void switchContext(SSL* ssl, int *ad, void *arg){
       string hostname = to!(string)(cast(const(char*)) SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name));
       writefln("[HTTPS]  Looking for hostname: %s", hostname);
@@ -57,74 +60,126 @@ version(SSL){
 
   class HTTPS : DriverInterface {
     private:
-      SSL*                ssl;
+      SSL* ssl = null;
 
     public:
       this(Socket socket, bool blocking = false) {
-        this.ssl = SSL_new(contexts[0].context);            // writefln("[INFO]   SSL created, using standard certificate contexts[0].context");
-        writefln("[HTTPS]  initial SSL tunnel created");
-        SSL_set_fd(this.ssl, socket.handle());              // writefln("[INFO]   Added socket handle");
-        sslAssert(SSL_accept(this.ssl) != -1);
-        this.socket           = socket;
-        this.socket.blocking  = blocking;
-        this.starttime        = Clock.currTime();           /// Time in ms since this process came alive
-        this.modtime          = Clock.currTime();           /// Time in ms since this process was modified
+        this.socket = socket;
+        if(ncontext > 0) {
+          this.ssl = SSL_new(contexts[0].context);            // writefln("[INFO]   SSL created, using standard certificate contexts[0].context");
+          writefln("[HTTPS]  initial SSL tunnel created");
+          SSL_set_fd(this.ssl, socket.handle());              // writefln("[INFO]   Added socket handle");
+          sslAssert(SSL_accept(this.ssl) != -1);
+          this.socket.blocking = blocking;
+        } else {
+          writeln("[HTTPS]  HTTPS driver failed, reason: no certificate");
+          socket.close();
+        }
+        this.starttime = Clock.currTime();            /// Time in ms since this process came alive
+        this.modtime = Clock.currTime();              /// Time in ms since this process was modified
         try {
-          this.address        = socket.remoteAddress();
+          this.address = socket.remoteAddress();
         } catch(Exception e) {
           writefln("[WARN]   unable to resolve requesting origin");
         }
         writeln("[HTTPS]  HTTPS driver finished");
       }
 
-      override long receive(Socket socket, long maxsize = 4096){ synchronized {
-        long received;
+      override ptrdiff_t receive(Socket socket, ptrdiff_t maxsize = 4096){ synchronized {
+        ptrdiff_t received;
+        if(ssl is null) return -1;
         char[] tmpbuffer = new char[](maxsize);
-        if((received = SSL_read(ssl, cast(void*) tmpbuffer, cast(int)maxsize)) > 0){
+        if((received = SSL_read(ssl, cast(void*) tmpbuffer, cast(int)maxsize)) > 0) {
           inbuffer.put(tmpbuffer[0 .. received]); modtime = Clock.currTime();
         }
         return(inbuffer.data.length);
       } }
 
-      override void send(ref Response response, Socket socket, long maxsize = 4096){ synchronized {
+      override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096){ synchronized {
         auto slice = response.bytes(maxsize);
-        long send = SSL_write(ssl, cast(void*) slice, cast(int) slice.length);
-        if(send >= 0){
+        if(ssl is null) return;
+        ptrdiff_t send = SSL_write(ssl, cast(void*) slice, cast(int) slice.length);
+        if(send >= 0) {
           response.index += send; modtime = Clock.currTime(); senddata[requests] += send;
           if(response.index >= response.length) response.completed = true;
         }
       } }
 
-      override bool isSecure(){ return(true); }
+      override bool isSecure() { return(true); }
   }
 
-  SSL_CTX* getCTX(string CertFile, string KeyFile) {
+  SSL_CTX* getCTX(string CertFile, string keyFile) {
     SSL_CTX *ctx = SSL_CTX_new(SSLv23_server_method());
     sslAssert(!(ctx is null));
     sslAssert(SSL_CTX_use_certificate_file(ctx, cast(const char*) toStringz(CertFile), SSL_FILETYPE_PEM) > 0);
-    sslAssert(SSL_CTX_use_PrivateKey_file(ctx, cast(const char*) KeyFile, SSL_FILETYPE_PEM) > 0);
+    sslAssert(SSL_CTX_use_PrivateKey_file(ctx, cast(const char*) keyFile, SSL_FILETYPE_PEM) > 0);
     sslAssert(SSL_CTX_check_private_key(ctx) > 0);
     return ctx;
   }
 
-  SSLcontext* initSSL(Server server, string CertDir = ".ssl/", string KeyFile = ".ssl/server.key", VERSION v = SSL23) {
-    writefln("[HTTPS]  loading Deimos.openSSL, from %s using key: %s, SSL:%s", CertDir, KeyFile, v);
+  bool hasCertificate(string hostname) {
+    writefln("[HTTPS]  '%s' certificate?", hostname);
+    string s;
+    for(size_t x = 0; x < ncontext; x++) {
+      s = to!string(contexts[x].hostname.ptr);
+      writefln("[HTTPS]  context: %s %s", hostname, s);
+      if(hostname.endsWith(s)) {
+        writefln("[HTTPS]  Switching SSL context to %s", hostname);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // loads an SSL context for hostname from the .crt file at path;
+  SSLcontext loadContext(string path, string hostname, string keyFile){
+    SSLcontext ctx;
+    size_t certNameEnd = (path.length - 4);
+    for(size_t x = 0; x < hostname.length; x++) {
+      ctx.hostname[x] = hostname[x];
+    }
+    ctx.hostname[hostname.length] = '\0';
+    ctx.context = getCTX(path, keyFile);
+    writefln("[INFO]   context created for certificate: %s", to!string(ctx.hostname.ptr));
+    SSL_CTX_callback_ctrl(ctx.context,SSL_CTRL_SET_TLSEXT_SERVERNAME_CB, cast(ExternC!(void function())) &switchContext);
+    return(ctx);
+  }
+
+  // loads all crt files in the certDir, using keyfile: server.key
+  SSLcontext* initSSL(Server server, string certDir = ".ssl/", string keyFile = ".ssl/server.key", VERSION v = SSL23) {
+    writefln("[HTTPS]  loading Deimos.openSSL, certificate: %s, priv.key: %s, SSL:%s", certDir, keyFile, v);
     SSL_library_init();
     OpenSSL_add_all_algorithms();
     SSL_load_error_strings();
     contexts = cast(SSLcontext*) malloc(0 * SSLcontext.sizeof);
-    foreach (DirEntry d; dirEntries(CertDir, SpanMode.shallow)){
-      if(d.name.endsWith(".crt")){
-        writefln("[INFO]   Loading certificate: %s", d.name);
-        SSLcontext ctx;
-        ctx.hostname = d.name[CertDir.length .. ($-4)] ~ "\0";
-        ctx.context = getCTX(d.name, KeyFile);
-        writeln(ctx);
-        SSL_CTX_set_tlsext_servername_callback(ctx.context, cast(ExternC!(void function())) &switchContext);
-        //SSL_CTX_set_tlsext_servername_arg(ctx.context, &server);
-        contexts = cast(SSLcontext*) realloc(contexts, (ncontext+1) * SSLcontext.sizeof);
-        contexts[ncontext] = ctx;
-        ncontext++;
+    writefln("[HTTPS]  Certificate folder: %d", exists(certDir));
+    if (!exists(certDir)) {
+      writefln("[WARN]   SSL certificate folder '%s' not found", certDir);
+      return contexts;
+    }
+    if (!isDir(certDir)) {
+      writefln("[WARN]   SSL certificate folder '%s' not a folder", certDir);
+      return contexts;
+    }
+    if (!exists(keyFile)) {
+      writefln("[WARN]   SSL private key file: '%s' not found", certDir);
+      return contexts;
+    }
+    if (!isFile(keyFile)) {
+      writefln("[WARN]   SSL private key file: '%s' not a file", certDir);
+      return contexts;
+    }
+    string hostname;
+    foreach (DirEntry d; dirEntries(certDir, SpanMode.shallow)) {
+      if(d.name.endsWith(".crt")) {
+        hostname = baseName(d.name, ".crt");
+        if(hostname.length < 255) {
+          writefln("[INFO]   loading certificate from file: %s", d.name);
+          contexts = cast(SSLcontext*) realloc(contexts, (ncontext+1) * SSLcontext.sizeof);
+          contexts[ncontext] = loadContext(d.name, hostname, keyFile);
+          writefln("[HTTPS]  stored certificate: %s in context: %d", to!string(contexts[ncontext].hostname.ptr), ncontext);
+          ncontext++;
+        }
       }
     }
     writefln("[HTTPS]  loaded %s SSL certificates", ncontext);
@@ -132,12 +187,14 @@ version(SSL){
   }
 
   void closeSSL(Socket socket) {
-    writefln("[HTTPS]  closing socket");
+    writefln("[INFO]   closing server SSL socket");
     socket.close();
+    writefln("[INFO]   cleaning up %d HTTPS contexts", ncontext);
     for(int x = 0; x < ncontext; x++) {
       // Free the different SSL contexts
       SSL_CTX_free(contexts[x].context);
     }
+    free(contexts);
   }
 
   void sslAssert(bool ret){ if (!ret) {

@@ -8,28 +8,37 @@ import std.array : Appender, appender;
 import core.thread : Thread;
 import std.process : Config, Pipe, pipe, spawnShell, tryWait, wait, kill;
 import danode.functions : Msecs;
-import core.sys.posix.fcntl : fcntl, F_SETFL, O_NONBLOCK;
 import core.stdc.stdio : fileno;
 import danode.log : NORMAL, INFO, DEBUG;
+version(Posix) {
+  import core.sys.posix.fcntl : fcntl, F_SETFL, O_NONBLOCK;
+}
 
 struct WaitResult {
   bool terminated;           // Is the process terminated
   int status;                // Exit status when terminated
 }
 
-int readpipe(ref Pipe pipe){
+int readpipe(ref Pipe pipe, int verbose = NORMAL){
   File fp = pipe.readEnd;
   try{
     if(fp.isOpen()){
-      if(nonblocking(fp)) return(fgetc(fp.getFP()));
-      writeln("[WARN]   unable to create nonblocking pipe for command");
+      if(!nonblocking(fp) && verbose >= DEBUG) writeln("[WARN]   unable to create nonblocking pipe for command");
+      return(fgetc(fp.getFP()));
     }
-  }catch(Exception e){ writefln("[WARN]   exception during readpipe command"); }
+  }catch(Exception e){
+    writefln("[WARN]   Exception during readpipe command: %s", e.msg);
+    fp.close();
+  }
   return(EOF);
 }
 
-bool nonblocking(ref File file){
- return(fcntl(fileno(file.getFP()), F_SETFL, O_NONBLOCK) != -1); 
+bool nonblocking(ref File file) {
+  version(Posix) {
+    return(fcntl(fileno(file.getFP()), F_SETFL, O_NONBLOCK) != -1); 
+  }else{
+    return(false);
+  }
 }
 
 class Process : Thread {
@@ -65,7 +74,7 @@ class Process : Thread {
     }
 
      // Output/Errors so far
-    final @property const(char)[] output(long from) const { 
+    final @property const(char)[] output(ptrdiff_t from) const { 
       synchronized { if(errbuffer.data.length == 1){ return(outbuffer.data[from .. $]); } return errbuffer.data[from .. $]; }
     }
 

@@ -35,10 +35,10 @@ abstract class DriverInterface {
     long[long]          senddata;            /// Size of data send per request
     SysTime             starttime;           /// Time in ms since this process came alive
     SysTime             modtime;             /// Time in ms since this process was last modified
-    Address             address;             /// Private  address field
+    Address             address;             /// Private address field
 
-    long receive(Socket conn, long maxsize = 4096);
-    void send(ref Response response, Socket conn, long maxsize = 4096);
+    ptrdiff_t receive(Socket conn, ptrdiff_t maxsize = 4096);
+    void send(ref Response response, Socket conn, ptrdiff_t maxsize = 4096);
     bool isSecure();
 }
 
@@ -65,7 +65,7 @@ class Client : Thread, ClientInterface {
         while(running && modified < maxtime){
           if(driver.receive(driver.socket) > 0){                                                // We've received new data
             if(!response.ready){                                                                // If we're not ready to respond yet
-              router.route(ip(), port(), request, response, to!string(driver.inbuffer.data));   // Parse the data and try to create a response (Could fail multiple times)
+              router.route(ip(), port(), request, response, to!string(driver.inbuffer.data), driver.isSecure());   // Parse the data and try to create a response (Could fail multiple times)
             }
             if(response.ready && !response.completed){                                        // We know what to respond, but haven't send all of it yet
               driver.send(response, driver.socket);                                           // Send the response, hit multiple times, send what you can and return
@@ -129,20 +129,21 @@ class Client : Thread, ClientInterface {
 class HTTP : DriverInterface {
   public:
     this(Socket socket, bool blocking = false){ // writefln("[HTTP]   driver constructor");
-      this.socket           = socket;
-      this.socket.blocking  = blocking;
-      this.starttime        = Clock.currTime();           /// Time in ms since this process came alive
-      this.modtime          = Clock.currTime();           /// Time in ms since this process was modified
-      try{
+      this.socket = socket;
+      this.socket.blocking = blocking;
+      this.starttime = Clock.currTime();           /// Time in ms since this process came alive
+      this.modtime = Clock.currTime();           /// Time in ms since this process was modified
+      try {
         this.address        = socket.remoteAddress();
-      } catch(Exception e){
+      } catch(Exception e) {
         writefln("[WARN]   unable to resolve requesting origin");
       }
     }
 
-    override long receive(Socket socket, long maxsize = 4096) {
-      long received;
+    override ptrdiff_t receive(Socket socket, ptrdiff_t maxsize = 4096) {
+      ptrdiff_t received;
       char[] tmpbuffer = new char[](maxsize);
+      if(!socket.isAlive()) return(-1);
       if((received = socket.receive(tmpbuffer)) > 0) {
         inbuffer.put(tmpbuffer[0 .. received]); modtime = Clock.currTime();
       }
@@ -150,8 +151,9 @@ class HTTP : DriverInterface {
       return(inbuffer.data.length);
     }
 
-    override void send(ref Response response, Socket socket, long maxsize = 4096) {
-      long send = socket.send(response.bytes(maxsize));
+    override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096) {
+      if(!socket.isAlive()) return;
+      ptrdiff_t send = socket.send(response.bytes(maxsize));
       if(send >= 0) {
         response.index += send; modtime = Clock.currTime(); senddata[requests] += send;
         if(response.index >= response.length) response.completed = true;

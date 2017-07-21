@@ -6,7 +6,8 @@
 	"importPaths": ["danode"],
 	"sourcePaths": ["danode"],
 	"mainSourceFile": "danode/server.d",
-	"targetPath": "server",
+	"targetPath": "danode",
+	"targetName": "server",
 	"configurations": [
   {
 		"name": "default",

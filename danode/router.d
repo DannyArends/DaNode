@@ -7,7 +7,7 @@ import std.string : indexOf;
 import danode.client : ClientInterface;
 import danode.httpstatus : StatusCode;
 import danode.request : Request;
-import danode.response : SERVERINFO, Response, redirect, create, notmodified, domainNotFound, serveCGI, serveStaticFile, serveDirectory, serveForbidden, notFound;
+import danode.response;
 import danode.webconfig : WebConfig;
 import danode.payload : Message, CGI;
 import danode.mimetypes : mime;
@@ -15,6 +15,9 @@ import danode.functions : from, has, isCGI, isFILE, isDIR, Msecs, htmltime, brow
 import danode.filesystem : FileSystem, FileInfo;
 import danode.post : parsepost, PostType, servervariables;
 import danode.log;
+version(SSL) {
+  import danode.ssl : hasCertificate;
+}
 
 class Router {
   private:
@@ -22,21 +25,21 @@ class Router {
     Log             logger;
 
   public:
-    this(int verbose = NORMAL){
+    this(string wwwRoot = "./www/", int verbose = NORMAL){
       this.logger = new Log(verbose);
-      this.filesystem = new FileSystem(logger);
+      this.filesystem = new FileSystem(logger, wwwRoot);
     }
 
     void logrequest(in ClientInterface client, in Request request, in Response response) {
       logger.write(client, request, response);
     }
 
-    final bool parse(in string ip, long port, ref Request request, ref Response response, in string inputSoFar) const {
-      long idx = inputSoFar.indexOf("\r\n\r\n");
+    final bool parse(in string ip, long port, ref Request request, ref Response response, in string inputSoFar, bool isSecure) const {
+      ptrdiff_t idx = inputSoFar.indexOf("\r\n\r\n");
       if(idx <= 0) idx = inputSoFar.indexOf("\n\n");
       if(idx <= 0) return(false);
       if(!response.created) {
-        request.parse(ip, port, inputSoFar[0 .. idx], inputSoFar[(idx + 4) .. $], logger.verbose);
+        request.parse(ip, port, inputSoFar[0 .. idx], inputSoFar[(idx + 4) .. $], isSecure, logger.verbose);
         response = request.create();
       } else {
         request.update(inputSoFar[(idx + 4) .. $]);
@@ -44,8 +47,8 @@ class Router {
       return(true);
     }
 
-    final void route(in string ip, long port, ref Request request, ref Response response, in string inputSoFar) {
-      if(!response.routed && parse(ip, port, request, response, inputSoFar)) {
+    final void route(in string ip, long port, ref Request request, ref Response response, in string inputSoFar, bool isSecure) {
+      if(!response.routed && parse(ip, port, request, response, inputSoFar, isSecure)) {
         if(parsepost(request, response, filesystem, logger.verbose)) {
           route(request, response);
         }
@@ -55,24 +58,34 @@ class Router {
     final void route(ref Request request, ref Response response, bool finalrewrite = false) {
       string localroot = filesystem.localroot(request.shorthost());
 
-      if(logger.verbose >= DEBUG){
+      if (logger.verbose >= DEBUG) {
         writefln("[DEBUG]  %s client %s:%s", (finalrewrite? "redirecting" : "routing"), request.ip, request.port);
         writefln("[INFO]   shorthost -> localroot: %s -> %s", request.shorthost(), localroot);
       }
 
-      if(request.shorthost() == "" || !exists(localroot)) // No domain requested, or we are not hosting it
+      if (request.shorthost() == "" || !exists(localroot)) // No domain requested, or we are not hosting it
         return response.domainNotFound(request);
 
       WebConfig config = WebConfig(filesystem.file(localroot, "/web.config"));
       string fqdn = config.domain(request.shorthost());
       string localpath = config.localpath(localroot, request.path);
 
-      if(logger.verbose >= DEBUG) {
+      if (logger.verbose >= DEBUG) {
         writefln("[DEBUG]  configfile at: %s%s", localroot, "/web.config");
         writefln("[DEBUG]  request.host: %s, fqdn: %s", request.host, fqdn);
         writefln("[DEBUG]  localpath: %s, exists ? %s", localpath, localpath.exists());
       }
-      if(request.host != fqdn) return response.redirect(request, fqdn, logger.verbose);  // Requested the wrong shortdomain
+
+      version(SSL){
+        // SSL is available, or requested the wrong shortdomain
+        if (request.isSecure != hasCertificate(fqdn) || request.host != fqdn) {
+          return response.redirect(request, fqdn, hasCertificate(fqdn), logger.verbose);
+        }
+      } else {  // Requested the wrong shortdomain
+        if (request.host != fqdn) {
+          return response.redirect(request, fqdn, false, logger.verbose);
+        }
+      }
 
       if(localpath.exists()) {  // Requested an existing resource
         if(localpath.isCGI() && config.allowcgi)

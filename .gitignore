@@ -3,7 +3,9 @@ www/rotationz.nl
 www/grassland.test
 www/localhost/ddoc
 danode/server
+danode/server.exe
 server
+server.exe
 
 server.crt
 server.csr

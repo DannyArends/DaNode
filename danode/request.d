@@ -14,7 +14,7 @@ import std.regex : regex, match;
 import danode.functions : interpreter, from, toD, mtoI;
 import danode.webconfig : WebConfig;
 import danode.post : PostItem, PostType;
-import danode.log : INFO, DEBUG;
+import danode.log;
 
 SysTime parseHtmlDate(const string datestr){ // 21 Apr 2014 20:20:13 CET
   SysTime ts =  SysTime(DateTime(-7, 1, 1, 1, 0, 0));
@@ -40,10 +40,11 @@ struct Request {
   SysTime           starttime;
   string            content;
   PostItem[string]  postinfo;
+  bool              isSecure;
   int               verbose;
 
-  final void parse(in string ip, long port, in string header, in string content, int verbose){
-    this.ip  = ip; this.port = port; this.content = content;
+  final void parse(in string ip, long port, in string header, in string content, bool isSecure = false, int verbose = NORMAL){
+    this.ip  = ip; this.port = port; this.content = content; this.isSecure = isSecure;
     this.setHeader(header);
     this.starttime = Clock.currTime();
     this.requestid = md5UUID(format("%s:%d-%s", ip, port, starttime));
@@ -74,13 +75,13 @@ struct Request {
   final void update(in string content){ this.content = content; }
 
   final @property string host() const { 
-    long i = headers.from("Host").indexOf(":");
+    ptrdiff_t i = headers.from("Host").indexOf(":");
     if(i > 0) return(headers.from("Host")[0 .. i]);
     return(headers.from("Host")); 
   }
 
   final @property ushort serverport() const {
-    long i = headers.from("Host").indexOf(":");
+    ptrdiff_t i = headers.from("Host").indexOf(":");
     if(i > 0){ return( to!ushort(headers.from("Host")[(i+1) .. $])); } 
     return(to!ushort(80));
   }
@@ -99,9 +100,9 @@ struct Request {
     return params;
   }
 
-  final @property string    path() const { long i = url.indexOf("?"); if(i > 0){ return(url[0 .. i]); }else{ return(url); } }
-  final @property string    query() const { long i = uri.indexOf("?"); if(i > 0){ return(uri[i .. $]); }else{ return("?"); } }
-  final @property string    uripath() const { long i = uri.indexOf("?"); if(i > 0){ return(uri[0 .. i]); }else{ return(uri); } }
+  final @property string    path() const { ptrdiff_t i = url.indexOf("?"); if(i > 0){ return(url[0 .. i]); }else{ return(url); } }
+  final @property string    query() const { ptrdiff_t i = uri.indexOf("?"); if(i > 0){ return(uri[i .. $]); }else{ return("?"); } }
+  final @property string    uripath() const { ptrdiff_t i = uri.indexOf("?"); if(i > 0){ return(uri[0 .. i]); }else{ return(uri); } }
   final @property bool      keepalive() const { return( toLower(headers.from("Connection")) == "keep-alive"); }
   final @property SysTime   ifModified() const { return(parseHtmlDate(headers.from("If-Modified-Since"))); }
   final @property bool      track() const { return(  headers.from("DNT","0") == "0"); }
