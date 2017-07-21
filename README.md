@@ -75,7 +75,15 @@ The content of the ./sh/run shell script:
     nohup authbind danode/server -k -b 100 -v 2 > server.log 2>&1 &
 
 This starts the server, does not allow for keyboard command (-k) has a backlog (-b) 
-of 100 simultaneous connection (per port), and produces more log output (-v 2)
+of 100 simultaneous connection (per port), and produces more log output (-v 2).
+
+          --port | -p          Port to listen on
+          --backlog | -b       Backlog of clients supported
+          --keyoff | -k        Keyboard on or off
+          --certDir            Location of SSL certificates
+          --keyFile            Server private key
+          --wwwRoot            Server www root folder
+          --verbose | -v       Verbose level (via commandline)
 
 ##### Example websites
 
