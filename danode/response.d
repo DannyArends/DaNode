@@ -91,10 +91,11 @@ Response create(in Request request, in StatusCode statuscode = StatusCode.Ok, in
   return(response);
 }
 
-void redirect(ref Response response, in Request request, in string fqdn, int verbose) {
+void redirect(ref Response response, in Request request, in string fqdn, bool isSecure = false, int verbose = NORMAL) {
   if(verbose >= DEBUG) writefln("[DEBUG]  redirecting request to %s", fqdn);
   response.payload = new Empty(StatusCode.MovedPermanently);
-  response.customheader("Location", format("http://%s:%d%s%s", fqdn, request.serverport, request.path, request.query));
+  response.customheader("Location", format("http%s://%s%s%s", isSecure? "s": "", fqdn, request.path, request.query));
+  response.connection = "Close";
   response.ready = true;
 }
 

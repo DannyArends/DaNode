@@ -65,7 +65,7 @@ class Client : Thread, ClientInterface {
         while(running && modified < maxtime){
           if(driver.receive(driver.socket) > 0){                                                // We've received new data
             if(!response.ready){                                                                // If we're not ready to respond yet
-              router.route(ip(), port(), request, response, to!string(driver.inbuffer.data));   // Parse the data and try to create a response (Could fail multiple times)
+              router.route(ip(), port(), request, response, to!string(driver.inbuffer.data), driver.isSecure());   // Parse the data and try to create a response (Could fail multiple times)
             }
             if(response.ready && !response.completed){                                        // We know what to respond, but haven't send all of it yet
               driver.send(response, driver.socket);                                           // Send the response, hit multiple times, send what you can and return

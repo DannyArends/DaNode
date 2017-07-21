@@ -117,6 +117,20 @@ version(SSL){
     return ctx;
   }
 
+  bool hasCertificate(string hostname) {
+    writefln("[HTTPS]  '%s' certificate?", hostname);
+    string s;
+    for(size_t x = 0; x < ncontext; x++) {
+      s = to!string(contexts[x].hostname.ptr);
+      writefln("[HTTPS]  context: %s %s", hostname, s);
+      if(hostname.endsWith(s)) {
+        writefln("[HTTPS]  Switching SSL context to %s", hostname);
+        return true;
+      }
+    }
+    return false;
+  }
+
   // loads an SSL context for hostname from the .crt file at path;
   SSLcontext loadContext(string path, string hostname, string keyFile){
     SSLcontext ctx;

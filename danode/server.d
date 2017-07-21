@@ -13,8 +13,7 @@ import danode.client : DriverInterface, Client, HTTP;
 import danode.router : Router;
 import danode.log;
 import danode.serverconfig : ServerConfig;
-version(SSL){
-  import deimos.openssl.ssl;
+version(SSL) {
   import danode.ssl : HTTPS, initSSL, closeSSL;
 }
 import std.getopt : getopt;
