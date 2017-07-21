@@ -58,25 +58,33 @@ class Router {
     final void route(ref Request request, ref Response response, bool finalrewrite = false) {
       string localroot = filesystem.localroot(request.shorthost());
 
-      if(logger.verbose >= DEBUG) {
+      if (logger.verbose >= DEBUG) {
         writefln("[DEBUG]  %s client %s:%s", (finalrewrite? "redirecting" : "routing"), request.ip, request.port);
         writefln("[INFO]   shorthost -> localroot: %s -> %s", request.shorthost(), localroot);
       }
 
-      if(request.shorthost() == "" || !exists(localroot)) // No domain requested, or we are not hosting it
+      if (request.shorthost() == "" || !exists(localroot)) // No domain requested, or we are not hosting it
         return response.domainNotFound(request);
 
       WebConfig config = WebConfig(filesystem.file(localroot, "/web.config"));
       string fqdn = config.domain(request.shorthost());
       string localpath = config.localpath(localroot, request.path);
 
-      if(logger.verbose >= DEBUG) {
+      if (logger.verbose >= DEBUG) {
         writefln("[DEBUG]  configfile at: %s%s", localroot, "/web.config");
         writefln("[DEBUG]  request.host: %s, fqdn: %s", request.host, fqdn);
         writefln("[DEBUG]  localpath: %s, exists ? %s", localpath, localpath.exists());
       }
-      if(request.host != fqdn || request.isSecure != hasCertificate(fqdn)) {
-        return response.redirect(request, fqdn, hasCertificate(fqdn), logger.verbose);  // Requested the wrong shortdomain
+
+      version(SSL){
+        // SSL is available, or requested the wrong shortdomain
+        if (request.isSecure != hasCertificate(fqdn) || request.host != fqdn) {
+          return response.redirect(request, fqdn, hasCertificate(fqdn), logger.verbose);
+        }
+      } else {  // Requested the wrong shortdomain
+        if (request.host != fqdn) {
+          return response.redirect(request, fqdn, false, logger.verbose);
+        }
       }
 
       if(localpath.exists()) {  // Requested an existing resource
