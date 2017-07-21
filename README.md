@@ -77,13 +77,13 @@ The content of the ./sh/run shell script:
 This starts the server, does not allow for keyboard command (-k) has a backlog (-b) 
 of 100 simultaneous connection (per port), and produces more log output (-v 2).
 
-          --port | -p          Port to listen on
-          --backlog | -b       Backlog of clients supported
-          --keyoff | -k        Keyboard on or off
-          --certDir            Location of SSL certificates
-          --keyFile            Server private key
-          --wwwRoot            Server www root folder
-          --verbose | -v       Verbose level (via commandline)
+          --port      -p       HTTP port to listen on (integer)
+          --backlog   -b       Backlog of clients supported simultaneously per port (integer)
+          --keyoff    -k       Keyboard input via STDIN (boolean)
+          --certDir            Location of folder with SSL certificates (string)
+          --keyFile            Server private key location (string)
+          --wwwRoot            Server www root folder holding website domains (string)
+          --verbose   -v       Verbose level, logs on STDOUT (integer)
 
 ##### Example websites
 
