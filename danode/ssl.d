@@ -122,9 +122,8 @@ version(SSL){
     string s;
     for(size_t x = 0; x < ncontext; x++) {
       s = to!string(contexts[x].hostname.ptr);
-      writefln("[HTTPS]  context: %s %s", hostname, s);
       if(hostname.endsWith(s)) {
-        writefln("[HTTPS]  Switching SSL context to %s", hostname);
+        writefln("[HTTPS]  '%s' certificate found", hostname);
         return true;
       }
     }
