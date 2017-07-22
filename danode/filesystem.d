@@ -74,6 +74,10 @@ class FileInfo : Payload {
         if(buf is null) buf = new char[](maxsize);
         char[] slice = [];
         if (from == 0) write("[STREAM] ");
+        if (from >= fileSize()) {
+          writeln("[DEBUG]  from >= filesize, are we still trying to send?");
+          return([]);
+        }
         try {
           if(fp is null) fp = new File(path, "rb");
           fp.open(path, "rb");
