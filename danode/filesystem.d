@@ -13,11 +13,13 @@ class FileInfo : Payload {
     bool      buffered = false;
     char[]    buf = null;
     File*     fp = null;
+    int       verbose = NORMAL;
 
   public:
     this(string path){ this.path = path; }
 
     final bool needsupdate(int verbose = NORMAL) {
+      this.verbose = verbose;
       if( fitsInBuffer() ) {
         if (!buffered) {
           if(verbose >= INFO) writefln("[INFO]   Need to buffering file record: %s", path);
@@ -32,8 +34,9 @@ class FileInfo : Payload {
     }
 
     final void unbuffer(int verbose = NORMAL) { synchronized {
-      buf = [];
-      buffered = false;
+      this.verbose = verbose;
+      this.buf = [];
+      this.buffered = false;
     } }
 
     final bool fitsInBuffer(size_t buffersize = 4096) {
@@ -42,7 +45,8 @@ class FileInfo : Payload {
     }
 
     final void buffer(size_t buffersize = 4096, int verbose = NORMAL) { synchronized {
-      buf = new char[](fileSize());
+      this.verbose = verbose;
+      this.buf = new char[](fileSize());
       try{
         if(fp is null) fp = new File(path, "rb");
         fp.rawRead(buf);
@@ -73,9 +77,9 @@ class FileInfo : Payload {
       if (!buffered) {
         if(buf is null) buf = new char[](maxsize);
         char[] slice = [];
-        if (from == 0) write("[STREAM] ");
+        if (from == 0) write("[STREAM] .");
         if (from >= fileSize()) {
-          writeln("[DEBUG]  from >= filesize, are we still trying to send?");
+          if(verbose >= DEBUG) writeln("[DEBUG]  from >= filesize, are we still trying to send?");
           return([]);
         }
         try {
@@ -85,7 +89,7 @@ class FileInfo : Payload {
             fp.seek(from);
             slice = fp.rawRead!char(buf);
             fp.close();
-            write(".");
+            if(verbose >= DEBUG) write(".");
             if ((from + slice.length) >= fileSize()) write("\n");
           }
         } catch(Exception e) { 
