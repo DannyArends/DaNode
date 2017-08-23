@@ -40,7 +40,7 @@ class FileInfo : Payload {
     } }
 
     final bool fitsInBuffer(size_t buffersize = 4096) {
-      if(fileSize() > -1 && fileSize() < buffersize){ return(true); }
+      if(fileSize() > 0 && fileSize() < buffersize){ return(true); }
       return(false);
     }
 
