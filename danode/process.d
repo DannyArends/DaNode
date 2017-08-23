@@ -113,34 +113,38 @@ class Process : Thread {
 
     // Execute the process
     final void run() {
-      int  ch;
-      if(exists(path)){
-        pStdIn          = File(path, "r");
-        pStdOut         = pipe();
-        pStdErr         = pipe();
-        if(verbose >= INFO) writefln("[INFO]   command: %s < %s", command, path);
-        auto cpid       = spawnShell(command, pStdIn, pStdOut.writeEnd, pStdErr.writeEnd, null);
-        while(running && lastmodified < maxtime){
+      try {
+        int  ch;
+        if(exists(path)){
+          pStdIn          = File(path, "r");
+          pStdOut         = pipe();
+          pStdErr         = pipe();
+          if(verbose >= INFO) writefln("[INFO]   command: %s < %s", command, path);
+          auto cpid       = spawnShell(command, pStdIn, pStdOut.writeEnd, pStdErr.writeEnd, null);
+          while(running && lastmodified < maxtime){
+            while((ch = readpipe(pStdOut)) != EOF){ modified = Clock.currTime(); outbuffer.put(cast(char)ch); }  // Non blocking slurp of stdout
+            while((ch = readpipe(pStdErr)) != EOF){ modified = Clock.currTime(); errbuffer.put(cast(char)ch); }  // Non blocking slurp of stderr
+            process = cast(WaitResult) tryWait(cpid);
+            Thread.yield();
+          }
+          if(!process.terminated){
+            writefln("[WARN]   command: %s < %s did not finish in time", command, path); 
+            kill(cpid, 9); 
+            process = WaitResult(true, wait(cpid));
+          }
           while((ch = readpipe(pStdOut)) != EOF){ modified = Clock.currTime(); outbuffer.put(cast(char)ch); }  // Non blocking slurp of stdout
           while((ch = readpipe(pStdErr)) != EOF){ modified = Clock.currTime(); errbuffer.put(cast(char)ch); }  // Non blocking slurp of stderr
-          process = cast(WaitResult) tryWait(cpid);
-          Thread.yield();
-        }
-        if(!process.terminated){
-          writefln("[WARN]   command: %s < %s did not finish in time", command, path); 
-          kill(cpid, 9); 
-          process = WaitResult(true, wait(cpid));
-        }
-        while((ch = readpipe(pStdOut)) != EOF){ modified = Clock.currTime(); outbuffer.put(cast(char)ch); }  // Non blocking slurp of stdout
-        while((ch = readpipe(pStdErr)) != EOF){ modified = Clock.currTime(); errbuffer.put(cast(char)ch); }  // Non blocking slurp of stderr
-        pStdIn.close();
-        if(verbose >= DEBUG) writefln("[DEBUG]  command finished %d after %s msecs", status(), time());
-        if(exists(path)){ if(verbose >= DEBUG) writefln("[DEBUG]  removing process input file %s", path);
-          import std.file : remove;
-          remove(path); 
-        }
-      }else{ writefln("[WARN]   no input path: %s", path); process.terminated = true; }
-      this.completed = true;
+          pStdIn.close();
+          if(verbose >= DEBUG) writefln("[DEBUG]  command finished %d after %s msecs", status(), time());
+          if(exists(path)){ if(verbose >= DEBUG) writefln("[DEBUG]  removing process input file %s", path);
+            import std.file : remove;
+            remove(path); 
+          }
+        }else{ writefln("[WARN]   no input path: %s", path); process.terminated = true; }
+        this.completed = true;
+      } catch(Exception e) {
+        writefln("[WARN]   process.d, exception: '%s'", e.msg);
+      }
     }
 }
 
