@@ -1,1 +1,18 @@
-gdb --args danode/server -p 8080 < test/gdb.in
+
+# start the server
+nohup authbind danode/server -v 2
+
+# In another terminal:
+# 1) Make sure that we are allowed to attach to our own processes
+echo 0 | sudo tee /proc/sys/kernel/yama/ptrace_scope
+
+# 2) Get the PID of the server
+pgrep server
+
+# 3) start GDB and attach to our PID
+gdb attach <PID>
+
+# 4) in GDB set the following options to not be pausin on normal events (threads, start/stop and pagination of output)
+handle SIGUSR1 nostop
+handle SIGUSR2 nostop
+set pagination off
