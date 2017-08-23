@@ -9,6 +9,7 @@ import core.thread : Thread;
 import std.process : Config, Pipe, pipe, spawnShell, tryWait, wait, kill;
 import danode.functions : Msecs;
 import core.stdc.stdio : fileno;
+import std.file : remove;
 import danode.log : NORMAL, INFO, DEBUG;
 version(Posix) {
   import core.sys.posix.fcntl : fcntl, F_SETFL, O_NONBLOCK;
@@ -44,7 +45,7 @@ bool nonblocking(ref File file) {
 class Process : Thread {
   private:
     string            command;              /// Command to execute
-    string            path;                 /// Path of input file
+    string            inputfile;            /// Path of input file
     int               verbose = NORMAL;
     bool              completed = false;
 
@@ -61,9 +62,9 @@ class Process : Thread {
     Appender!(char[])  errbuffer;           /// Error appender buffer
 
   public:
-    this(string command, string path, int verbose = NORMAL, long maxtime = 4500) {
+    this(string command, string inputfile, int verbose = NORMAL, long maxtime = 4500) {
       this.command    = command;
-      this.path       = path;
+      this.inputfile  = inputfile;
       this.verbose    = verbose;
       this.maxtime    = maxtime;
       this.starttime  = Clock.currTime();
@@ -75,7 +76,15 @@ class Process : Thread {
 
      // Output/Errors so far
     final @property const(char)[] output(ptrdiff_t from) const { 
-      synchronized { if(errbuffer.data.length == 1){ return(outbuffer.data[from .. $]); } return errbuffer.data[from .. $]; }
+      synchronized {
+        if (errbuffer.data.length == 1 && from >= 0 && from <= outbuffer.data.length) {
+          return outbuffer.data[from .. $];
+        }
+        if(from >= 0 && from <= errbuffer.data.length){
+          return errbuffer.data[from .. $]; 
+        }
+        return [];
+      }
     }
 
     // Runtime so far
@@ -108,39 +117,38 @@ class Process : Thread {
       synchronized { if(errbuffer.data.length == 1){ return(outbuffer.data.length); } return errbuffer.data.length; }
     }
 
-    // Path to the input file
-    final @property string inputpath() const { synchronized { return path; } }
-
     // Execute the process
     final void run() {
       try {
         int  ch;
-        if(exists(path)){
-          pStdIn          = File(path, "r");
-          pStdOut         = pipe();
-          pStdErr         = pipe();
-          if(verbose >= INFO) writefln("[INFO]   command: %s < %s", command, path);
-          auto cpid       = spawnShell(command, pStdIn, pStdOut.writeEnd, pStdErr.writeEnd, null);
-          while(running && lastmodified < maxtime){
-            while((ch = readpipe(pStdOut)) != EOF){ modified = Clock.currTime(); outbuffer.put(cast(char)ch); }  // Non blocking slurp of stdout
-            while((ch = readpipe(pStdErr)) != EOF){ modified = Clock.currTime(); errbuffer.put(cast(char)ch); }  // Non blocking slurp of stderr
-            process = cast(WaitResult) tryWait(cpid);
-            Thread.yield();
-          }
-          if(!process.terminated){
-            writefln("[WARN]   command: %s < %s did not finish in time", command, path); 
-            kill(cpid, 9); 
-            process = WaitResult(true, wait(cpid));
-          }
+        if( ! exists(inputfile) ) {
+          writefln("[WARN]   no input path: %s", inputfile);
+          this.process.terminated = true;
+          this.completed = true;
+          return;
+        }
+        pStdIn = File(inputfile, "r");
+        pStdOut = pipe();
+        pStdErr = pipe();
+        if(verbose >= INFO) writefln("[INFO]   command: %s < %s", command, inputfile);
+        auto cpid       = spawnShell(command, pStdIn, pStdOut.writeEnd, pStdErr.writeEnd, null);
+        while(running && lastmodified < maxtime){
           while((ch = readpipe(pStdOut)) != EOF){ modified = Clock.currTime(); outbuffer.put(cast(char)ch); }  // Non blocking slurp of stdout
           while((ch = readpipe(pStdErr)) != EOF){ modified = Clock.currTime(); errbuffer.put(cast(char)ch); }  // Non blocking slurp of stderr
-          pStdIn.close();
-          if(verbose >= DEBUG) writefln("[DEBUG]  command finished %d after %s msecs", status(), time());
-          if(exists(path)){ if(verbose >= DEBUG) writefln("[DEBUG]  removing process input file %s", path);
-            import std.file : remove;
-            remove(path); 
-          }
-        }else{ writefln("[WARN]   no input path: %s", path); process.terminated = true; }
+          process = cast(WaitResult) tryWait(cpid);
+          Thread.yield();
+        }
+        if(!process.terminated){
+          writefln("[WARN]   command: %s < %s did not finish in time", command, inputfile); 
+          kill(cpid, 9); 
+          process = WaitResult(true, wait(cpid));
+        }
+        while((ch = readpipe(pStdOut)) != EOF){ modified = Clock.currTime(); outbuffer.put(cast(char)ch); }  // Non blocking slurp of stdout
+        while((ch = readpipe(pStdErr)) != EOF){ modified = Clock.currTime(); errbuffer.put(cast(char)ch); }  // Non blocking slurp of stderr
+        pStdIn.close();
+        if(verbose >= DEBUG) writefln("[DEBUG]  command finished %d after %s msecs", status(), time());
+        if(verbose >= DEBUG) writefln("[DEBUG]  removing process input file %s", inputfile);
+        remove(inputfile);
         this.completed = true;
       } catch(Exception e) {
         writefln("[WARN]   process.d, exception: '%s'", e.msg);
