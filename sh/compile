@@ -8,5 +8,5 @@ if [ "$UI1" == "ssl" ]; then
     CFLAGS="-version=SSL -I../openssl -L-lssl -L-lcrypto"
 fi
 
-rdmd --force --build-only -O -gc -release $CFLAGS -w danode/server.d
+rdmd --force --build-only -O -g -release $CFLAGS -w danode/server.d
 
