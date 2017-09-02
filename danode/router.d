@@ -105,7 +105,7 @@ class Router {
         }
         return response.serveForbidden(request, logger.verbose);
       }
-
+      //writefln("[DEBUG] redirect: %s %d", config.redirect, finalrewrite);
       if(config.redirect && !finalrewrite)  // Route this request as canonical request the index page
         return this.redirectCanonical(request, response, config);
 

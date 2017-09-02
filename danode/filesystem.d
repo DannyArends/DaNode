@@ -11,41 +11,53 @@ class FileInfo : Payload {
     string    path;
     SysTime   btime;
     bool      buffered = false;
-    char[]    buf;
-    char[]    slice;
+    char[]    buf = null;
+    File*     fp = null;
+    int       verbose = NORMAL;
 
   public:
     this(string path){ this.path = path; }
 
     final bool needsupdate(int verbose = NORMAL) {
-      if(!buffered) return true;
-      if(mtime > btime){ if(verbose >= INFO) writefln("[INFO]   rebuffering stale record: %s", path); 
-        return true;
+      this.verbose = verbose;
+      if( fitsInBuffer() ) {
+        if (!buffered) {
+          if(verbose >= INFO) writefln("[INFO]   Need to buffering file record: %s", path);
+          return true;
+        }
+        if (mtime > btime) {
+          if(verbose >= INFO) writefln("[INFO]   Rebuffering stale record: %s", path);
+          return true;
+        }
       }
       return false;
     }
 
-    final void unbuffer(int verbose = NORMAL) {
-      char[]    buf   = null;
-      char[]    slice = null;
-      buffered        = false;
+    final void unbuffer(int verbose = NORMAL) { synchronized {
+      this.verbose = verbose;
+      this.buf = [];
+      this.buffered = false;
+    } }
+
+    final bool fitsInBuffer(size_t buffersize = 4096) {
+      if(fileSize() > 0 && fileSize() < buffersize){ return(true); }
+      return(false);
     }
 
-    final bool buffer(long maxsize = 4096, int verbose = NORMAL) { synchronized {
-      if(length > 0 && length < maxsize && needsupdate(verbose)){
-        buf = new char[](length);
-        try{
-          auto fp = new File(path, "rb");
-          fp.rawRead(buf);
-          fp.close();
-        }catch(Exception e){
-          writefln("[WARN]   exception %s while buffering file: %s", e.msg, path);
-        }
-        btime = Clock.currTime();
-        if(verbose >= DEBUG) writefln("[DEBUG]  buffered %s: %s bytes", path, length);
-        return(buffered = true);
+    final void buffer(size_t buffersize = 4096, int verbose = NORMAL) { synchronized {
+      this.verbose = verbose;
+      this.buf = new char[](fileSize());
+      try{
+        if(fp is null) fp = new File(path, "rb");
+        fp.rawRead(buf);
+        fp.close();
+      }catch(Exception e){
+        writefln("[WARN]   exception %s while buffering file: %s", e.msg, path);
+        return;
       }
-      return(false);
+      btime = Clock.currTime();
+      if(verbose >= DEBUG) writefln("[DEBUG]  buffered %s: %s bytes", path, length);
+      buffered = true;
     } }
 
     final @property string        content(){ return( to!string(bytes(0, length)) ); }
@@ -53,25 +65,41 @@ class FileInfo : Payload {
     final @property SysTime       mtime() const { if(!realfile){ return btime; } return path.timeLastModified(); }
     final @property long          ready() { return(true); }
     final @property PayLoadType   type() const { return(PayLoadType.Message); }
-    final @property ptrdiff_t     length() const { if(!realfile){ return 0; } return to!ptrdiff_t(path.getSize()); }
+    final @property ptrdiff_t     length() const { return(fileSize()); }
+    final @property ptrdiff_t     fileSize() const { if(!realfile){ return -1; } return to!ptrdiff_t(path.getSize()); }
     final @property long          buffersize() const { return cast(long)(buf.length); }
     final @property string        mimetype() const { return mime(path); }
     final @property StatusCode    statuscode() const { return StatusCode.Ok; }
 
     final char[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 1024){ synchronized {
-      if(!realfile){ return []; }
-      if(needsupdate) buffer();
-      if(!buffered){
-        buf = new char[](maxsize);
-        try{
-          auto fp = new File(path, "rb");
-          fp.seek(from);
-          slice = fp.rawRead!char(buf);
-          fp.close();
-        }catch(Exception e){ writefln("[WARN]   exception %s while streaming file: %s", e.msg, path); }
+      if (!realfile) { return []; }
+      if (needsupdate){ buffer(); }
+      if (!buffered) {
+        if(buf is null) buf = new char[](maxsize);
+        char[] slice = [];
+        if (from == 0) write("[STREAM] .");
+        if (from >= fileSize()) {
+          if(verbose >= DEBUG) writeln("[DEBUG]  from >= filesize, are we still trying to send?");
+          return([]);
+        }
+        try {
+          if(fp is null) fp = new File(path, "rb");
+          fp.open(path, "rb");
+          if(fp.isOpen()) {
+            fp.seek(from);
+            slice = fp.rawRead!char(buf);
+            fp.close();
+            if(verbose >= DEBUG) write(".");
+            if ((from + slice.length) >= fileSize()) write("\n");
+          }
+        } catch(Exception e) { 
+          writefln("[WARN]   exception %s while streaming file: %s", e.msg, path);
+        }
         return(slice);
-      }else if(from < buf.length){
-        return( buf[from .. to!ptrdiff_t(fmin(from+maxsize, $))] );
+      } else {
+        if(from < buf.length) {
+          return( buf[from .. to!ptrdiff_t(fmin(from+maxsize, $))] );
+        }
       }
       return([]);
     } }
@@ -115,7 +143,10 @@ class FileSystem {
         if(!domain.files.has(shortname)){
           domain.files[shortname] = new FileInfo(f.name);
           domain.entries++;
-          if(domain.files[shortname].buffer(maxsize, logger.verbose)) domain.buffered++;
+          if(domain.files[shortname].needsupdate()) {
+            domain.files[shortname].buffer(maxsize, logger.verbose);
+            domain.buffered++;
+          }
         }
       } }
       if(logger.verbose >= INFO) {

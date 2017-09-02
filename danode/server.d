@@ -65,17 +65,20 @@ class Server : Thread {
       if (set.isSet(socket)) {
         try {
           DriverInterface driver = null;
-          if(!secure) driver = new HTTP(socket.accept());
+          if(!secure) driver = new HTTP(socket, false, verbose);
           version(SSL) {
-            if(secure) driver = new HTTPS(socket.accept());
+            if(secure) driver = new HTTPS(socket, false, verbose);
           }
           if(driver is null) return(null);
           Client client = new Client(router, driver);
           client.start();
+          //Thread.sleep(dur!"msecs"(1));
           return(client);
         } catch(Exception e) {
           writefln("[ERROR]  unable to accept connection: %s", e.msg);
         }
+      } else {
+        writefln("[ERROR]  Socket is not in the socketset");
       }
       return(null);
     }
@@ -103,21 +106,27 @@ class Server : Thread {
     final void run() {
       int select;
       Appender!(Client[]) persistent;
-      while(running){
-        persistent.clear();
-        if((select = set.sISelect(socket)) > 0){           // writefln("Accepting HTTP request");
-          Client client = accept(socket);
-          if(client !is null) persistent.put(client);
-        }
-        version(SSL) {
-          if((select = set.sISelect(sslsocket)) > 0){      // writefln("Accepting HTTPs request");
-            Client client = accept(sslsocket, true);
+      while(running) {
+        try {
+          persistent.clear();
+          if((select = set.sISelect(socket)) > 0){           // writefln("Accepting HTTP request");
+            Client client = this.accept(socket);
             if(client !is null) persistent.put(client);
           }
+          version(SSL) {
+            if((select = set.sISelect(sslsocket)) > 0){      // writefln("Accepting HTTPs request");
+              Client client = this.accept(sslsocket, true);
+              if(client !is null) persistent.put(client);
+            }
+          }
+          foreach(Client client; clients){ if(client.running){ persistent.put(client); } }        // Add the backlog of persistent clients
+          clients = persistent.data;
+          //writefln("[INFO]  .");
+        } catch(Exception e) {
+          writefln("[SERVER] ERROR: %s", e.msg);
         }
-        foreach(Client client; clients){ if(client.running){ persistent.put(client); } }        // Add the backlog of persistent clients
-        clients = persistent.data;
       }
+      writefln("[INFO]  Server socket closed, running: %s", running);
       socket.close();
       version(SSL) {
         sslsocket.closeSSL();

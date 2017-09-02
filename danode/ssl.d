@@ -19,6 +19,7 @@ version(SSL){
   import deimos.openssl.err;
   import danode.server;
   import danode.client : Response, Clock;
+  import danode.log : NORMAL, INFO, DEBUG;
 
   // SSL context structure, stored relation between hostname 
   // and the SSL context, should be allocated only once available to C, and deallocated at exit
@@ -35,55 +36,77 @@ version(SSL){
   extern (C)
   {
     __gshared int             ncontext;         // How many contexts are available
+    __gshared int             cverbose;         // Verbose level of C-Code
     __gshared SSLcontext*     contexts;         // SSL / HTTPs contexts (allocated globally from C)
 
     // C callback function to switch SSL contexts after hostname lookup
-    static void switchContext(SSL* ssl, int *ad, void *arg){
+    static void switchContext(SSL* ssl, int *ad, void *arg) {
       string hostname = to!(string)(cast(const(char*)) SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name));
-      writefln("[HTTPS]  Looking for hostname: %s", hostname);
+      if(cverbose >= INFO) writefln("[HTTPS]  Looking for hostname: %s", hostname);
       if(hostname is null) {
-        writefln("[WARN]   Client does not support Server Name Indication (SNI)");
+        if(cverbose >= INFO) writefln("[WARN]   Client does not support Server Name Indication (SNI)");
+        return;
       }
       string s;
       for(int x = 0; x < ncontext; x++) {
         s = to!string(contexts[x].hostname.ptr);
-        writefln("[HTTPS]  context: %s %s", hostname, s);
+        if(cverbose >= INFO) writefln("[HTTPS]  context: %s %s", hostname, s);
         if(hostname.endsWith(s)) {
-          writefln("[HTTPS]  Switching SSL context to %s", hostname);
+          if(cverbose >= INFO) writefln("[HTTPS]  Switching SSL context to %s", hostname);
           SSL_set_SSL_CTX(ssl, contexts[x].context);
           return;
         }
       }
-      writefln("[WARN]   callback failed to find certificate for %s", hostname);
+      if(cverbose >= INFO) writefln("[WARN]   callback failed to find certificate for %s", hostname);
+      return;
     }
   }
 
   class HTTPS : DriverInterface {
     private:
       SSL* ssl = null;
+      bool blocking = false;
+      int verbose = NORMAL;
 
     public:
-      this(Socket socket, bool blocking = false) {
-        this.socket = socket;
+      this(Socket socket, bool blocking = false, int verbose = NORMAL) {
+        this.serversocket = socket;
+        this.blocking = blocking;
+        cverbose = verbose;
+        this.starttime = Clock.currTime(); /// Time in ms since this process came alive
+        this.modtime = Clock.currTime(); /// Time in ms since this process was modified
+        if(verbose >= INFO) writeln("[HTTPS]  HTTPS driver initialized");
+      }
+
+      override bool openConnection() { synchronized {
         if(ncontext > 0) {
-          this.ssl = SSL_new(contexts[0].context);            // writefln("[INFO]   SSL created, using standard certificate contexts[0].context");
-          writefln("[HTTPS]  initial SSL tunnel created");
-          SSL_set_fd(this.ssl, socket.handle());              // writefln("[INFO]   Added socket handle");
-          sslAssert(SSL_accept(this.ssl) != -1);
-          this.socket.blocking = blocking;
+          try {
+            this.socket = this.serversocket.accept(); // Accept the incoming socket connection
+            if (this.socket is null) return(false);
+            this.ssl = SSL_new(contexts[0].context); // writefln("[INFO]   SSL created, using standard certificate contexts[0].context");
+            if(verbose >= INFO) writefln("[HTTPS]  initial SSL tunnel created");
+            this.ssl.SSL_set_fd(socket.handle()); // writefln("[INFO]   Added socket handle");
+            sslAssert(SSL_accept(this.ssl) != -1);
+            this.socket.blocking = this.blocking;
+          } catch(Exception e) {
+            if(verbose >= INFO) writefln("[ERROR]  Couldn't open SSL connection : %s", e.msg);
+            return(false);
+          }
+          try {
+            if (this.socket !is null) {
+              this.address = this.socket.remoteAddress();
+            }
+          } catch(Exception e) {
+            if(verbose >= INFO) writefln("[WARN]   unable to resolve requesting origin: %s", e.msg);
+          }
+          if(verbose >= INFO) writeln("[HTTPS]  HTTPS driver initialized");
+          return(true);
         } else {
-          writeln("[HTTPS]  HTTPS driver failed, reason: no certificate");
+          writeln("[ERROR]  HTTPS driver failed, reason: Server has no certificates loaded");
           socket.close();
         }
-        this.starttime = Clock.currTime();            /// Time in ms since this process came alive
-        this.modtime = Clock.currTime();              /// Time in ms since this process was modified
-        try {
-          this.address = socket.remoteAddress();
-        } catch(Exception e) {
-          writefln("[WARN]   unable to resolve requesting origin");
-        }
-        writeln("[HTTPS]  HTTPS driver finished");
-      }
+        return(false);
+      } }
 
       override ptrdiff_t receive(Socket socket, ptrdiff_t maxsize = 4096){ synchronized {
         ptrdiff_t received;
@@ -118,13 +141,12 @@ version(SSL){
   }
 
   bool hasCertificate(string hostname) {
-    writefln("[HTTPS]  '%s' certificate?", hostname);
+    if(cverbose >= INFO) writefln("[HTTPS]  '%s' certificate?", hostname);
     string s;
     for(size_t x = 0; x < ncontext; x++) {
       s = to!string(contexts[x].hostname.ptr);
-      writefln("[HTTPS]  context: %s %s", hostname, s);
       if(hostname.endsWith(s)) {
-        writefln("[HTTPS]  Switching SSL context to %s", hostname);
+        if(cverbose >= INFO) writefln("[HTTPS]  '%s' certificate found", hostname);
         return true;
       }
     }
@@ -140,14 +162,14 @@ version(SSL){
     }
     ctx.hostname[hostname.length] = '\0';
     ctx.context = getCTX(path, keyFile);
-    writefln("[INFO]   context created for certificate: %s", to!string(ctx.hostname.ptr));
+    if(cverbose >= INFO) writefln("[INFO]   context created for certificate: %s", to!string(ctx.hostname.ptr));
     SSL_CTX_callback_ctrl(ctx.context,SSL_CTRL_SET_TLSEXT_SERVERNAME_CB, cast(ExternC!(void function())) &switchContext);
     return(ctx);
   }
 
   // loads all crt files in the certDir, using keyfile: server.key
   SSLcontext* initSSL(Server server, string certDir = ".ssl/", string keyFile = ".ssl/server.key", VERSION v = SSL23) {
-    writefln("[HTTPS]  loading Deimos.openSSL, certificate: %s, priv.key: %s, SSL:%s", certDir, keyFile, v);
+    writefln("[HTTPS]  loading Deimos.openSSL, certDir: %s, keyFile: %s, SSL:%s", certDir, keyFile, v);
     SSL_library_init();
     OpenSSL_add_all_algorithms();
     SSL_load_error_strings();
@@ -174,10 +196,10 @@ version(SSL){
       if(d.name.endsWith(".crt")) {
         hostname = baseName(d.name, ".crt");
         if(hostname.length < 255) {
-          writefln("[INFO]   loading certificate from file: %s", d.name);
+          if(cverbose >= INFO) writefln("[INFO]   loading certificate from file: %s", d.name);
           contexts = cast(SSLcontext*) realloc(contexts, (ncontext+1) * SSLcontext.sizeof);
           contexts[ncontext] = loadContext(d.name, hostname, keyFile);
-          writefln("[HTTPS]  stored certificate: %s in context: %d", to!string(contexts[ncontext].hostname.ptr), ncontext);
+          if(cverbose >= INFO) writefln("[HTTPS]  stored certificate: %s in context: %d", to!string(contexts[ncontext].hostname.ptr), ncontext);
           ncontext++;
         }
       }

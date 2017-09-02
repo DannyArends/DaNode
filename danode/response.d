@@ -36,13 +36,13 @@ struct Response {
 
   final void customheader(string key, string value){ headers[key] = value; }
 
-  @property final char[] header() {
+  @property final char[] header(int verbose = NORMAL) {
     if(hdr.data) return(hdr.data);                                                        // If we have build the header, no need to redo this
     if(payload.type == PayLoadType.Script){                                               // Scripts build their own header
       CGI script = to!CGI(payload);
       this.connection = "Close";
       HeaderType type = script.headerType();
-      writefln("[INFO]   script header type: %s", type);
+      if(verbose >= INFO) writefln("[INFO]   script header type: %s", type);
       if(type != HeaderType.None) {
         long clength = script.getHeader("Content-Length", -1);                              // Is the content length provided ?
         if(clength >= 0) connection = script.getHeader("Connection", "Close");              // Yes ? then the script, can try to keep alive
@@ -50,8 +50,10 @@ struct Response {
           hdr.put(format("%s %s %s\n", "HTTP/1.1", script.getHeader("Status", 500), script.getHeader("Status", "Internal Server Error", 2)));
         }
         hdr.put(script.fullHeader());
-        writefln("[INFO]   script: status: %d, eoh: %d, content: %d", script.statuscode, script.endOfHeader(), clength);
-        writefln("[INFO]   connection: %s -> %s, to %s in %d bytes", strip(script.getHeader("Connection", "Close")), connection, type, hdr.data.length);
+        if(verbose >= INFO) {
+          writefln("[INFO]   script: status: %d, eoh: %d, content: %d", script.statuscode, script.endOfHeader(), clength);
+          writefln("[INFO]   connection: %s -> %s, to %s in %d bytes", strip(script.getHeader("Connection", "Close")), connection, type, hdr.data.length);
+        }
         return(hdr.data);
       }
       writeln("[WARN]   no valid header detected, generating one");
