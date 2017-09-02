@@ -65,9 +65,9 @@ class Server : Thread {
       if (set.isSet(socket)) {
         try {
           DriverInterface driver = null;
-          if(!secure) driver = new HTTP(socket);
+          if(!secure) driver = new HTTP(socket, false, verbose);
           version(SSL) {
-            if(secure) driver = new HTTPS(socket);
+            if(secure) driver = new HTTPS(socket, false, verbose);
           }
           if(driver is null) return(null);
           Client client = new Client(router, driver);

@@ -93,7 +93,7 @@ class Client : Thread, ClientInterface {
       } catch(Exception e) { 
         writefln("[WARN]   unknown client exception: %s", e.msg);
       }
-      if(router.verbose >= INFO){
+      if(router.verbose >= INFO) {
         writefln("[INFO]   connection %s:%s (%s) closed after %d requests %s (%s msecs)", ip, port, (driver.isSecure() ? "⚐" : "⚑"), 
                                                                                           driver.requests, driver.senddata, Msecs(driver.starttime));
       }
@@ -138,9 +138,10 @@ class Client : Thread, ClientInterface {
 class HTTP : DriverInterface {
   private:
     bool blocking = false;
+    int verbose = NORMAL;
 
   public:
-    this(Socket socket, bool blocking = false){ // writefln("[HTTP]   driver constructor");
+    this(Socket socket, bool blocking = false, int verbose = NORMAL) { // writefln("[HTTP]   driver constructor");
       this.serversocket = socket;
       this.blocking = blocking;
       this.starttime = Clock.currTime();         /// Time in ms since this process came alive
@@ -158,7 +159,7 @@ class HTTP : DriverInterface {
       try {
         this.address = socket.remoteAddress();
       } catch(Exception e) {
-        writefln("[WARN]   unable to resolve requesting origin: %s", e.msg);
+        if(verbose >= INFO) writefln("[WARN]   unable to resolve requesting origin: %s", e.msg);
       }
       return(true);
     }
