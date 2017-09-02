@@ -62,7 +62,10 @@ class Client : Thread, ClientInterface {
    final void run() {
       if(router.verbose >= DEBUG) writefln("[DEBUG]  new connection established %s:%d", ip(), port() );
       try {
-        if(this.driver.openConnection() == false) return;
+        if(this.driver.openConnection() == false){
+          this.terminated = true;
+          return;
+        }
         Request request;
         Response response;
         while(running && modified < maxtime) {
