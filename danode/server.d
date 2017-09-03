@@ -3,20 +3,26 @@ module danode.server;
 import core.stdc.stdlib : exit;
 import core.stdc.stdio;
 import core.thread : Thread;
+
 import std.array : Appender, appender;
 import std.datetime : Clock, dur, SysTime, Duration;
-import std.socket : AddressFamily, InternetAddress, ProtocolType, Socket, SocketSet, SocketType, SocketOption, SocketOptionLevel;
+import std.socket;
 import std.stdio : writeln, writefln, stdin;
 import std.string : startsWith, format, chomp;
+import std.getopt : getopt;
+
 import danode.functions : Msecs, sISelect;
-import danode.client : DriverInterface, Client, HTTP;
+import danode.client : Client;
+import danode.interfaces : DriverInterface;
+import danode.http : HTTP;
 import danode.router : Router;
 import danode.log;
 import danode.serverconfig : ServerConfig;
+
 version(SSL) {
-  import danode.ssl : HTTPS, initSSL, closeSSL;
+  import danode.ssl : initSSL, closeSSL;
+  import danode.https : HTTPS;
 }
-import std.getopt : getopt;
 
 class Server : Thread {
   private:
@@ -37,15 +43,14 @@ class Server : Thread {
       this.socket = initialize(port, backlog);      // Create the HTTP socket
       version(SSL) {
         this.sslsocket = initialize(443, backlog);  // Create the SSL / HTTPs socket
-        backlog = (backlog * 2) + 1;                // Enlarge the backlog, for N clients and 1 ssl server socket
       }
-      backlog = backlog + 1;                        // Add room for the server socket
-      this.set = new SocketSet(backlog);            // Create a socket set
+      set = new SocketSet(1);                       // Create a server socket set
       writefln("[SERVER] server created backlog: %d", backlog);
       super(&run);
     }
 
-    Socket initialize(ushort port = 80, int backlog = 200) {      // Initialize the listening socket to a certain port and backlog
+    // Initialize the listening socket to a certain port and backlog
+    Socket initialize(ushort port = 80, int backlog = 100) {
       Socket socket;
       try {
         socket = new Socket(AddressFamily.INET, SocketType.STREAM, ProtocolType.TCP);
@@ -61,13 +66,14 @@ class Server : Thread {
       return socket;
     }
 
-    final Client accept(Socket socket, bool secure = false) {     // Create a connection to a client
+    // Accept an incoming connection and create a client object
+    final Client accept(Socket socket, bool secure = false) {
       if (set.isSet(socket)) {
         try {
           DriverInterface driver = null;
-          if(!secure) driver = new HTTP(socket, false, verbose);
+          if(!secure) driver = new HTTP(socket.accept(), false, verbose);
           version(SSL) {
-            if(secure) driver = new HTTPS(socket, false, verbose);
+            if(secure) driver = new HTTPS(socket.accept(), false, verbose);
           }
           if(driver is null) return(null);
           Client client = new Client(router, driver);
@@ -83,21 +89,30 @@ class Server : Thread {
       return(null);
     }
 
-    final @property bool running(){ synchronized {      // Is the server still running ?
-      return(socket.isAlive() && !terminated); 
+    // is the server still running ?
+    final @property bool running(){ synchronized {
+      version(SSL) {
+        return(socket.isAlive() && sslsocket.isAlive() && !terminated);
+      } else {
+        return(socket.isAlive() && !terminated);
+      }
     } }
 
-    final @property void stop(){ synchronized {     // Stop the server
+    // Stop all clients and shutdown the server
+    final void stop(){ synchronized {
       foreach(ref Client client; clients){ client.stop(); } terminated = true;
     } }
 
-    final @property Duration time() const { return(Clock.currTime() - starttime); } // Time so far
+     // Returns a Duration object holding the server uptime
+    final @property Duration uptime() const { return(Clock.currTime() - starttime); }
 
-    final @property void info() {     // Server information
-      writefln("[INFO]   uptime %s\n[INFO]   # of connections: %d", time, connections);
+     // Print some server information
+    final @property void info() {
+      writefln("[INFO]   uptime %s\n[INFO]   # of connections: %d / %d", uptime(), nAlive(), clients.length);
     }
 
-    final @property long connections() { // Number of connections
+    // Number of alive connections
+    final @property long nAlive() {
       long sum = 0; foreach(Client client; clients){ if(client.running){ sum++; } } return sum; 
     }
 
@@ -109,19 +124,18 @@ class Server : Thread {
       while(running) {
         try {
           persistent.clear();
-          if((select = set.sISelect(socket)) > 0){           // writefln("Accepting HTTP request");
+          if ((select = set.sISelect(socket)) > 0) {           // writefln("Accepting HTTP request");
             Client client = this.accept(socket);
             if(client !is null) persistent.put(client);
           }
           version(SSL) {
-            if((select = set.sISelect(sslsocket)) > 0){      // writefln("Accepting HTTPs request");
+            if ((select = set.sISelect(sslsocket)) > 0) {      // writefln("Accepting HTTPs request");
               Client client = this.accept(sslsocket, true);
               if(client !is null) persistent.put(client);
             }
           }
           foreach(Client client; clients){ if(client.running){ persistent.put(client); } }        // Add the backlog of persistent clients
           clients = persistent.data;
-          //writefln("[INFO]  .");
         } catch(Exception e) {
           writefln("[SERVER] ERROR: %s", e.msg);
         }

@@ -4,7 +4,7 @@ import std.array : Appender, split, join;
 import std.stdio, std.string, std.conv, std.datetime, std.file, std.math;
 import std.uri : encode;
 import std.string : indexOf;
-import danode.client : ClientInterface;
+import danode.interfaces : ClientInterface;
 import danode.httpstatus : StatusCode;
 import danode.request : Request;
 import danode.response;

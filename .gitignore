@@ -33,6 +33,7 @@ www/qrcode.test/QR/gen/*
 *.err
 *.out
 *~
+*.pdf
 
 .sass-cache
 

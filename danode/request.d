@@ -8,9 +8,10 @@ import std.stdio : write, writeln, writefln;
 import std.datetime;
 import std.math : fmax;
 import std.string : split, strip, format, toLower, lastIndexOf, indexOf;
-import danode.filesystem : FileSystem;
-import danode.client : ClientInterface;
 import std.regex : regex, match;
+
+import danode.filesystem : FileSystem;
+import danode.interfaces : ClientInterface;
 import danode.functions : interpreter, from, toD, mtoI;
 import danode.webconfig : WebConfig;
 import danode.post : PostItem, PostType;
@@ -21,7 +22,8 @@ SysTime parseHtmlDate(const string datestr){ // 21 Apr 2014 20:20:13 CET
   auto dateregex = regex(r"([0-9]{1,2}) ([a-z]{1,3}) ([0-9]{4}) ([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2}) cet", "g");
   auto m = match(datestr.toLower(), dateregex);
   if(m.captures.length == 7){
-    ts = SysTime(DateTime(to!int(m.captures[3]), mtoI(m.captures[2]), to!int(m.captures[1]), to!int(m.captures[4]), to!int(m.captures[5]), to!int(m.captures[6])));
+    ts = SysTime(DateTime(to!int(m.captures[3]), mtoI(m.captures[2]), to!int(m.captures[1]),        // 21 Apr 2014
+                          to!int(m.captures[4]), to!int(m.captures[5]), to!int(m.captures[6])));    // 20:20:13
   }
   return(ts);
 }
@@ -100,6 +102,14 @@ struct Request {
     return params;
   }
 
+  final @property string[]  postfiles() const { 
+    string[] files;
+    foreach (p; postinfo) {
+      if(p.type == PostType.File && p.size > 0) files ~= p.value;
+    } 
+    return(files);
+  }
+
   final @property string    path() const { ptrdiff_t i = url.indexOf("?"); if(i > 0){ return(url[0 .. i]); }else{ return(url); } }
   final @property string    query() const { ptrdiff_t i = uri.indexOf("?"); if(i > 0){ return(uri[i .. $]); }else{ return("?"); } }
   final @property string    uripath() const { ptrdiff_t i = uri.indexOf("?"); if(i > 0){ return(uri[0 .. i]); }else{ return(uri); } }
@@ -109,7 +119,6 @@ struct Request {
   final @property string    params() const { Appender!string str; foreach(k; get.byKey()){ str.put(format(" \"%s=%s\"", k, get[k])); } return(str.data); }
   final @property string    cookies() const { return(headers.from("Cookie")); }
   final @property string    useragent() const { return(headers.from("User-Agent", "Unknown")); }
-  final @property string[]  postfiles() const { string[] files; foreach(p; postinfo){ if(p.type == PostType.File && p.size > 0) files ~= p.value; } return(files); }
   final string              shorthost() const { return( (host.indexOf("www.") >= 0)? host[4 .. $] : host ); }
   final string              command(string localpath) const { return(format("%s %s%s", localpath.interpreter(), localpath, params())); }
 
