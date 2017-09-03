@@ -16,7 +16,8 @@ import danode.router : Router;
 import danode.log;
 import danode.serverconfig : ServerConfig;
 version(SSL) {
-  import danode.ssl : HTTPS, initSSL, closeSSL;
+  import danode.ssl : initSSL, closeSSL;
+  import danode.https : HTTPS;
 }
 import std.getopt : getopt;
 

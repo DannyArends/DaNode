@@ -2,9 +2,9 @@ module danode.http;
 
 import std.datetime : Clock;
 import std.stdio : writeln, writefln, stdin;
-import std.socket : AddressFamily, InternetAddress, ProtocolType, Socket, SocketSet, SocketType, SocketOption, SocketOptionLevel;
+import std.socket : Socket;
 
-import danode.client : DriverInterface;
+import danode.interfaces : DriverInterface;
 import danode.response : Response;
 import danode.log : NORMAL, INFO, DEBUG;
 
