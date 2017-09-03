@@ -9,7 +9,8 @@ import std.socket : AddressFamily, InternetAddress, ProtocolType, Socket, Socket
 import std.stdio : writeln, writefln, stdin;
 import std.string : startsWith, format, chomp;
 import danode.functions : Msecs, sISelect;
-import danode.client : DriverInterface, Client, HTTP;
+import danode.client : DriverInterface, Client;
+import danode.http : HTTP;
 import danode.router : Router;
 import danode.log;
 import danode.serverconfig : ServerConfig;
