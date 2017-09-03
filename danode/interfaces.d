@@ -3,7 +3,9 @@ module danode.interfaces;
 import std.array : Appender, appender;
 import std.socket : Address, Socket;
 import std.datetime : Clock, SysTime, msecs, dur;
+
 import danode.response : Response;
+import danode.log : NORMAL, INFO, DEBUG;
 
 interface ClientInterface {
   @property bool    running();
@@ -26,6 +28,8 @@ abstract class DriverInterface {
     SysTime             starttime;           /// Time in ms since this process came alive
     SysTime             modtime;             /// Time in ms since this process was last modified
     Address             address;             /// Private address field
+    bool                blocking = false;    /// Blocking communication ?
+    int                 verbose = NORMAL;    /// Verbose level
 
     bool openConnection();
     ptrdiff_t receive(Socket conn, ptrdiff_t maxsize = 4096);

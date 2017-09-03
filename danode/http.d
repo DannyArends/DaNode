@@ -9,10 +9,6 @@ import danode.response : Response;
 import danode.log : NORMAL, INFO, DEBUG;
 
 class HTTP : DriverInterface {
-  private:
-    bool blocking = false;
-    int verbose = NORMAL;
-
   public:
     this(Socket socket, bool blocking = false, int verbose = NORMAL) { // writefln("[HTTP]   driver constructor");
       this.socket = socket;

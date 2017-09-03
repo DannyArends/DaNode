@@ -65,8 +65,6 @@ version(SSL){
   class HTTPS : DriverInterface {
     private:
       SSL* ssl = null;
-      bool blocking = false;
-      int verbose = NORMAL;
 
     public:
       this(Socket socket, bool blocking = false, int verbose = NORMAL) {
