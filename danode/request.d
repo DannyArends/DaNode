@@ -8,9 +8,10 @@ import std.stdio : write, writeln, writefln;
 import std.datetime;
 import std.math : fmax;
 import std.string : split, strip, format, toLower, lastIndexOf, indexOf;
-import danode.filesystem : FileSystem;
-import danode.client : ClientInterface;
 import std.regex : regex, match;
+
+import danode.filesystem : FileSystem;
+import danode.interfaces : ClientInterface;
 import danode.functions : interpreter, from, toD, mtoI;
 import danode.webconfig : WebConfig;
 import danode.post : PostItem, PostType;

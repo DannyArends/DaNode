@@ -70,7 +70,7 @@ version(SSL){
 
     public:
       this(Socket socket, bool blocking = false, int verbose = NORMAL) {
-        this.serversocket = socket;
+        this.socket = socket;
         this.blocking = blocking;
         cverbose = verbose;
         this.starttime = Clock.currTime(); /// Time in ms since this process came alive
@@ -79,17 +79,22 @@ version(SSL){
       }
 
       override bool openConnection() { synchronized {
+        writeln("[HTTPS]  Opening HTTPS connection");
         if(ncontext > 0) {
+          writefln("[HTTPS]  Number of SSL contexts: %d", ncontext);
           try {
-            this.socket = this.serversocket.accept(); // Accept the incoming socket connection
-            if (this.socket is null) return(false);
+            if (this.socket is null) {
+              writefln("[ERROR]  SSL Socket is null");
+              return(false);
+            }
+            writeln("[HTTPS]  Creating SSL_new");
             this.ssl = SSL_new(contexts[0].context); // writefln("[INFO]   SSL created, using standard certificate contexts[0].context");
-            if(verbose >= INFO) writefln("[HTTPS]  initial SSL tunnel created");
+            writefln("[HTTPS]  initial SSL tunnel created");
             this.ssl.SSL_set_fd(socket.handle()); // writefln("[INFO]   Added socket handle");
             sslAssert(SSL_accept(this.ssl) != -1);
             this.socket.blocking = this.blocking;
           } catch(Exception e) {
-            if(verbose >= INFO) writefln("[ERROR]  Couldn't open SSL connection : %s", e.msg);
+            writefln("[ERROR]  Couldn't open SSL connection : %s", e.msg);
             return(false);
           }
           try {
@@ -97,9 +102,9 @@ version(SSL){
               this.address = this.socket.remoteAddress();
             }
           } catch(Exception e) {
-            if(verbose >= INFO) writefln("[WARN]   unable to resolve requesting origin: %s", e.msg);
+            writefln("[WARN]   unable to resolve requesting origin: %s", e.msg);
           }
-          if(verbose >= INFO) writeln("[HTTPS]  HTTPS driver initialized");
+          writeln("[HTTPS]  HTTPS connection opened");
           return(true);
         } else {
           writeln("[ERROR]  HTTPS driver failed, reason: Server has no certificates loaded");

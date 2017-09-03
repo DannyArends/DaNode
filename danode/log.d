@@ -1,7 +1,7 @@
 module danode.log;
 
 import std.array, std.stdio, std.string, std.conv, std.datetime, std.file, std.math;
-import danode.client : ClientInterface;
+import danode.interfaces : ClientInterface;
 import danode.request : Request;
 import danode.response : Response;
 import danode.functions;

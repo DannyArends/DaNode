@@ -15,7 +15,7 @@ class HTTP : DriverInterface {
 
   public:
     this(Socket socket, bool blocking = false, int verbose = NORMAL) { // writefln("[HTTP]   driver constructor");
-      this.serversocket = socket;
+      this.socket = socket;
       this.blocking = blocking;
       this.starttime = Clock.currTime();         /// Time in ms since this process came alive
       this.modtime = Clock.currTime();           /// Time in ms since this process was modified
@@ -23,7 +23,6 @@ class HTTP : DriverInterface {
 
     override bool openConnection() {
       try {
-        this.socket = this.serversocket.accept();      // Accept the incoming socket connection
         this.socket.blocking = this.blocking;
       } catch(Exception e) {
         writefln("[ERROR]  unable to accept socket: %s", e.msg);

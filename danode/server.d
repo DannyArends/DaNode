@@ -9,7 +9,8 @@ import std.socket : AddressFamily, InternetAddress, ProtocolType, Socket, Socket
 import std.stdio : writeln, writefln, stdin;
 import std.string : startsWith, format, chomp;
 import danode.functions : Msecs, sISelect;
-import danode.client : DriverInterface, Client;
+import danode.client : Client;
+import danode.interfaces : DriverInterface;
 import danode.http : HTTP;
 import danode.router : Router;
 import danode.log;
@@ -66,9 +67,9 @@ class Server : Thread {
       if (set.isSet(socket)) {
         try {
           DriverInterface driver = null;
-          if(!secure) driver = new HTTP(socket, false, verbose);
+          if(!secure) driver = new HTTP(socket.accept(), false, verbose);
           version(SSL) {
-            if(secure) driver = new HTTPS(socket, false, verbose);
+            if(secure) driver = new HTTPS(socket.accept(), false, verbose);
           }
           if(driver is null) return(null);
           Client client = new Client(router, driver);
