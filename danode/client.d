@@ -33,25 +33,25 @@ class Client : Thread, ClientInterface {
     }
 
    final void run() {
-      if(router.verbose >= DEBUG) writefln("[DEBUG]  new connection established %s:%d", ip(), port() );
+      if (router.verbose >= DEBUG) writefln("[DEBUG]  new connection established %s:%d", ip(), port() );
       try {
-        if(this.driver.openConnection() == false) {
+        if (driver.openConnection() == false) {
           writefln("[WARN]  new connection aborted: unable to open connection");
-          this.terminated = true;
+          terminated = true;
           return;
         }
         Request request;
         Response response;
-        while(running && modified < maxtime) {
-          if(driver.receive(driver.socket) > 0){                      // We've received new data
-            if(!response.ready){                                      // If we're not ready to respond yet
+        while (running && modified < maxtime) {
+          if (driver.receive(driver.socket) > 0) {                      // We've received new data
+            if (!response.ready) {                                      // If we're not ready to respond yet
               // Parse the data and try to create a response (Could fail multiple times)
               router.route(ip(), port(), request, response, to!string(driver.inbuffer.data), driver.isSecure());
             }
-            if(response.ready && !response.completed){                          // We know what to respond, but haven't send all of it yet
+            if (response.ready && !response.completed) {                        // We know what to respond, but haven't send all of it yet
               driver.send(response, driver.socket);                             // Send the response, hit multiple times, send what you can and return
             }
-            if(response.ready && response.completed){                           // We've completed the request, response cycle
+            if (response.ready && response.completed) {                         // We've completed the request, response cycle
               router.logrequest(this, request, response);                       // Log the response to the request
               request.clearUploadFiles();                                       // Remove any upload files left over
               request.destroy();                                                // Clear the request and uploaded files
@@ -70,17 +70,17 @@ class Client : Thread, ClientInterface {
       } catch(Exception e) { 
         writefln("[WARN]   unknown client exception: %s", e.msg);
       }
-      if(router.verbose >= INFO) {
+      if (router.verbose >= INFO) {
         writefln("[INFO]   connection %s:%s (%s) closed after %d requests %s (%s msecs)", ip, port, (driver.isSecure() ? "⚐" : "⚑"), 
                                                                                           driver.requests, driver.senddata, Msecs(driver.starttime));
       }
-      if(driver.socket !is null) {
+      if (driver.socket !is null) {
         driver.socket.close();
       }
     }
 
     final @property bool running() {
-      if(driver.socket is null) return(false);
+      if (driver.socket is null) return(false);
       return(driver.socket.isAlive() && !terminated);
     }
 
@@ -93,19 +93,19 @@ class Client : Thread, ClientInterface {
     }
 
     final @property void stop(){
-      if(router.verbose >= DEBUG) writefln("[DEBUG]  connection %s:%s stop called", ip, port);
+      if (router.verbose >= DEBUG) writefln("[DEBUG]  connection %s:%s stop called", ip, port);
       terminated = true; 
     }
 
     final @property long port() const { 
-      if(driver.address !is null){ 
+      if (driver.address !is null) {
         return(to!long(driver.address.toPortString())); 
       } 
       return(-1); 
     }
 
     final @property string ip() const {
-      if(driver.address !is null){
+      if (driver.address !is null) {
         return(driver.address.toAddrString()); 
       }
       return("0.0.0.0"); 
