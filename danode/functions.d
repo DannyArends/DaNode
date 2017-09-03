@@ -33,7 +33,10 @@ void writefile(in string localpath, in string content){
   if(content.length > 0){ auto fp = File(localpath, "wb"); fp.rawWrite(content); fp.close(); }
 }
 
-string htmltime(in SysTime d = Clock.currTime()){ return format(timeFmt, d.day(), months[d.month()], d.year(), d.hour(), toD(d.minute(),2), toD(d.second(),2), "CET"); }
+string htmltime(in SysTime d = Clock.currTime()){
+  return format(timeFmt, d.day(), months[d.month()], d.year(), d.hour(), toD(d.minute(),2), toD(d.second(),2), "CET");
+}
+
 bool isFILE(in string path){ if(exists(path) && isFile(path)){ return true; } return false; }
 bool isDIR(in string path){ if(exists(path) && isDir(path)){ return true; } return false; }
 
@@ -56,7 +59,9 @@ pure string interpreter(in string path){
 string browsedir(in string root, in string localpath){
   Appender!(string) content;
   content.put(format("Content of: %s<br>\n", localpath));
-  foreach (DirEntry d; dirEntries(localpath, SpanMode.shallow)){ content.put(format("<a href='%s'>%s</a><br>", d.name[root.length .. $], d.name[root.length .. $])); }
+  foreach (DirEntry d; dirEntries(localpath, SpanMode.shallow)) {
+    content.put(format("<a href='%s'>%s</a><br>", d.name[root.length .. $], d.name[root.length .. $]));
+  }
   return(format("<html><head><title>200 - Allowed directory</title></head><body>%s</body></html>", content.data));
 }
 
