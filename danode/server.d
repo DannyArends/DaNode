@@ -24,6 +24,12 @@ version(SSL) {
   import danode.https : HTTPS;
 }
 
+extern(C) @nogc nothrow void sigpipehandler(int x){
+  printf("[!!!!!]  SIGPIPE signal caught: %d\n", x);
+}
+
+import core.sys.posix.signal;
+
 class Server : Thread {
   private:
     Socket            socket;           // The server socket
@@ -156,7 +162,7 @@ void parseKeyInput(ref Server server){
 }
 
 void main(string[] args) {
-  version(unittest){ ushort port     = 8080; }else{ ushort port     = 80; }
+  version(unittest){ ushort port = 8080; }else{ ushort port = 80; }
   int    backlog  = 100;
   int    verbose  = NORMAL;
   bool   keyoff   = false;
@@ -173,6 +179,8 @@ void main(string[] args) {
   version(unittest){
     // Do nothing, unittests will run
   }else{
+    signal(SIGPIPE, &sigpipehandler);
+
     auto server = new Server(port, backlog, wwwRoot, verbose);
     version(SSL) {
       server.initSSL(certDir, keyFile);  // Load SSL certificates, using the server key
