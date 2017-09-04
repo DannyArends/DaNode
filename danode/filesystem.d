@@ -77,7 +77,7 @@ class FileInfo : Payload {
       if (!buffered) {
         if(buf is null) buf = new char[](maxsize);
         char[] slice = [];
-        if (from == 0) write("[STREAM] .");
+        if (verbose >= DEBUG && from == 0) write("[STREAM] .");
         if (from >= fileSize()) {
           if(verbose >= DEBUG) writeln("[DEBUG]  from >= filesize, are we still trying to send?");
           return([]);
@@ -90,7 +90,7 @@ class FileInfo : Payload {
             slice = fp.rawRead!char(buf);
             fp.close();
             if(verbose >= DEBUG) write(".");
-            if ((from + slice.length) >= fileSize()) write("\n");
+            if (verbose >= DEBUG && (from + slice.length) >= fileSize()) write("\n");
           }
         } catch(Exception e) { 
           writefln("[WARN]   exception %s while streaming file: %s", e.msg, path);
