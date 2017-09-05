@@ -28,6 +28,7 @@ version(SSL) {
       }
 
       override bool openConnection() { synchronized {
+        verbose = INFO;
         if(verbose >= INFO) writeln("[HTTPS]  Opening HTTPS connection");
         if(ncontext > 0) {
           if(verbose >= INFO) writefln("[HTTPS]  Number of SSL contexts: %d", ncontext);
@@ -39,9 +40,17 @@ version(SSL) {
             if(verbose >= INFO) writeln("[HTTPS]  Creating SSL_new");
             this.ssl = SSL_new(contexts[0].context); // writefln("[INFO]   SSL created, using standard certificate contexts[0].context");
             if(verbose >= INFO) writefln("[HTTPS]  initial SSL tunnel created");
-            this.ssl.SSL_set_fd(socket.handle()); // writefln("[INFO]   Added socket handle");
-            sslAssert(SSL_accept(this.ssl) != -1);
+            this.ssl.SSL_set_fd(socket.handle());
+            writefln("[INFO]   Added socket handle");
             this.socket.blocking = this.blocking;
+            writefln("[INFO]   Socket to non-blocking");
+            bool handshaked = false;
+            int tries = 0;
+            while(!handshaked && tries < 20) {
+              if(SSL_accept(this.ssl) != -1) handshaked = true;
+              tries++;
+            }
+            writefln("[INFO]   SSL_accept returned after %d tries", tries);
           } catch(Exception e) {
             writefln("[ERROR]  Couldn't open SSL connection : %s", e.msg);
             return(false);
