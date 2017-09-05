@@ -8,6 +8,7 @@ version(SSL) {
   import deimos.openssl.ssl;
   import deimos.openssl.err;
 
+  import danode.functions : Msecs;
   import danode.response : Response;
   import danode.log : NORMAL, INFO, DEBUG;
   import danode.interfaces : DriverInterface;
@@ -28,29 +29,28 @@ version(SSL) {
       }
 
       override bool openConnection() { synchronized {
-        verbose = INFO;
-        if(verbose >= INFO) writeln("[HTTPS]  Opening HTTPS connection");
+        if(cverbose >= INFO) writeln("[HTTPS]  Opening HTTPS connection");
         if(ncontext > 0) {
-          if(verbose >= INFO) writefln("[HTTPS]  Number of SSL contexts: %d", ncontext);
+          if(cverbose >= INFO) writefln("[HTTPS]  Number of SSL contexts: %d", ncontext);
           try {
             if (this.socket is null) {
               writefln("[ERROR]  SSL Socket is null");
               return(false);
             }
-            if(verbose >= INFO) writeln("[HTTPS]  Creating SSL_new");
+            if(cverbose >= INFO) writeln("[HTTPS]  Creating SSL_new");
             this.ssl = SSL_new(contexts[0].context); // writefln("[INFO]   SSL created, using standard certificate contexts[0].context");
-            if(verbose >= INFO) writefln("[HTTPS]  initial SSL tunnel created");
+            if(cverbose >= INFO) writefln("[HTTPS]  initial SSL tunnel created");
             this.ssl.SSL_set_fd(socket.handle());
-            writefln("[INFO]   Added socket handle");
+            if(cverbose >= INFO) writefln("[HTTPS]  Added socket handle");
             this.socket.blocking = this.blocking;
-            writefln("[INFO]   Socket to non-blocking");
+            if(cverbose >= INFO) writefln("[HTTPS]  Socket to non-blocking");
             bool handshaked = false;
-            int tries = 0;
-            while(!handshaked && tries < 20) {
-              if(SSL_accept(this.ssl) != -1) handshaked = true;
-              tries++;
+            int sslr;
+            while(!handshaked && Msecs(starttime) < 100) {
+              sslr = SSL_accept(this.ssl);
+              if(sslr != -1) handshaked = true;
             }
-            writefln("[INFO]   SSL_accept returned after %d tries", tries);
+            if(cverbose >= INFO) writefln("[HTTPS]  SSL_accept returned %d after %d milliseconds", sslr, Msecs(starttime));
           } catch(Exception e) {
             writefln("[ERROR]  Couldn't open SSL connection : %s", e.msg);
             return(false);
@@ -60,9 +60,9 @@ version(SSL) {
               this.address = this.socket.remoteAddress();
             }
           } catch(Exception e) {
-            if(verbose >= INFO) writefln("[WARN]   unable to resolve requesting origin: %s", e.msg);
+            if(cverbose >= INFO) writefln("[WARN]   unable to resolve requesting origin: %s", e.msg);
           }
-          if(verbose >= INFO) writeln("[HTTPS]  HTTPS connection opened");
+          if(cverbose >= INFO) writeln("[HTTPS]  HTTPS connection opened");
           return(true);
         } else {
           writeln("[ERROR]  HTTPS driver failed, reason: Server has no certificates loaded");
