@@ -24,12 +24,6 @@ version(SSL) {
   import danode.https : HTTPS;
 }
 
-extern(C) @nogc nothrow void sigpipehandler(int x){
-  printf("[!!!!!]  SIGPIPE signal caught: %d\n", x);
-}
-
-import core.sys.posix.signal;
-
 class Server : Thread {
   private:
     Socket            socket;           // The server socket
@@ -178,18 +172,22 @@ void main(string[] args) {
                "verbose|v",  &verbose);     // Verbose level (via commandline)
   version(unittest){
     // Do nothing, unittests will run
-  }else{
-    signal(SIGPIPE, &sigpipehandler);
+  } else {
+    version(Posix) {
+      import core.sys.posix.signal : signal, SIGPIPE;
+      import danode.signals : handle_signal;
+      signal(SIGPIPE, &handle_signal);
+    }
+    version(Windows) {
+      writeln("[WARN]   -k has been set to true, we cannot handle keyboard input under windows at the moment");
+      keyoff = true;
+    }
 
     auto server = new Server(port, backlog, wwwRoot, verbose);
     version(SSL) {
       server.initSSL(certDir, keyFile);  // Load SSL certificates, using the server key
     }
     server.start();
-    version(Windows) {
-      writeln("[WARN]   -k has been set to true, we cannot handle keyboard input under windows at the moment");
-      keyoff = true;
-    }
     while(server.running){
       if(!keyoff){
         server.parseKeyInput();
