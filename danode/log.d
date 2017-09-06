@@ -7,6 +7,8 @@ import danode.response : Response;
 import danode.functions;
 import danode.httpstatus;
 
+extern(C) __gshared int cverbose;         // Verbose level of C-Code
+
 immutable int NOTSET = -1, NORMAL = 0, INFO = 1, DEBUG = 2;
 
 struct Info {
@@ -43,6 +45,7 @@ class Log {
       if(verbose != NOTSET) {
         writefln("Changing verbose level from %s to %s", level, verbose);
         level = verbose;
+        cverbose = verbose;
       }
       return(level); 
     }
