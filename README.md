@@ -13,7 +13,7 @@ Small web server written in the D programming language, main features:
 
 ##### Get DaNode
 
-Download and compile the web server:
+Clone the source code from Github
 
     git clone https://github.com/DannyArends/DaNode.git
     cd DaNode
