@@ -7,12 +7,11 @@ development: [![Build Status](https://travis-ci.org/DannyArends/DaNode.svg?branc
 
 ##### Structure
 
-The DaNode server is designed to handle multiple websites independent and simultaneously. 
-The DaNode front-end routes incoming HTTP requests to the correct web folder. It allows 
-for multiple index pages and executes scripts in other languages (PHP, Python, D and R). 
-Results from CGI scripts monitored and parsed back into the DaNode web server, (e.g. 
-possible header errors, infinite execution of scripts) and results are send to the 
-requesting client via HTTP.
+Small web server written in the D programming language. Main features:
+- Support all programming languages that generate output on stdout
+- HTTPs support (using e.g. Let's encrypt)
+- Small footprint: code, cpu and memory
+- API support for PHP, Python, D, R, or add your own
 
 ##### Get DaNode
 
