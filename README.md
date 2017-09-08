@@ -13,6 +13,8 @@ Small web server written in the D programming language, main features:
 
 ##### Get DaNode
 
+Install the DMD compiler from [https://dlang.org/](https://dlang.org/download.html)
+
 Clone the source code from Github
 
     git clone https://github.com/DannyArends/DaNode.git
