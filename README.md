@@ -18,15 +18,15 @@ Download and compile the web server:
     git clone https://github.com/DannyArends/DaNode.git
     cd DaNode
 
-Build DaNode using the dub package manager:
+Build DaNode using the dub package manager
 
     dub build
 
-or, compile using the compile script:
+Another option is to compile using the compile script
 
     ./sh/compile
 
-Then, start the web server at a specific port (e.g. 8080) type:
+Start the web server at a specific port (e.g. 8080)
 
     ./danode/server -p 8080
 
