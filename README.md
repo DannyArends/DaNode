@@ -5,9 +5,7 @@ master: [![Build Status](https://travis-ci.org/DannyArends/DaNode.svg?branch=mas
 
 development: [![Build Status](https://travis-ci.org/DannyArends/DaNode.svg?branch=development)](https://travis-ci.org/DannyArends/DaNode)
 
-##### Structure
-
-Small web server written in the D programming language. Main features:
+Small web server written in the D programming language, main features:
 - Support all programming languages that generate output on stdout
 - HTTPs support (using e.g. Let's encrypt)
 - Small footprint: code, cpu and memory
