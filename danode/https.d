@@ -3,14 +3,16 @@ module danode.https;
 version(SSL) {
   import std.datetime : Clock;
   import std.stdio : writeln, writefln, stdin;
-  import std.socket : Socket;
+  import std.socket : Socket, SocketShutdown;
 
   import deimos.openssl.ssl;
   import deimos.openssl.err;
 
+  import danode.functions : Msecs;
   import danode.response : Response;
   import danode.log : NORMAL, INFO, DEBUG;
   import danode.interfaces : DriverInterface;
+  import danode.log : cverbose;
   import danode.ssl;
 
   class HTTPS : DriverInterface {
@@ -21,27 +23,34 @@ version(SSL) {
       this(Socket socket, bool blocking = false, int verbose = NORMAL) {
         this.socket = socket;
         this.blocking = blocking;
-        cverbose = verbose;
         this.starttime = Clock.currTime(); /// Time in ms since this process came alive
         this.modtime = Clock.currTime(); /// Time in ms since this process was modified
         if(verbose >= INFO) writeln("[HTTPS]  HTTPS driver initialized");
       }
 
       override bool openConnection() { synchronized {
-        writeln("[HTTPS]  Opening HTTPS connection");
+        if(verbose >= INFO) writeln("[HTTPS]  Opening HTTPS connection");
         if(ncontext > 0) {
-          writefln("[HTTPS]  Number of SSL contexts: %d", ncontext);
+          if(verbose >= INFO) writefln("[HTTPS]  Number of SSL contexts: %d", ncontext);
           try {
             if (this.socket is null) {
               writefln("[ERROR]  SSL Socket is null");
               return(false);
             }
-            writeln("[HTTPS]  Creating SSL_new");
+            if(verbose >= INFO) writeln("[HTTPS]  Creating SSL_new");
             this.ssl = SSL_new(contexts[0].context); // writefln("[INFO]   SSL created, using standard certificate contexts[0].context");
-            writefln("[HTTPS]  initial SSL tunnel created");
-            this.ssl.SSL_set_fd(socket.handle()); // writefln("[INFO]   Added socket handle");
-            sslAssert(SSL_accept(this.ssl) != -1);
+            if(verbose >= INFO) writefln("[HTTPS]  initial SSL tunnel created");
+            this.ssl.SSL_set_fd(socket.handle());
+            if(verbose >= INFO) writefln("[HTTPS]  Added socket handle");
             this.socket.blocking = this.blocking;
+            if(verbose >= INFO) writefln("[HTTPS]  Socket to non-blocking");
+            bool handshaked = false;
+            int sslr;
+            while(!handshaked && Msecs(starttime) < 100) {
+              sslr = SSL_accept(this.ssl);
+              if(sslr != -1) handshaked = true;
+            }
+            if(verbose >= INFO) writefln("[HTTPS]  SSL_accept returned %d after %d milliseconds", sslr, Msecs(starttime));
           } catch(Exception e) {
             writefln("[ERROR]  Couldn't open SSL connection : %s", e.msg);
             return(false);
@@ -51,9 +60,9 @@ version(SSL) {
               this.address = this.socket.remoteAddress();
             }
           } catch(Exception e) {
-            writefln("[WARN]   unable to resolve requesting origin: %s", e.msg);
+            if(verbose >= INFO) writefln("[WARN]   unable to resolve requesting origin: %s", e.msg);
           }
-          writeln("[HTTPS]  HTTPS connection opened");
+          if(verbose >= INFO) writeln("[HTTPS]  HTTPS connection opened");
           return(true);
         } else {
           writeln("[ERROR]  HTTPS driver failed, reason: Server has no certificates loaded");
@@ -61,6 +70,23 @@ version(SSL) {
         }
         return(false);
       } }
+
+      override void closeConnection() {
+        if (socket !is null) {
+          try {
+            //if(socket.isAlive()) SSL_shutdown(ssl);
+            socket.shutdown(SocketShutdown.BOTH);
+            socket.close();
+          } catch(Exception e) {
+            if(verbose >= INFO) writefln("[WARN]   unable to close socket: %s", e.msg);
+          }
+        }
+      }
+
+      override bool isAlive() { 
+        if(socket !is null) { return socket.isAlive(); }
+        return false;
+      }
 
       override ptrdiff_t receive(Socket socket, ptrdiff_t maxsize = 4096){ synchronized {
         ptrdiff_t received;
@@ -74,10 +100,13 @@ version(SSL) {
 
       override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096){ synchronized {
         auto slice = response.bytes(maxsize);
+        if(socket is null) return;
+        if(!socket.isAlive()) return;
         if(ssl is null) return;
         ptrdiff_t send = SSL_write(ssl, cast(void*) slice, cast(int) slice.length);
         if(send >= 0) {
-          response.index += send; modtime = Clock.currTime(); senddata[requests] += send;
+          if(send > 0) modtime = Clock.currTime();
+          response.index += send; senddata[requests] += send;
           if(response.index >= response.length) response.completed = true;
         }
       } }

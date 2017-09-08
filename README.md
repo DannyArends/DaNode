@@ -5,31 +5,30 @@ master: [![Build Status](https://travis-ci.org/DannyArends/DaNode.svg?branch=mas
 
 development: [![Build Status](https://travis-ci.org/DannyArends/DaNode.svg?branch=development)](https://travis-ci.org/DannyArends/DaNode)
 
-##### Structure
-
-The DaNode server is designed to handle multiple websites independent and simultaneously. 
-The DaNode front-end routes incoming HTTP requests to the correct web folder. It allows 
-for multiple index pages and executes scripts in other languages (PHP, Python, D and R). 
-Results from CGI scripts monitored and parsed back into the DaNode web server, (e.g. 
-possible header errors, infinite execution of scripts) and results are send to the 
-requesting client via HTTP.
+Small web server written in the D programming language, main features:
+- Support all programming languages that generate output on stdout
+- HTTPs support (using e.g. Let's encrypt)
+- Small footprint: code, cpu and memory
+- API support for PHP, Python, D, R, or add your own
 
 ##### Get DaNode
 
-Download and compile the web server:
+Install the DMD compiler from [https://dlang.org/](https://dlang.org/download.html)
+
+Clone the source code from Github
 
     git clone https://github.com/DannyArends/DaNode.git
     cd DaNode
 
-Build DaNode using the dub package manager:
+Build DaNode using the dub package manager
 
     dub build
 
-or, compile using the compile script:
+Another option is to compile using the compile script
 
     ./sh/compile
 
-Then, start the web server at a specific port (e.g. 8080) type:
+Start the web server at a specific port (e.g. 8080)
 
     ./danode/server -p 8080
 

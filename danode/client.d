@@ -40,9 +40,12 @@ class Client : Thread, ClientInterface {
           terminated = true;
           return;
         }
+        scope (exit) {
+          if (driver.isAlive()) driver.closeConnection();
+        }
         Request request;
         Response response;
-        while (running && modified < maxtime) {
+        while (running) {
           if (driver.receive(driver.socket) > 0) {                      // We've received new data
             if (!response.ready) {                                      // If we're not ready to respond yet
               // Parse the data and try to create a response (Could fail multiple times)
@@ -54,16 +57,16 @@ class Client : Thread, ClientInterface {
             if (response.ready && response.completed) {                         // We've completed the request, response cycle
               router.logrequest(this, request, response);                       // Log the response to the request
               request.clearUploadFiles();                                       // Remove any upload files left over
-              request.destroy();                                                // Clear the request and uploaded files
+              request.destroy();                                                // Clear the request structure
               driver.inbuffer.destroy();                                        // Clear the input buffer
               driver.requests++;
               if(!response.keepalive) stop();                                   // No keep alive, then stop this client
-              response.destroy();                                               // Clear the response
+              response.destroy();                                               // Clear the response structure
             }
-
           } else {
             Thread.sleep(dur!"msecs"(1));
           }
+          if(lastmodified >= maxtime) terminated = true;
           // writefln("[INFO]   connection %s:%s (%s msecs) %s", ip, port, Msecs(driver.starttime), to!string(driver.inbuffer.data));
           Thread.yield();
         }
@@ -74,9 +77,7 @@ class Client : Thread, ClientInterface {
         writefln("[INFO]   connection %s:%s (%s) closed after %d requests %s (%s msecs)", ip, port, (driver.isSecure() ? "⚐" : "⚑"), 
                                                                                           driver.requests, driver.senddata, Msecs(driver.starttime));
       }
-      if (driver.socket !is null) {
-        driver.socket.close();
-      }
+      driver.destroy();                                               // Clear the response structure
     }
 
     final @property bool running() {
@@ -84,11 +85,11 @@ class Client : Thread, ClientInterface {
       return(driver.socket.isAlive() && !terminated);
     }
 
-    final @property long time(){
+    final @property long starttime(){
       return(Msecs(driver.starttime));
     }
 
-    final @property long modified(){
+    final @property long lastmodified(){
       return(Msecs(driver.modtime));
     }
 

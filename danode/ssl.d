@@ -17,7 +17,7 @@ version(SSL) {
   import deimos.openssl.err;
 
   import danode.client;
-  import danode.server;
+  import danode.server : cverbose, Server;
   import danode.client : Response, Clock;
   import danode.log : NORMAL, INFO, DEBUG;
 
@@ -36,7 +36,6 @@ version(SSL) {
   extern (C)
   {
     __gshared int             ncontext;         // How many contexts are available
-    __gshared int             cverbose;         // Verbose level of C-Code
     __gshared SSLcontext*     contexts;         // SSL / HTTPs contexts (allocated globally from C)
 
     // C callback function to switch SSL contexts after hostname lookup

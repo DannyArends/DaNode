@@ -9,8 +9,8 @@ import danode.log : NORMAL, INFO, DEBUG;
 
 interface ClientInterface {
   @property bool    running();
-  @property long    time();
-  @property long    modified();
+  @property long    starttime();
+  @property long    lastmodified();
   @property void    stop();
 
   @property long    port() const;
@@ -32,8 +32,11 @@ abstract class DriverInterface {
     int                 verbose = NORMAL;    /// Verbose level
 
     bool openConnection();
+    void closeConnection();
+    bool isAlive();
+    bool isSecure();
+
     ptrdiff_t receive(Socket conn, ptrdiff_t maxsize = 4096);
     void send(ref Response response, Socket conn, ptrdiff_t maxsize = 4096);
-    bool isSecure();
 }
 

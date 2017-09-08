@@ -2,7 +2,7 @@ module danode.http;
 
 import std.datetime : Clock;
 import std.stdio : writeln, writefln, stdin;
-import std.socket : Socket;
+import std.socket : Socket, SocketShutdown;
 
 import danode.interfaces : DriverInterface;
 import danode.response : Response;
@@ -19,7 +19,7 @@ class HTTP : DriverInterface {
 
     override bool openConnection() {
       try {
-        this.socket.blocking = this.blocking;
+        socket.blocking = this.blocking;
       } catch(Exception e) {
         writefln("[ERROR]  unable to accept socket: %s", e.msg);
         return(false);
@@ -44,14 +44,32 @@ class HTTP : DriverInterface {
     }
 
     override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096)  { synchronized {
+      if(socket is null) return;
       if(!socket.isAlive()) return;
       ptrdiff_t send = socket.send(response.bytes(maxsize));
       if(send >= 0) {
-        response.index += send; modtime = Clock.currTime(); senddata[requests] += send;
+        if(send > 0) modtime = Clock.currTime();
+        response.index += send; senddata[requests] += send;
         if(response.index >= response.length) response.completed = true;
       }
       // if(send > 0) writefln("[INFO]   send %d bytes of data", send);
     } }
+
+    override void closeConnection() {
+      if (socket !is null) {
+        try {
+          socket.shutdown(SocketShutdown.BOTH);
+          socket.close();
+        } catch(Exception e) {
+          if(verbose >= INFO) writefln("[WARN]   unable to close socket: %s", e.msg);
+        }
+      }
+    }
+
+    override bool isAlive() { 
+      if(socket !is null) { return socket.isAlive(); }
+      return false;
+    }
 
     override bool isSecure(){ return(false); }
 }
