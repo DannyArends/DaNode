@@ -1,7 +1,7 @@
 module danode.filesystem;
 
-import std.stdio, std.string, std.conv, std.datetime, std.file, std.math;
-import std.string : replace;
+import std.stdio, std.conv, std.datetime, std.file, std.math;
+import std.string : replace, format;
 import std.zlib : compress;
 
 import danode.mimetypes : mime;
@@ -84,7 +84,7 @@ class FileInfo : Payload {
       return(fileSize());
     }
 
-    final char[] asStream(ptrdiff_t from, ptrdiff_t maxsize = 1024){
+    final char[] asStream(ptrdiff_t from, ptrdiff_t maxsize = 1024) {
       if(buf is null) buf = new char[](maxsize);
       char[] slice = [];
       if (verbose >= DEBUG && from == 0) write("[STREAM] .");
