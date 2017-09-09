@@ -43,7 +43,7 @@ class Log {
     @property int verbose() const { return(level); }
     @property int verbose(int verbose = NOTSET){
       if(verbose != NOTSET) {
-        writefln("Changing verbose level from %s to %s", level, verbose);
+        if(verbose >= INFO) writefln("[INFO]   Changing verbose level from %s to %s", level, verbose);
         level = verbose;
         cverbose = verbose;
       }
