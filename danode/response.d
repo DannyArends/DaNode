@@ -31,29 +31,40 @@ struct Response {
   bool              havepost     = false;
   bool              routed       = false;
   bool              completed    = false;
+  bool              cgiheader    = false;
   Appender!(char[]) hdr;
   ptrdiff_t         index        = 0;
 
   final void customheader(string key, string value){ headers[key] = value; }
 
   @property final char[] header(int verbose = NORMAL) {
-    if(hdr.data) return(hdr.data);                                                        // If we have build the header, no need to redo this
-    if(payload.type == PayLoadType.Script){                                               // Scripts build their own header
+    if (hdr.data) {
+      return(hdr.data); // Header was constructed
+    }
+    // Scripts are allowed to have their own header
+    if(payload.type == PayLoadType.Script) {
       CGI script = to!CGI(payload);
-      this.connection = "Close";
+      connection = "Close";
       HeaderType type = script.headerType();
-      if(verbose >= INFO) writefln("[INFO]   script header type: %s", type);
-      if(type != HeaderType.None) {
+      if (type != HeaderType.None) {
         long clength = script.getHeader("Content-Length", -1);                              // Is the content length provided ?
         if(clength >= 0) connection = script.getHeader("Connection", "Close");              // Yes ? then the script, can try to keep alive
-        if(type == HeaderType.FastCGI){ // FastCGI type header, create our own HTTP headers based on the first Status: indicator
-          hdr.put(format("%s %s %s\n", "HTTP/1.1", script.getHeader("Status", 500), script.getHeader("Status", "Internal Server Error", 2)));
+        if(type == HeaderType.FastCGI) {
+          // FastCGI type header, create response line on Status: indicator
+          string status = script.getHeader("Status", "500 Internal Server Error");
+          string[] inparts = status.split(" ");
+          if(inparts.length == 2) {
+            hdr.put(format("%s %s %s\n", "HTTP/1.1", inparts[0], inparts[1]));
+          } else {
+            hdr.put(format("%s %s\n", "HTTP/1.1", "500 Internal Server Error"));
+          }
         }
         hdr.put(script.fullHeader());
         if(verbose >= INFO) {
           writefln("[INFO]   script: status: %d, eoh: %d, content: %d", script.statuscode, script.endOfHeader(), clength);
           writefln("[INFO]   connection: %s -> %s, to %s in %d bytes", strip(script.getHeader("Connection", "Close")), connection, type, hdr.data.length);
         }
+        cgiheader = true;
         return(hdr.data);
       }
       writeln("[WARN]   no valid header detected, generating one");
@@ -73,11 +84,20 @@ struct Response {
 
   @property final StatusCode statuscode() const { return payload.statuscode; }
   @property final bool keepalive() const { return( toLower(connection) == "keep-alive"); }
-  @property final long length(){ if(payload.length >= 0){ return header.length + payload.length; }else{ return(long.max); } }
-  @property final const(char)[] bytes(in ptrdiff_t maxsize = 1024){                              // Return the bytes from index to the end
+  @property final long length() {
+    ptrdiff_t payloadstart = (cgiheader)? to!CGI(payload).endOfHeader() : 0;
+    long l = header.length;
+    if(payload.length >= 0){ l += (payload.length - payloadstart); }
+    return l;
+  }
+  @property final const(char)[] bytes(in ptrdiff_t maxsize = 1024){                         // Return the bytes from index to the end
     ptrdiff_t hsize = header.length;
-    if(index <= hsize) return(header[index .. hsize] ~ payload.bytes(0, maxsize-hsize));    // We haven't completed the header yet
-    return(payload.bytes(index-hsize));                                                     // Header completed, just stream bytes from the payload
+    ptrdiff_t payloadstart = (cgiheader)? to!CGI(payload).endOfHeader() : 0;
+    if(index <= hsize) {
+      // We haven't completed the header yet
+      return(header[index .. hsize] ~ payload.bytes(payloadstart, maxsize-hsize));
+    }
+    return(payload.bytes(index+payloadstart));                                                     // Header completed, just stream bytes from the payload
   }
 
   @property final bool ready(bool r = false){ if(r){ routed = r; } return(routed && payload.ready()); }
