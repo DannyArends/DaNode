@@ -141,11 +141,18 @@ void serveCGI(ref Response response, in Request request, in WebConfig config, in
 void serveStaticFile(ref Response response, in Request request, FileSystem fs, int verbose) {
   if(verbose >= DEBUG) writeln("[DEBUG]  serving a static file");
   string localroot = fs.localroot(request.shorthost());
-  response.payload = fs.file(localroot, request.path);
+  FileInfo reqFile = fs.file(localroot, request.path);
+  if(request.supportsGzip && reqFile.isgzip) {
+    if(verbose >= INFO) writefln("[INFO]   will serve %s with deflate encoding", request.path);
+    reqFile.asgzip = true;
+    response.customheader("Content-Encoding","deflate");
+  }
+  response.payload = reqFile;
   if(request.ifModified >= response.payload.mtime()) {                                        // Non modified static content
     if(verbose >= DEBUG) writeln("[DEBUG]  static file has not changed, sending notmodified");
     response.notmodified(request, response.payload.mimetype);
   }
+
   response.ready = true;
 }
 
