@@ -116,7 +116,7 @@ struct Request {
   final @property string    uripath() const { ptrdiff_t i = uri.indexOf("?"); if(i > 0){ return(uri[0 .. i]); }else{ return(uri); } }
   final @property bool      keepalive() const { return( toLower(headers.from("Connection")) == "keep-alive"); }
   final @property SysTime   ifModified() const { return(parseHtmlDate(headers.from("If-Modified-Since"))); }
-  final @property bool      supportsGzip() const { return(headers.from("Accept-Encoding").canFind("deflate")); }
+  final @property bool      acceptsEncoding(string encoding = "deflate") const { return(headers.from("Accept-Encoding").canFind(encoding)); }
   final @property bool      track() const { return(  headers.from("DNT","0") == "0"); }
   final @property string    params() const { Appender!string str; foreach(k; get.byKey()){ str.put(format(" \"%s=%s\"", k, get[k])); } return(str.data); }
   final @property string    cookies() const { return(headers.from("Cookie")); }

@@ -142,9 +142,9 @@ void serveStaticFile(ref Response response, in Request request, FileSystem fs, i
   if(verbose >= DEBUG) writeln("[DEBUG]  serving a static file");
   string localroot = fs.localroot(request.shorthost());
   FileInfo reqFile = fs.file(localroot, request.path);
-  if(request.supportsGzip && reqFile.isgzip) {
+  if(request.acceptsEncoding("deflate") && reqFile.hasEncodedVersion) {
     if(verbose >= INFO) writefln("[INFO]   will serve %s with deflate encoding", request.path);
-    reqFile.asgzip = true;
+    reqFile.deflate = true;
     response.customheader("Content-Encoding","deflate");
   }
   response.payload = reqFile;
