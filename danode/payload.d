@@ -36,14 +36,17 @@ class CGI : Payload {
     final @property PayLoadType   type() const { return(PayLoadType.Script); }
     final @property long          ready() { return(external.finished); }
     final @property ptrdiff_t     length() const {
-      if(!external.running) return(getHeader!ptrdiff_t("Content-Length", to!ptrdiff_t(external.length)));
+      if(!external.running) {
+        ptrdiff_t msglength = to!ptrdiff_t(external.length) - endOfHeader;
+        return(getHeader!ptrdiff_t("Content-Length", msglength));
+      }
       return -1; 
     }
     final @property SysTime       mtime() { return Clock.currTime(); }
     final @property string        mimetype() const { return "text/html"; } // Todo if there is a header parse it out of there
 
     final T getHeader(T)(string key, T def = T.init) const {
-      if(endOfHeader > 0){
+      if (endOfHeader > 0) {
         foreach(line; fullHeader().split("\n")){
           string[] elems = line.split(": ");
           if(elems.length == 2) {
@@ -80,7 +83,7 @@ class CGI : Payload {
         status = status.split(" ")[0];
       }
       if(headerType() == HeaderType.HTTP10 || headerType() == HeaderType.HTTP11) {
-        string[] values = firstHeaderLine().split(" ");
+        string[] values = firstHeaderLine().split(" "); // Normal HTTP header: "Version Code Reason"
         if(values.length >= 3) status = values[1];
       }
       if(status == "") return((external.status == 0)? StatusCode.Ok : StatusCode.ISE );
@@ -94,7 +97,8 @@ class CGI : Payload {
     }
 
     const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 1024) {
-      return(external.output(from)[0 .. to!ptrdiff_t(fmin(from+maxsize, $))]);
+      // Stream of message bytes, skip the header the script generated (since the webserver parses this)
+      return(external.output(from + endOfHeader)[0 .. to!ptrdiff_t(fmin(from+maxsize, $))]);
     }
 
     final ptrdiff_t endOfHeader() const {

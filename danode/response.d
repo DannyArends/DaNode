@@ -84,20 +84,13 @@ struct Response {
 
   @property final StatusCode statuscode() const { return payload.statuscode; }
   @property final bool keepalive() const { return( toLower(connection) == "keep-alive"); }
-  @property final long length() {
-    ptrdiff_t payloadstart = (cgiheader)? to!CGI(payload).endOfHeader() : 0;
-    long l = header.length;
-    if(payload.length >= 0){ l += (payload.length - payloadstart); }
-    return l;
-  }
-  @property final const(char)[] bytes(in ptrdiff_t maxsize = 1024){                         // Return the bytes from index to the end
+  @property final long length() { return header.length + payload.length; }
+  @property final const(char)[] bytes(in ptrdiff_t maxsize = 1024) {                       // Stream of bytes (header + stream of bytes)
     ptrdiff_t hsize = header.length;
-    ptrdiff_t payloadstart = (cgiheader)? to!CGI(payload).endOfHeader() : 0;
-    if(index <= hsize) {
-      // We haven't completed the header yet
-      return(header[index .. hsize] ~ payload.bytes(payloadstart, maxsize-hsize));
+    if(index <= hsize) {  // We haven't completed the header yet
+      return(header[index .. hsize] ~ payload.bytes(0, maxsize-hsize));
     }
-    return(payload.bytes(index+payloadstart));                                                     // Header completed, just stream bytes from the payload
+    return(payload.bytes(index-hsize));                                                    // Header completed, just stream bytes from the payload
   }
 
   @property final bool ready(bool r = false){ if(r){ routed = r; } return(routed && payload.ready()); }
