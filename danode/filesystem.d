@@ -1,6 +1,7 @@
 module danode.filesystem;
 
 import std.stdio, std.string, std.conv, std.datetime, std.file, std.math;
+import std.string : replace;
 import danode.mimetypes : mime;
 import danode.payload : StatusCode, Payload, PayLoadType;
 import danode.functions : has;
@@ -137,18 +138,20 @@ class FileSystem {
 
     final Domain scan(string dname){ synchronized {
       Domain domain;
-      foreach (DirEntry f; dirEntries(dname, SpanMode.depth)){ if(f.isFile()){
-        string shortname = replace(f.name[dname.length .. $], "\\", "/");
-        if(logger.verbose >= INFO) writefln("[SCAN]   File: %s -> %s", f.name, shortname);
-        if(!domain.files.has(shortname)){
-          domain.files[shortname] = new FileInfo(f.name);
-          domain.entries++;
-          if(domain.files[shortname].needsupdate()) {
-            domain.files[shortname].buffer(maxsize, logger.verbose);
-            domain.buffered++;
+      foreach (DirEntry f; dirEntries(dname, SpanMode.depth)) {
+        if (f.isFile()) {
+          string shortname = replace(f.name[dname.length .. $], "\\", "/");
+          if(logger.verbose >= INFO) writefln("[SCAN]   File: %s -> %s", f.name, shortname);
+          if(!domain.files.has(shortname)){
+            domain.files[shortname] = new FileInfo(f.name);
+            domain.entries++;
+            if(domain.files[shortname].needsupdate()) {
+              domain.files[shortname].buffer(maxsize, logger.verbose);
+              domain.buffered++;
+            }
           }
         }
-      } }
+      }
       if(logger.verbose >= INFO) {
         writef("[INFO]   domain: %s, files %s|%s", dname, domain.buffered, domain.entries);
         writefln(", size: %.2f/%.2f kB", domain.buffersize/1024.0, domain.size/1024.0);
