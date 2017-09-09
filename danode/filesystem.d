@@ -4,24 +4,29 @@ import std.stdio, std.string, std.conv, std.datetime, std.file, std.math;
 import std.string : replace;
 import danode.mimetypes : mime;
 import danode.payload : StatusCode, Payload, PayLoadType;
-import danode.functions : has;
+import danode.functions : has, isCGI;
 import danode.log : Log, NORMAL, INFO, DEBUG;
+import std.zlib;
 
 class FileInfo : Payload {
+  public:
+    bool      asgzip = false;
+    bool      isgzip = false;
   private:
     string    path;
     SysTime   btime;
     bool      buffered = false;
     char[]    buf = null;
+    char[]    gzipbuf = null;
     File*     fp = null;
     int       verbose = NORMAL;
 
   public:
     this(string path){ this.path = path; }
 
-    final bool needsupdate(int verbose = NORMAL) {
+    final bool needsupdate(size_t buffersize = 4096, int verbose = NORMAL) {
       this.verbose = verbose;
-      if( fitsInBuffer() ) {
+      if( fitsInBuffer(buffersize) && needsBuffer() ) {
         if (!buffered) {
           if(verbose >= INFO) writefln("[INFO]   Need to buffering file record: %s", path);
           return true;
@@ -40,24 +45,34 @@ class FileInfo : Payload {
       this.buffered = false;
     } }
 
+    final bool needsBuffer() {
+      return(!path.isCGI());
+    }
+
     final bool fitsInBuffer(size_t buffersize = 4096) {
       if(fileSize() > 0 && fileSize() < buffersize){ return(true); }
       return(false);
     }
 
-    final void buffer(size_t buffersize = 4096, int verbose = NORMAL) { synchronized {
+    final void buffer(int verbose = NORMAL) { synchronized {
       this.verbose = verbose;
       this.buf = new char[](fileSize());
       try{
         if(fp is null) fp = new File(path, "rb");
         fp.rawRead(buf);
         fp.close();
-      }catch(Exception e){
+      } catch (Exception e) {
         writefln("[WARN]   exception %s while buffering file: %s", e.msg, path);
         return;
       }
+      try {
+        gzipbuf = cast(char[])( compress(buf, 9) );
+        isgzip = true;
+      } catch (Exception e) {
+        writefln("[WARN]   Error during compression of %s", path);
+      }
       btime = Clock.currTime();
-      if(verbose >= DEBUG) writefln("[DEBUG]  buffered %s: %s bytes", path, length);
+      if(verbose >= DEBUG) writefln("[DEBUG]  buffered %s: %d|%d bytes", path, length, gzipbuf.length);
       buffered = true;
     } }
 
@@ -66,40 +81,49 @@ class FileInfo : Payload {
     final @property SysTime       mtime() const { if(!realfile){ return btime; } return path.timeLastModified(); }
     final @property long          ready() { return(true); }
     final @property PayLoadType   type() const { return(PayLoadType.Message); }
-    final @property ptrdiff_t     length() const { return(fileSize()); }
+    final @property ptrdiff_t     length() const {
+      if(asgzip && isgzip) return(gzipbuf.length); 
+      return(fileSize());
+    }
     final @property ptrdiff_t     fileSize() const { if(!realfile){ return -1; } return to!ptrdiff_t(path.getSize()); }
     final @property long          buffersize() const { return cast(long)(buf.length); }
     final @property string        mimetype() const { return mime(path); }
     final @property StatusCode    statuscode() const { return StatusCode.Ok; }
 
+    final char[] serveStreamed(ptrdiff_t from, ptrdiff_t maxsize = 1024){
+      if(buf is null) buf = new char[](maxsize);
+      char[] slice = [];
+      if (verbose >= DEBUG && from == 0) write("[STREAM] .");
+      if (from >= fileSize()) {
+        if(verbose >= DEBUG) writeln("[DEBUG]  from >= filesize, are we still trying to send?");
+        return([]);
+      }
+      try {
+        if(fp is null) fp = new File(path, "rb");
+        fp.open(path, "rb");
+        if(fp.isOpen()) {
+          fp.seek(from);
+          slice = fp.rawRead!char(buf);
+          fp.close();
+          if(verbose >= DEBUG) write(".");
+          if (verbose >= DEBUG && (from + slice.length) >= fileSize()) write("\n");
+        }
+      } catch(Exception e) { 
+        writefln("[WARN]   exception %s while streaming file: %s", e.msg, path);
+      }
+      return(slice);
+    }
+
     final char[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 1024){ synchronized {
       if (!realfile) { return []; }
       if (needsupdate){ buffer(); }
       if (!buffered) {
-        if(buf is null) buf = new char[](maxsize);
-        char[] slice = [];
-        if (verbose >= DEBUG && from == 0) write("[STREAM] .");
-        if (from >= fileSize()) {
-          if(verbose >= DEBUG) writeln("[DEBUG]  from >= filesize, are we still trying to send?");
-          return([]);
-        }
-        try {
-          if(fp is null) fp = new File(path, "rb");
-          fp.open(path, "rb");
-          if(fp.isOpen()) {
-            fp.seek(from);
-            slice = fp.rawRead!char(buf);
-            fp.close();
-            if(verbose >= DEBUG) write(".");
-            if (verbose >= DEBUG && (from + slice.length) >= fileSize()) write("\n");
-          }
-        } catch(Exception e) { 
-          writefln("[WARN]   exception %s while streaming file: %s", e.msg, path);
-        }
-        return(slice);
+        return(serveStreamed(from, maxsize));
       } else {
-        if(from < buf.length) {
-          return( buf[from .. to!ptrdiff_t(fmin(from+maxsize, $))] );
+        if(asgzip && isgzip) {
+          if(from < gzipbuf.length) return( gzipbuf[from .. to!ptrdiff_t(fmin(from+maxsize, $))] );
+        } else {
+          if(from < buf.length) return( buf[from .. to!ptrdiff_t(fmin(from+maxsize, $))] );
         }
       }
       return([]);
@@ -123,7 +147,7 @@ class FileSystem {
     long              maxsize;
 
   public:
-    this(Log logger, string root = "./www/", int maxsize = 4096){
+    this(Log logger, string root = "./www/", int maxsize = 1024 * 512){
       this.logger   = logger;
       this.root     = root;
       this.maxsize  = maxsize;
@@ -145,8 +169,8 @@ class FileSystem {
           if(!domain.files.has(shortname)){
             domain.files[shortname] = new FileInfo(f.name);
             domain.entries++;
-            if(domain.files[shortname].needsupdate()) {
-              domain.files[shortname].buffer(maxsize, logger.verbose);
+            if(domain.files[shortname].needsupdate(maxsize)) {
+              domain.files[shortname].buffer(logger.verbose);
               domain.buffered++;
             }
           }
