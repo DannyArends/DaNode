@@ -72,6 +72,7 @@ class Client : Thread, ClientInterface {
         }
       } catch(Exception e) { 
         writefln("[WARN]   unknown client exception: %s", e.msg);
+        terminated = true;
       }
       if (router.verbose >= INFO) {
         writefln("[INFO]   connection %s:%s (%s) closed after %d requests %s (%s msecs)", ip, port, (driver.isSecure() ? "⚐" : "⚑"), 
