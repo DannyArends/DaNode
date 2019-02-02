@@ -5,8 +5,8 @@ CFLAGS=""
 
 if [ "$UI1" == "ssl" ]; then
     echo "Compiling: DaNode openSSL version"
-    CFLAGS="-version=SSL -I../openssl -L-lssl -L-lcrypto"
+    CFLAGS="--config=ssl"
 fi
 
-rdmd --force --build-only -O -g -m64 -release $CFLAGS -w danode/server.d
+dub build --force --build=release $CFLAGS
 
