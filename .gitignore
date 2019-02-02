@@ -1,5 +1,7 @@
 www/dannyarends.nl
+www/dannyarends.test
 www/rotationz.nl
+www/rotationz.test
 www/grassland.test
 www/localhost/ddoc
 danode/server
@@ -34,9 +36,13 @@ www/qrcode.test/QR/gen/*
 *.out
 *~
 *.pdf
+*.zip
 
 .sass-cache
 
 .dub/
 dub.selections.json
+
+letsEncrypt_da.nl
+www/*.nl/
 
