@@ -8,8 +8,9 @@ void setGET(string[] args){
   }
 }
 
-void setCONFIG(){
-  string myloc = SERVER["SCRIPT_FILENAME"];
+void setCONFIG() {
+  string myloc = "./";
+  if(SERVER) myloc = SERVER["SCRIPT_FILENAME"];
   string configfile = myloc[0 .. (myloc.lastIndexOf("/"))] ~ "/web.config";
   if(exists(configfile)){
     string[] configcont = to!string(std.file.read(configfile)).split("\n");

@@ -17,9 +17,9 @@ version(SSL) {
   import deimos.openssl.err;
 
   import danode.client;
-  import danode.server : cverbose, Server;
-  import danode.client : Response, Clock;
-  import danode.log : NORMAL, INFO, DEBUG;
+  import danode.server : Server;
+  import danode.client : Response;
+  import danode.log : cverbose, NORMAL, INFO, DEBUG;
 
   // SSL context structure, stored relation between hostname 
   // and the SSL context, should be allocated only once available to C, and deallocated at exit
@@ -61,16 +61,21 @@ version(SSL) {
     }
   }
 
-
-  SSL_CTX* getCTX(string CertFile, string keyFile) {
-    SSL_CTX *ctx = SSL_CTX_new(SSLv23_server_method());
+  // Create a new SSL context pointer using a certificate, chain and privateKey file
+  SSL_CTX* createCTX(string certFile, string keyFile, string chainFile) {
+    SSL_CTX* ctx = SSL_CTX_new(SSLv23_server_method());
     sslAssert(!(ctx is null));
-    sslAssert(SSL_CTX_use_certificate_file(ctx, cast(const char*) toStringz(CertFile), SSL_FILETYPE_PEM) > 0);
-    sslAssert(SSL_CTX_use_PrivateKey_file(ctx, cast(const char*) keyFile, SSL_FILETYPE_PEM) > 0);
+    sslAssert(SSL_CTX_use_certificate_file(ctx, cast(const char*) toStringz(certFile), SSL_FILETYPE_PEM) > 0);
+    if (exists(chainFile) && isFile(chainFile)) {
+      if(cverbose >= INFO) writefln("[INFO]   loading certificate chain from file: %s", chainFile);
+      sslAssert(SSL_CTX_use_certificate_chain_file(ctx, cast(const char*) toStringz(chainFile)) > 0);
+    }
+    sslAssert(SSL_CTX_use_PrivateKey_file(ctx, cast(const char*) toStringz(keyFile), SSL_FILETYPE_PEM) > 0);
     sslAssert(SSL_CTX_check_private_key(ctx) > 0);
     return ctx;
   }
 
+  // Does the hostname requested have a certificate ?
   bool hasCertificate(string hostname) {
     if(cverbose >= INFO) writefln("[HTTPS]  '%s' certificate?", hostname);
     string s;
@@ -85,14 +90,14 @@ version(SSL) {
   }
 
   // loads an SSL context for hostname from the .crt file at path;
-  SSLcontext loadContext(string path, string hostname, string keyFile){
+  SSLcontext loadContext(string path, string hostname, string keyFile, string chainFile) {
     SSLcontext ctx;
     size_t certNameEnd = (path.length - 4);
     for(size_t x = 0; x < hostname.length; x++) {
       ctx.hostname[x] = hostname[x];
     }
     ctx.hostname[hostname.length] = '\0';
-    ctx.context = getCTX(path, keyFile);
+    ctx.context = createCTX(path, keyFile, chainFile);
     if(cverbose >= INFO) writefln("[INFO]   context created for certificate: %s", to!string(ctx.hostname.ptr));
     SSL_CTX_callback_ctrl(ctx.context,SSL_CTRL_SET_TLSEXT_SERVERNAME_CB, cast(ExternC!(void function())) &switchContext);
     return(ctx);
@@ -122,14 +127,15 @@ version(SSL) {
       writefln("[WARN]   SSL private key file: '%s' not a file", certDir);
       return contexts;
     }
-    string hostname;
+
     foreach (DirEntry d; dirEntries(certDir, SpanMode.shallow)) {
-      if(d.name.endsWith(".crt")) {
-        hostname = baseName(d.name, ".crt");
-        if(hostname.length < 255) {
+      if (d.name.endsWith(".crt")) {
+        string hostname = baseName(d.name, ".crt");
+        if (hostname.length < 255) {
+          string chainFile = baseName(d.name, ".crt") ~ ".chain";
           if(cverbose >= INFO) writefln("[INFO]   loading certificate from file: %s", d.name);
           contexts = cast(SSLcontext*) realloc(contexts, (ncontext+1) * SSLcontext.sizeof);
-          contexts[ncontext] = loadContext(d.name, hostname, keyFile);
+          contexts[ncontext] = loadContext(d.name, hostname, keyFile, chainFile);
           if(cverbose >= INFO) writefln("[HTTPS]  stored certificate: %s in context: %d", to!string(contexts[ncontext].hostname.ptr), ncontext);
           ncontext++;
         }
