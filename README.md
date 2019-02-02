@@ -1,11 +1,9 @@
 DaNode a small webserver written in the D programming language
 --------------------------------------------------------------
-
 master: [![Build Status](https://travis-ci.org/DannyArends/DaNode.svg?branch=master)](https://travis-ci.org/DannyArends/DaNode)
-
 development: [![Build Status](https://travis-ci.org/DannyArends/DaNode.svg?branch=development)](https://travis-ci.org/DannyArends/DaNode)
 
-Small web server written in the D programming language, main features:
+Small web server written in the [D programming language](https://dlang.org/), main features:
 - Support all programming languages that generate output on stdout
 - HTTPs support (using e.g. Let's encrypt)
 - Small footprint: code, cpu and memory
@@ -143,7 +141,7 @@ Fell free to also post comments on commits.
 
 Or be a maintainer, and adopt (the documentation of) a function.
 
-##### Licence
+##### License
 
-(c) 2010-2016 Danny Arends
+DaNode is written by Danny Arends and is released under the GNU GENERAL PUBLIC LICENSE Version 3 (GPLv3). See [LICENSE.txt](LICENSE.txt).
 
