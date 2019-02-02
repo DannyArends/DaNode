@@ -57,6 +57,8 @@ pure string mime(string i){
     case ".frag"  : return "x-shader/x-fragment";
     case ".geom"  : return "x-shader/x-geometry";
 
+    case ".woff2"  : return "font/woff2";
+
     case ".scss" : return CGI_FILE ~ "sass -t compact"; //nested (default), compact, compressed, or expanded
     case ".cgi"  : return CGI_FILE ~ "perl";
     case ".d"    : return CGI_FILE ~ "rdmd";

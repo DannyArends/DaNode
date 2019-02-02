@@ -4,8 +4,9 @@ import std.stdio, std.conv, std.datetime, std.file, std.math;
 import std.string : replace, format;
 import std.zlib : compress;
 
+import danode.httpstatus : StatusCode;
 import danode.mimetypes : mime;
-import danode.payload : StatusCode, Payload, PayLoadType;
+import danode.payload : Payload, PayLoadType;
 import danode.functions : has, isCGI;
 import danode.log : Log, NORMAL, INFO, DEBUG;
 
