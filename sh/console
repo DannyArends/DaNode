@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 
-authbind danode/server -k
+authbind danode/server -k $*
 
