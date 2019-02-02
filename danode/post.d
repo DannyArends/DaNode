@@ -54,7 +54,7 @@ final bool parsepost(ref Request request, ref Response response, in FileSystem f
   }else if(contenttype.indexOf(MPHEADER) >= 0){             // Multipart
     string mpid = split(contenttype, "boundary=")[1];
     if(verbose >= INFO) writef("[MPART]  header: %s, parsing %d bytes", mpid, expectedlength);
-    foreach(int i, part; chomp(request.content).split(mpid)){
+    foreach(size_t i, part; chomp(request.content).split(mpid)){
       string[] elem = strip(part).split("\r\n");
       if(elem[0] != "--"){
         string[] mphdr = elem[0].split("; ");
