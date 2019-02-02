@@ -17,9 +17,9 @@ version(SSL) {
   import deimos.openssl.err;
 
   import danode.client;
-  import danode.server : cverbose, Server;
-  import danode.client : Response, Clock;
-  import danode.log : NORMAL, INFO, DEBUG;
+  import danode.server : Server;
+  import danode.client : Response;
+  import danode.log : cverbose, NORMAL, INFO, DEBUG;
 
   // SSL context structure, stored relation between hostname 
   // and the SSL context, should be allocated only once available to C, and deallocated at exit
