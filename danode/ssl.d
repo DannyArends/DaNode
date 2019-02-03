@@ -1,21 +1,10 @@
 module danode.ssl;
 
 version(SSL) {
-  import std.socket;
-  import std.file;
-  import std.path : baseName;
-  import std.traits;
-  import std.string;
-  import std.algorithm;
-  import core.thread;
-  import core.stdc.stdlib : malloc, realloc, free;
-  import std.conv : to;
-  import std.stdio : writefln, writeln;
-  import core.stdc.stdio;
-
   import deimos.openssl.ssl;
   import deimos.openssl.err;
 
+  import danode.imports;
   import danode.client;
   import danode.server : Server;
   import danode.client : Response;
@@ -157,7 +146,7 @@ version(SSL) {
   }
 
   void sslAssert(bool ret){ if (!ret) {
-    ERR_print_errors_fp(stderr);
+    ERR_print_errors_fp(stderr.getFP());
     throw new Exception("SSL_ERROR");
   } }
 

@@ -1,8 +1,6 @@
 module danode.webconfig;
 
-import std.stdio : writeln, writefln;
-import std.string : chomp, format, split, strip, toLower, lastIndexOf, join, indexOf;
-import std.file : DirEntry, dirEntries, exists, isDir, SpanMode, readText;
+import danode.imports;
 import danode.functions : has, from;
 import danode.filesystem : FileInfo;
 import danode.request : Request;

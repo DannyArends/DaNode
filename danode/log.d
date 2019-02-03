@@ -1,7 +1,6 @@
 module danode.log;
 
 import danode.imports;
-
 import danode.interfaces : ClientInterface;
 import danode.request : Request;
 import danode.response : Response;

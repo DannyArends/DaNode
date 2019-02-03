@@ -1,7 +1,6 @@
 module danode.client;
 
 import danode.imports;
-
 import danode.functions : Msecs;
 import danode.router : Router;
 import danode.httpstatus : StatusCode;

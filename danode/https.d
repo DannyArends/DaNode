@@ -1,13 +1,10 @@
 module danode.https;
 
 version(SSL) {
-  import std.datetime : Clock;
-  import std.stdio : writeln, writefln, stdin;
-  import std.socket : Socket, SocketShutdown;
-
   import deimos.openssl.ssl;
   import deimos.openssl.err;
 
+  import danode.imports;
   import danode.functions : Msecs;
   import danode.response : Response;
   import danode.log : NORMAL, INFO, DEBUG;

@@ -1,7 +1,6 @@
 module danode.mimetypes;
 
-import std.path : extension;
-import std.string : toLower;
+import danode.imports;
 
 immutable string      UNSUPPORTED_FILE = "file/unknown";                            /// Unsupported file mime
 immutable string      CGI_FILE         = "executable/";                             /// CGI mime prefix
