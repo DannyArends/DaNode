@@ -31,7 +31,8 @@ class Router {
     }
 
     void logrequest(in ClientInterface client, in Request request, in Response response) {
-      logger.write(client, request, response);
+      logger.updatePerformanceStatistics(client, request, response);
+      logger.logRequest(client, request, response);
     }
 
     final bool parse(in string ip, long port, ref Request request, ref Response response, in string inputSoFar, bool isSecure) const {
@@ -131,7 +132,5 @@ class Router {
       if(sp.length >= 2) nval = to!int(sp[1]);
       return(logger.verbose(nval)); 
     }
-
-    final @property string stats(){ return(format("%s", logger.statistics)); }
 }
 
