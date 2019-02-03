@@ -62,14 +62,14 @@ class Process : Thread {
       this.starttime  = Clock.currTime();
       this.modified   = Clock.currTime();
       this.outbuffer  = appender!(char[])();
-      this.errbuffer  = appender!(char[])(['\n']);
+      this.errbuffer  = appender!(char[])();
       super(&run);
     }
 
      // Output/Errors so far
     final @property const(char)[] output(ptrdiff_t from) const { 
       synchronized {
-        if (errbuffer.data.length == 1 && from >= 0 && from <= outbuffer.data.length) {
+        if (errbuffer.data.length == 0 && from >= 0 && from <= outbuffer.data.length) {
           return outbuffer.data[from .. $];
         }
         if(from >= 0 && from <= errbuffer.data.length){
@@ -105,8 +105,9 @@ class Process : Thread {
     }
 
     // Length of output/error
-    final @property long length() const { 
-      synchronized { if(errbuffer.data.length == 1){ return(outbuffer.data.length); } return errbuffer.data.length; }
+    final @property long length() const {
+      if (errbuffer.data.length == 0) { return(outbuffer.data.length); }
+      return errbuffer.data.length; 
     }
 
     // Execute the process
