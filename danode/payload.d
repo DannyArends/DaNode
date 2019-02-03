@@ -32,7 +32,8 @@ class CGI : Payload {
     final @property long          ready() { return(external.finished); }
     final @property ptrdiff_t     length() const {
       if(!external.running) {
-        ptrdiff_t msglength = to!ptrdiff_t(external.length) - endOfHeader;
+        ptrdiff_t msglength = to!ptrdiff_t(external.length);
+        if(endOfHeader > 0) msglength = msglength - endOfHeader;
         return(getHeader!ptrdiff_t("Content-Length", msglength));
       }
       return -1; 
@@ -63,7 +64,8 @@ class CGI : Payload {
 
     @property final string fullHeader() const {
       string outputSoFar = to!string(external.output(0));
-      return outputSoFar[0 .. endOfHeader()];
+      if(endOfHeader() > 0) return outputSoFar[0 .. endOfHeader()];
+      return [];
     }
 
     @property final string firstHeaderLine() const {
@@ -93,7 +95,8 @@ class CGI : Payload {
 
     const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 1024) {
       // Stream of message bytes, skip the header the script generated (since the webserver parses this)
-      return(external.output(from + endOfHeader)[0 .. to!ptrdiff_t(fmin(from+maxsize, $))]);
+      if(from + endOfHeader > from) from = from + endOfHeader;
+      return(external.output(from)[0 .. to!ptrdiff_t(fmin(from+maxsize, $))]);
     }
 
     final ptrdiff_t endOfHeader() const {
