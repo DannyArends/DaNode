@@ -1,11 +1,6 @@
 module danode.response;
 
-import std.array : Appender, appender;
-import std.compiler;
-import std.conv : to;
-import std.datetime : Clock;
-import std.stdio : writef, writeln, writefln;
-import std.string : format, indexOf, split, strip, toLower;
+import danode.imports;
 import danode.process : Process;
 import danode.functions : htmltime;
 import danode.httpstatus : reason, StatusCode;
@@ -99,7 +94,7 @@ struct Response {
 Response create(in Request request, in StatusCode statuscode = StatusCode.Ok, in string mimetype = UNSUPPORTED_FILE){
   Response response = Response(request.protocol);
   response.customheader("Server", SERVERINFO);
-  response.customheader("X-Powered-By", format("%s %s.%s", std.compiler.name, version_major, version_minor));
+  response.customheader("X-Powered-By", format("%s %s.%s", name, version_major, version_minor));
   response.payload = new Empty(statuscode, mimetype);
   if(!request.keepalive) response.connection = "Close";
   response.created = true;

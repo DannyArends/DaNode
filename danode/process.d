@@ -1,15 +1,7 @@
 module danode.process;
 
-import std.stdio : EOF, File, fgetc, write, writeln, writefln, ftell;
-import std.file : exists, remove;
-import std.string : empty;
-import std.datetime : Clock, SysTime;
-import std.array : Appender, appender;
-import core.thread : Thread;
-import std.process : Config, Pipe, pipe, spawnShell, tryWait, wait, kill;
+import danode.imports;
 import danode.functions : Msecs;
-import core.stdc.stdio : fileno;
-import std.file : remove;
 import danode.log : NORMAL, INFO, DEBUG;
 version(Posix) {
   import core.sys.posix.fcntl : fcntl, F_SETFL, O_NONBLOCK;

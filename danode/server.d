@@ -1,16 +1,6 @@
 module danode.server;
 
-import core.stdc.stdlib : exit;
-import core.stdc.stdio;
-import core.thread : Thread;
-
-import std.array : Appender, appender;
-import std.datetime : Clock, dur, SysTime, Duration;
-import std.socket;
-import std.stdio : writeln, writefln, stdin;
-import std.string : startsWith, format, chomp;
-import std.getopt : getopt;
-
+import danode.imports;
 import danode.functions : Msecs, sISelect;
 import danode.client : Client;
 import danode.interfaces : DriverInterface;
@@ -192,7 +182,7 @@ void main(string[] args) {
       if(!keyoff){
         server.parseKeyInput();
       }
-      fflush(stdout);
+      stdout.flush();
       Thread.sleep(dur!"msecs"(250));
     }
     writefln("[INFO]   Server shutting down: %d", server.running);
