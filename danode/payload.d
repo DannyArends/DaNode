@@ -26,7 +26,15 @@ class CGI : Payload {
     Process external;
 
   public:
-    this(string command, string path, int verbose = NORMAL){ external = new Process(command, path, verbose); external.start(); }
+    string command;
+    string path;
+
+    this(string command, string path, int verbose = NORMAL){
+      this.command = command;
+      this.path = path;
+      external = new Process(command, path, verbose); 
+      external.start();
+    }
 
     final @property PayLoadType   type() const { return(PayLoadType.Script); }
     final @property long          ready() { return(external.finished); }
