@@ -11,7 +11,14 @@ static this(){
              9 : "Sep", 10: "Oct", 11: "Nov", 12: "Dec"];
 }
 
-pure int mtoI(string m) { for(int x = 1; x < 12; ++x){ if(m == months[x].toLower()) return x; } return 1; }
+// Month to index
+pure int monthToIndex(string m) {
+  for(int x = 1; x < 12; ++x) {
+    if(m == months[x].toLower()) return x;
+  }
+  return -1;
+}
+
 pure string toD(T, U)(in T x, in U digits = 6) nothrow {
   string s = to!string(x);
   while (s.length < digits) { s = "0" ~ s; }

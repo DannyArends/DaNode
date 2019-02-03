@@ -3,7 +3,7 @@ module danode.request;
 import danode.imports;
 import danode.filesystem : FileSystem;
 import danode.interfaces : ClientInterface;
-import danode.functions : interpreter, from, toD, mtoI;
+import danode.functions : interpreter, from, toD, monthToIndex;
 import danode.webconfig : WebConfig;
 import danode.post : PostItem, PostType;
 import danode.log;
@@ -13,7 +13,7 @@ SysTime parseHtmlDate(const string datestr){ // 21 Apr 2014 20:20:13 CET
   auto dateregex = regex(r"([0-9]{1,2}) ([a-z]{1,3}) ([0-9]{4}) ([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2}) cet", "g");
   auto m = match(datestr.toLower(), dateregex);
   if(m.captures.length == 7){
-    ts = SysTime(DateTime(to!int(m.captures[3]), mtoI(m.captures[2]), to!int(m.captures[1]),        // 21 Apr 2014
+    ts = SysTime(DateTime(to!int(m.captures[3]), monthToIndex(m.captures[2]), to!int(m.captures[1]),        // 21 Apr 2014
                           to!int(m.captures[4]), to!int(m.captures[5]), to!int(m.captures[6])));    // 20:20:13
   }
   return(ts);
