@@ -12,7 +12,7 @@ static this(){
 }
 
 // Month to index
-pure int monthToIndex(string m) {
+pure int monthToIndex(in string m) {
   for(int x = 1; x < 12; ++x) {
     if(m == months[x].toLower()) return x;
   }
@@ -54,10 +54,17 @@ string htmltime(in SysTime d = Clock.currTime()) {
   return format(timeFmt, d.day(), months[d.month()], d.year(), d.hour(), toD(d.minute(),2), toD(d.second(),2), "CET");
 }
 
-bool isFILE(in string path) { if(exists(path) && isFile(path)){ return true; } return false; }
-bool isDIR(in string path) { if(exists(path) && isDir(path)){ return true; } return false; }
+bool isFILE(in string path) { 
+  if(exists(path) && isFile(path)) return true;
+  return false;
+}
 
-bool isCGI(in string path){
+bool isDIR(in string path) {
+  if(exists(path) && isDir(path)) return true;
+  return false;
+}
+
+bool isCGI(in string path) {
   if(exists(path) && mime(path).indexOf(CGI_FILE) >= 0) return true;
   return false;
 }
@@ -73,7 +80,7 @@ pure string interpreter(in string path) {
   return "";
 }
 
-string browsedir(in string root, in string localpath){
+string browseDir(in string root, in string localpath){
   Appender!(string) content;
   content.put(format("Content of: %s<br>\n", localpath));
   foreach (DirEntry d; dirEntries(localpath, SpanMode.shallow)) {
@@ -82,7 +89,8 @@ string browsedir(in string root, in string localpath){
   return(format("<html><head><title>200 - Allowed directory</title></head><body>%s</body></html>", content.data));
 }
 
-int sISelect(SocketSet set, Socket socket, int timeout = 10) {         // Reset the socketset and add a server socket to listen to
+// Reset the socketset and add a server socket to the set
+int sISelect(SocketSet set, Socket socket, int timeout = 10) {
   set.reset();
   set.add(socket);
   return Socket.select(set, null, null, dur!"msecs"(timeout));

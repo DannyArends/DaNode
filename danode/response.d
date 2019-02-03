@@ -11,7 +11,7 @@ import danode.log;
 import danode.webconfig;
 import danode.filesystem;
 import danode.post : servervariables;
-import danode.router : browsedir;
+import danode.functions : browseDir;
 
 immutable string SERVERINFO = "DaNode/0.0.2 (Universal)";
 
@@ -159,7 +159,7 @@ void serveDirectory(ref Response response, ref Request request, in WebConfig con
   if(verbose >= DEBUG) writeln("[DEBUG]  sending browse directory");
   string localroot = fs.localroot(request.shorthost());
   string localpath = config.localpath(localroot, request.path);
-  response.payload = new Message(StatusCode.Ok, browsedir(localroot, localpath), "text/html");
+  response.payload = new Message(StatusCode.Ok, browseDir(localroot, localpath), "text/html");
   response.ready = true;
 }
 

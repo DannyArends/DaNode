@@ -8,10 +8,10 @@ import danode.response;
 import danode.webconfig : WebConfig;
 import danode.payload : Message, CGI;
 import danode.mimetypes : mime;
-import danode.functions : from, has, isCGI, isFILE, isDIR, Msecs, htmltime, browsedir, isAllowed, writefile;
+import danode.functions : from, has, isCGI, isFILE, isDIR, Msecs, htmltime, isAllowed, writefile;
 import danode.filesystem : FileSystem, FileInfo;
 import danode.post : parsepost, PostType, servervariables;
-import danode.log :cverbose, Log, NORMAL, DEBUG, NOTSET;
+import danode.log : cverbose, Log, NORMAL, DEBUG, NOTSET;
 version(SSL) {
   import danode.ssl : hasCertificate;
 }
