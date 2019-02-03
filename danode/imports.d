@@ -2,7 +2,7 @@ module danode.imports;
 
 // Public imported function from core
 public import core.stdc.stdlib : exit, free, malloc, realloc;
-public import core.stdc.stdio : fileno;
+public import core.stdc.stdio : fileno, printf;
 
 // Public imported function from std
 public import std.algorithm : mean, canFind;

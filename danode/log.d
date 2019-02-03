@@ -46,10 +46,9 @@ class Log {
       PerformanceLogFp = File(perfLog, "a");
     }
 
-    @property int verbose() const { return(cverbose); }
-    @property int verbose(int verbose = NOTSET){
+    @property @nogc int verbose(int verbose = NOTSET) const nothrow {
       if(verbose != NOTSET) {
-        if(cverbose >= INFO) writefln("[INFO]   Changing verbose level from %s to %s", cverbose, verbose);
+        if(cverbose >= INFO) printf("[INFO]   Changing verbose level from %d to %d\n", cverbose, verbose);
         cverbose = verbose;
       }
       return(cverbose); 
