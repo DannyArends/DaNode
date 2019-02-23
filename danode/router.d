@@ -1,9 +1,6 @@
 module danode.router;
 
-import std.array : Appender, split, join;
-import std.stdio, std.string, std.conv, std.datetime, std.file, std.math;
-import std.uri : encode;
-import std.string : indexOf;
+import danode.imports;
 import danode.interfaces : ClientInterface;
 import danode.httpstatus : StatusCode;
 import danode.request : Request;
@@ -11,10 +8,10 @@ import danode.response;
 import danode.webconfig : WebConfig;
 import danode.payload : Message, CGI;
 import danode.mimetypes : mime;
-import danode.functions : from, has, isCGI, isFILE, isDIR, Msecs, htmltime, browsedir, isAllowed, writefile;
+import danode.functions : from, has, isCGI, isFILE, isDIR, Msecs, htmltime, isAllowed, writefile;
 import danode.filesystem : FileSystem, FileInfo;
 import danode.post : parsepost, PostType, servervariables;
-import danode.log :cverbose, Log, NORMAL, DEBUG, NOTSET;
+import danode.log : cverbose, Log, NORMAL, DEBUG, NOTSET;
 version(SSL) {
   import danode.ssl : hasCertificate;
 }
@@ -31,7 +28,8 @@ class Router {
     }
 
     void logrequest(in ClientInterface client, in Request request, in Response response) {
-      logger.write(client, request, response);
+      logger.updatePerformanceStatistics(client, request, response);
+      logger.logRequest(client, request, response);
     }
 
     final bool parse(in string ip, long port, ref Request request, ref Response response, in string inputSoFar, bool isSecure) const {
@@ -131,7 +129,5 @@ class Router {
       if(sp.length >= 2) nval = to!int(sp[1]);
       return(logger.verbose(nval)); 
     }
-
-    final @property string stats(){ return(format("%s", logger.statistics)); }
 }
 
