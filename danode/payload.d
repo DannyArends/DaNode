@@ -1,11 +1,6 @@
 module danode.payload;
 
-import std.stdio;
-import std.file;
-import std.conv;
-import std.datetime;
-import std.string;
-import std.math : fmin;
+import danode.imports;
 import danode.process : Process;
 import danode.httpstatus : StatusCode;
 import danode.mimetypes : UNSUPPORTED_FILE, mime;
@@ -31,13 +26,22 @@ class CGI : Payload {
     Process external;
 
   public:
-    this(string command, string path, int verbose = NORMAL){ external = new Process(command, path, verbose); external.start(); }
+    string command;
+    string path;
+
+    this(string command, string path, int verbose = NORMAL){
+      this.command = command;
+      this.path = path;
+      external = new Process(command, path, verbose); 
+      external.start();
+    }
 
     final @property PayLoadType   type() const { return(PayLoadType.Script); }
     final @property long          ready() { return(external.finished); }
     final @property ptrdiff_t     length() const {
       if(!external.running) {
-        ptrdiff_t msglength = to!ptrdiff_t(external.length) - endOfHeader;
+        ptrdiff_t msglength = to!ptrdiff_t(external.length);
+        if(endOfHeader > 0) msglength = msglength - endOfHeader;
         return(getHeader!ptrdiff_t("Content-Length", msglength));
       }
       return -1; 
@@ -68,7 +72,8 @@ class CGI : Payload {
 
     @property final string fullHeader() const {
       string outputSoFar = to!string(external.output(0));
-      return outputSoFar[0 .. endOfHeader()];
+      if(endOfHeader() > 0) return outputSoFar[0 .. endOfHeader()];
+      return [];
     }
 
     @property final string firstHeaderLine() const {
@@ -98,7 +103,8 @@ class CGI : Payload {
 
     const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 1024) {
       // Stream of message bytes, skip the header the script generated (since the webserver parses this)
-      return(external.output(from + endOfHeader)[0 .. to!ptrdiff_t(fmin(from+maxsize, $))]);
+      if(from + endOfHeader > from) from = from + endOfHeader;
+      return(external.output(from)[0 .. to!ptrdiff_t(fmin(from+maxsize, $))]);
     }
 
     final ptrdiff_t endOfHeader() const {

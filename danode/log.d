@@ -1,6 +1,6 @@
 module danode.log;
 
-import std.array, std.stdio, std.string, std.conv, std.datetime, std.file, std.math;
+import danode.imports;
 import danode.interfaces : ClientInterface;
 import danode.request : Request;
 import danode.response : Response;
@@ -9,7 +9,7 @@ import danode.httpstatus;
 
 extern(C) __gshared int cverbose;         // Verbose level of C-Code
 
-immutable int NOTSET = -1, NORMAL = 0, INFO = 1, DEBUG = 2;
+immutable int NOTSET = -1, NORMAL = 0, INFO = 1, TRACE = 2, DEBUG = 3;
 
 struct Info {
   long[StatusCode]      responses;
@@ -19,39 +19,43 @@ struct Info {
   long[string]          useragents;
   long[string]          ips;
 
-  string toString(){ return(format("%s %s %s %s %s %s", responses, starttimes.data, timings.data, keepalives.data, useragents, ips)); }
+  void toString(scope void delegate(const(char)[]) sink, FormatSpec!char fmt) const {
+    sink(format("%s %d %.2f", responses, timings.data[($-1)], mean(timings.data)));
+  }
 }
 
 class Log {
   private:
-    string          path        = "requests.log";
-    int             level       = NORMAL;
-    File            requests;
+    File RequestLogFp;
+    File PerformanceLogFp;
+    Info[string] statistics;
 
   public:
-    Info[string]    statistics;
-
-    this(int verbose = NORMAL, bool overwrite = false){
-      this.verbose = verbose;
-      if(exists(path) && overwrite){
-        writefln("[WARN]   overwriting log: %s", path); 
-        remove(path);
+    this(int verbose = NORMAL, string requestLog = "request.log", string perfLog = "perf.log", bool overwrite = false) {
+      cverbose = verbose;
+      if (exists(requestLog) && overwrite) { // Request log
+        writefln("[WARN]   overwriting log: %s", requestLog); 
+        remove(requestLog);
       }
-      requests = File(path, "a");
+      RequestLogFp = File(requestLog, "a");
+
+      if (exists(perfLog) && overwrite) { // Performance log
+        writefln("[WARN]   overwriting log: %s", perfLog);
+        remove(perfLog);
+      }
+      PerformanceLogFp = File(perfLog, "a");
     }
 
-    @property int verbose() const { return(level); }
-    @property int verbose(int verbose = NOTSET){
+    @property @nogc int verbose(int verbose = NOTSET) const nothrow {
       if(verbose != NOTSET) {
-        if(verbose >= INFO) writefln("[INFO]   Changing verbose level from %s to %s", level, verbose);
-        level = verbose;
+        if(cverbose >= INFO) printf("[INFO]   Changing verbose level from %d to %d\n", cverbose, verbose);
         cverbose = verbose;
       }
-      return(level); 
+      return(cverbose); 
     }
 
-    void write(in ClientInterface cl, in Request rq, in Response rs){
-      string    key = format("%s%s", rq.shorthost, rq.uripath);
+    void updatePerformanceStatistics(in ClientInterface cl, in Request rq, in Response rs) {
+      string key = format("%s%s", rq.shorthost, rq.uripath);
       if(!statistics.has(key)) statistics[key] = Info();    // Unknown key, create new Info statistics object
       // Fill run-time statistics
       statistics[key].responses[rs.statuscode]++;
@@ -59,13 +63,17 @@ class Log {
       statistics[key].timings.put(Msecs(rq.starttime));
       statistics[key].keepalives.put(rs.keepalive);
       statistics[key].ips[((rq.track)? cl.ip : "DNT")]++;
+      if (cverbose == TRACE) {
+        PerformanceLogFp.writefln("%s = [%s] %s", key, rs.statuscode, statistics[key]);
+        PerformanceLogFp.flush();
+      }
+    }
 
-      if(level >= INFO)
-        requests.writefln("[%d]    %s %s:%s %s%s %s %s", rs.statuscode, htmltime(), cl.ip, cl.port, rq.shorthost, rq.uri, Msecs(rq.starttime), rs.payload.length);
-
-      // Write the request to the requests file
-      requests.flush();
+    void logRequest(in ClientInterface cl, in Request rq, in Response rs) {
+      if (cverbose >= NORMAL) {
+        RequestLogFp.writefln("[%d]    %s %s:%s %s%s %s %s", rs.statuscode, htmltime(), cl.ip, cl.port, rq.shorthost, rq.uri, Msecs(rq.starttime), rs.payload.length);
+        RequestLogFp.flush();
+      }
     }
 }
-
 

@@ -1,11 +1,6 @@
 module danode.response;
 
-import std.array : Appender, appender;
-import std.compiler;
-import std.conv : to;
-import std.datetime : Clock;
-import std.stdio : writef, writeln, writefln;
-import std.string : format, indexOf, split, strip, toLower;
+import danode.imports;
 import danode.process : Process;
 import danode.functions : htmltime;
 import danode.httpstatus : reason, StatusCode;
@@ -16,7 +11,7 @@ import danode.log;
 import danode.webconfig;
 import danode.filesystem;
 import danode.post : servervariables;
-import danode.router : browsedir;
+import danode.functions : browseDir;
 
 immutable string SERVERINFO = "DaNode/0.0.2 (Universal)";
 
@@ -35,7 +30,7 @@ struct Response {
   Appender!(char[]) hdr;
   ptrdiff_t         index        = 0;
 
-  final void customheader(string key, string value){ headers[key] = value; }
+  final void customheader(string key, string value) nothrow { headers[key] = value; }
 
   @property final char[] header(int verbose = NORMAL) {
     if (hdr.data) {
@@ -47,27 +42,9 @@ struct Response {
       connection = "Close";
       HeaderType type = script.headerType();
       if (type != HeaderType.None) {
-        long clength = script.getHeader("Content-Length", -1);                              // Is the content length provided ?
-        if(clength >= 0) connection = script.getHeader("Connection", "Close");              // Yes ? then the script, can try to keep alive
-        if(type == HeaderType.FastCGI) {
-          // FastCGI type header, create response line on Status: indicator
-          string status = script.getHeader("Status", "500 Internal Server Error");
-          string[] inparts = status.split(" ");
-          if(inparts.length == 2) {
-            hdr.put(format("%s %s %s\n", "HTTP/1.1", inparts[0], inparts[1]));
-          } else {
-            hdr.put(format("%s %s\n", "HTTP/1.1", "500 Internal Server Error"));
-          }
-        }
-        hdr.put(script.fullHeader());
-        if(verbose >= INFO) {
-          writefln("[INFO]   script: status: %d, eoh: %d, content: %d", script.statuscode, script.endOfHeader(), clength);
-          writefln("[INFO]   connection: %s -> %s, to %s in %d bytes", strip(script.getHeader("Connection", "Close")), connection, type, hdr.data.length);
-        }
-        cgiheader = true;
-        return(hdr.data);
+        return(parseHTTPResponseHeader(this, script, type));
       }
-      writeln("[WARN]   no valid header detected, generating one");
+      writefln("[WARN]   script '%s',  failed to generate a header", script.command);
     }
     hdr.put(format("%s %d %s\r\n", protocol, payload.statuscode, reason(payload.statuscode)));
     foreach(key, value; headers) { hdr.put(format("%s: %s\r\n", key, value)); }
@@ -96,10 +73,32 @@ struct Response {
   @property final bool ready(bool r = false){ if(r){ routed = r; } return(routed && payload.ready()); }
 }
 
+char[] parseHTTPResponseHeader(ref Response response, CGI script, HeaderType type) {
+  long clength = script.getHeader("Content-Length", -1);                              // Is the content length provided ?
+  if(clength >= 0) response.connection = script.getHeader("Connection", "Close");              // Yes ? then the script, can try to keep alive
+  if(type == HeaderType.FastCGI) {
+    // FastCGI type header, create response line on Status: indicator
+    string status = script.getHeader("Status", "500 Internal Server Error");
+    string[] inparts = status.split(" ");
+    if(inparts.length == 2) {
+      response.hdr.put(format("%s %s %s\n", "HTTP/1.1", inparts[0], inparts[1]));
+    } else {
+      response.hdr.put(format("%s %s\n", "HTTP/1.1", "500 Internal Server Error"));
+    }
+  }
+  response.hdr.put(script.fullHeader());
+  if(cverbose >= INFO) {
+    writefln("[INFO]   script: status: %d, eoh: %d, content: %d", script.statuscode, script.endOfHeader(), clength);
+    writefln("[INFO]   connection: %s -> %s, to %s in %d bytes", strip(script.getHeader("Connection", "Close")), response.connection, type, response.hdr.data.length);
+  }
+  response.cgiheader = true;
+  return(response.hdr.data);
+}
+
 Response create(in Request request, in StatusCode statuscode = StatusCode.Ok, in string mimetype = UNSUPPORTED_FILE){
   Response response = Response(request.protocol);
   response.customheader("Server", SERVERINFO);
-  response.customheader("X-Powered-By", format("%s %s.%s", std.compiler.name, version_major, version_minor));
+  response.customheader("X-Powered-By", format("%s %s.%s", name, version_major, version_minor));
   response.payload = new Empty(statuscode, mimetype);
   if(!request.keepalive) response.connection = "Close";
   response.created = true;
@@ -160,7 +159,7 @@ void serveDirectory(ref Response response, ref Request request, in WebConfig con
   if(verbose >= DEBUG) writeln("[DEBUG]  sending browse directory");
   string localroot = fs.localroot(request.shorthost());
   string localpath = config.localpath(localroot, request.path);
-  response.payload = new Message(StatusCode.Ok, browsedir(localroot, localpath), "text/html");
+  response.payload = new Message(StatusCode.Ok, browseDir(localroot, localpath), "text/html");
   response.ready = true;
 }
 
