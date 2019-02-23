@@ -74,7 +74,7 @@ class Server : Thread {
           writefln("[ERROR]  unable to accept connection: %s", e.msg);
         }
       } else {
-        writefln("[ERROR]  Socket is not in the socketset");
+        writefln("[ERROR]  socket is not in the socketset");
       }
       return(null);
     }
