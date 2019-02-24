@@ -1,5 +1,7 @@
 module danode.httpstatus;
 
+import danode.log : custom;
+
 enum StatusCode {
   Continue = 100, SwitchingProtocols = 101,
   Ok = 200, Saved = 201, Accepted = 202, NoContent = 204, ResetContent = 205, PartialContent = 206,
@@ -8,7 +10,7 @@ enum StatusCode {
   ISE = 500, NotImplemented = 501, ServiceUnavailable = 502, VersionUnsupported = 505
 };
 
-pure string reason(StatusCode statuscode){ with(StatusCode){
+@nogc pure string reason(StatusCode statuscode) nothrow { with(StatusCode){
   final switch(statuscode){
     case Continue                 : return("Continue");
     case SwitchingProtocols       : return("Switching Protocols");
@@ -44,15 +46,17 @@ pure string reason(StatusCode statuscode){ with(StatusCode){
 } }
 
 unittest {
-  import std.stdio : writefln;
-  writefln("[FILE]   %s", __FILE__);
-  with(StatusCode){
-    writefln("[TEST]   %d: \"%s\"", Continue, reason(Continue));
-    writefln("[TEST]   %d: \"%s\"", Ok, reason(Ok));
-    writefln("[TEST]   %d: \"%s\"", MovedPermanently, reason(MovedPermanently));
-    writefln("[TEST]   %d: \"%s\"", NotModified, reason(NotModified));
-    writefln("[TEST]   %d: \"%s\"", Unauthorized, reason(Unauthorized));
-    writefln("[TEST]   %d: \"%s\"", ISE, reason(ISE));
+  custom(0, "FILE", "%s", __FILE__);
+  with (StatusCode) {
+    custom(0, "TEST", "%d: \"%s\"", Continue, reason(Continue));
+    custom(0, "TEST", "%d: \"%s\"", Ok, reason(Ok));
+    custom(0, "TEST", "%d: \"%s\"", MovedPermanently, reason(MovedPermanently));
+    custom(0, "TEST", "%d: \"%s\"", NotModified, reason(NotModified));
+    custom(0, "TEST", "%d: \"%s\"", Unauthorized, reason(Unauthorized));
+    custom(0, "TEST", "%d: \"%s\"", BadRequest, reason(BadRequest));
+    custom(0, "TEST", "%d: \"%s\"", TimedOut, reason(TimedOut));
+    custom(0, "TEST", "%d: \"%s\"", ISE, reason(ISE));
+    custom(0, "TEST", "%d: \"%s\"", NotImplemented, reason(NotImplemented));
   }
 }
 
