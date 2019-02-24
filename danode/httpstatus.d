@@ -10,7 +10,7 @@ enum StatusCode {
   ISE = 500, NotImplemented = 501, ServiceUnavailable = 502, VersionUnsupported = 505
 };
 
-@nogc pure string reason(StatusCode statuscode) nothrow { with(StatusCode){
+@nogc pure string reason (StatusCode statuscode) nothrow { with(StatusCode) {
   final switch(statuscode){
     case Continue                 : return("Continue");
     case SwitchingProtocols       : return("Switching Protocols");
@@ -52,8 +52,8 @@ unittest {
     custom(0, "TEST", "%d: \"%s\"", Ok, reason(Ok));
     custom(0, "TEST", "%d: \"%s\"", MovedPermanently, reason(MovedPermanently));
     custom(0, "TEST", "%d: \"%s\"", NotModified, reason(NotModified));
-    custom(0, "TEST", "%d: \"%s\"", Unauthorized, reason(Unauthorized));
     custom(0, "TEST", "%d: \"%s\"", BadRequest, reason(BadRequest));
+    custom(0, "TEST", "%d: \"%s\"", Unauthorized, reason(Unauthorized));
     custom(0, "TEST", "%d: \"%s\"", TimedOut, reason(TimedOut));
     custom(0, "TEST", "%d: \"%s\"", ISE, reason(ISE));
     custom(0, "TEST", "%d: \"%s\"", NotImplemented, reason(NotImplemented));
