@@ -1,6 +1,7 @@
 module danode.functions;
 
 import danode.imports;
+import danode.log : error;
 import danode.mimetypes : CGI_FILE, mime, UNSUPPORTED_FILE;
 
 immutable string timeFmt =  "%s %s %s %s:%s:%s %s";
@@ -54,23 +55,35 @@ string htmltime(in SysTime d = Clock.currTime()) {
   return format(timeFmt, d.day(), months[d.month()], d.year(), d.hour(), toD(d.minute(),2), toD(d.second(),2), "CET");
 }
 
-bool isFILE(in string path) { 
-  if(exists(path) && isFile(path)) return true;
+bool isFILE(in string path) {
+  try {
+    if (exists(path) && isFile(path)) return true;
+  } catch(Exception e) {
+    error("isFILE: I/O exception '%s'", e.msg);
+  }
   return false;
 }
 
 bool isDIR(in string path) {
-  if(exists(path) && isDir(path)) return true;
+  try {
+    if (exists(path) && isDir(path)) return true;
+  } catch(Exception e) {
+    error("isDIR: I/O exception '%s'", e.msg);
+  }
   return false;
 }
 
 bool isCGI(in string path) {
-  if(exists(path) && mime(path).indexOf(CGI_FILE) >= 0) return true;
+  try {
+    if (exists(path) && isFile(path) && mime(path).indexOf(CGI_FILE) >= 0) return true;
+  } catch(Exception e) {
+    error("isCGI: I/O exception '%s'", e.msg);
+  }
   return false;
 }
 
 pure bool isAllowed(in string path) {
-  if(mime(path) == UNSUPPORTED_FILE) return false;
+  if (mime(path) == UNSUPPORTED_FILE) return false;
   return true;
 }
 
@@ -97,8 +110,9 @@ int sISelect(SocketSet set, Socket socket, int timeout = 10) {
 }
 
 unittest {
-  import std.stdio : writefln;
-  writefln("[FILE]   %s", __FILE__);
-  writefln("[TEST]   htmltime() = %s", htmltime());
+  custom(0, "FILE", "%s", __FILE__);
+  custom(0, "TEST", "htmltime() = %s", htmltime());
+  custom(0, "TEST", "isDIR('danode') = %s", isDIR("danode"));
+  custom(0, "TEST", "isFILE('danode/functions.d') = %s", isFILE("danode/functions.d"));
 }
 
