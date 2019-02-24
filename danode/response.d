@@ -10,7 +10,7 @@ import danode.payload : Payload, PayLoadType, HeaderType, Empty, CGI, Message;
 import danode.log;
 import danode.webconfig;
 import danode.filesystem;
-import danode.post : servervariables;
+import danode.post : serverVariables;
 import danode.functions : browseDir;
 
 immutable string SERVERINFO = "DaNode/0.0.2 (Universal)";
@@ -130,7 +130,7 @@ void serveCGI(ref Response response, in Request request, in WebConfig config, in
   string localpath = config.localpath(localroot, request.path);
   if(!response.routed) { // Store POST data (could fail multiple times)
     if(verbose >= DEBUG)  writeln("[DEBUG]  writing server variables");
-    fs.servervariables(config, request, response, verbose);
+    fs.serverVariables(config, request, response);
     if(verbose >= DEBUG)  writeln("[DEBUG]  creating CGI payload");
     response.payload = new CGI(request.command(localpath), request.inputfile(fs), verbose);
     response.ready = true;

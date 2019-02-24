@@ -35,7 +35,7 @@ class Server : Thread {
         this.sslsocket = initialize(443, backlog);  // Create the SSL / HTTPs socket
       }
       set = new SocketSet(1);                       // Create a server socket set
-      writefln("[SERVER] server created backlog: %d", backlog);
+      custom(0, "SERVER", "server created backlog: %d", backlog);
       super(&run);
     }
 
@@ -48,10 +48,9 @@ class Server : Thread {
         socket.blocking = false;
         socket.bind(new InternetAddress(port));
         socket.listen(backlog);
-        writefln("[INFO]   socket listening on port %s", port);
+        custom(0, "SERVER", "socket listening on port %s", port);
       } catch(Exception e) {
-        writefln("[ERROR]  unable to bind socket on port %s\n%s", port, e.msg);
-        exit(-1);
+        abort(format("unable to bind socket on port %s\n%s", port, e.msg), -1);
       }
       return socket;
     }
@@ -71,10 +70,10 @@ class Server : Thread {
           //Thread.sleep(dur!"msecs"(1));
           return(client);
         } catch(Exception e) {
-          writefln("[ERROR]  unable to accept connection: %s", e.msg);
+          error("unable to accept connection: %s", e.msg);
         }
       } else {
-        writefln("[ERROR]  socket is not in the socketset");
+        error("socket is not in the socketset");
       }
       return(null);
     }
@@ -98,7 +97,7 @@ class Server : Thread {
 
      // Print some server information
     final @property void info() {
-      writefln("[INFO]   uptime %s\n[INFO]   # of connections: %d / %d", uptime(), nAlive(), clients.length);
+      custom(0, "SERVER", "uptime %s\n[INFO]   # of connections: %d / %d", uptime(), nAlive(), clients.length);
     }
 
     // Number of alive connections
@@ -127,10 +126,10 @@ class Server : Thread {
           foreach(Client client; clients){ if(client.running){ persistent.put(client); } }        // Add the backlog of persistent clients
           clients = persistent.data;
         } catch(Exception e) {
-          writefln("[SERVER] ERROR: %s", e.msg);
+          error("Unspecified top level server error: %s", e.msg);
         }
       }
-      writefln("[INFO]  Server socket closed, running: %s", running);
+      custom(0, "SERVER", "Server socket closed, running: %s", running);
       socket.close();
       version (SSL) {
         sslsocket.closeSSL();
