@@ -101,8 +101,8 @@ version(SSL) {
       case SSL_ERROR_WANT_X509_LOOKUP:
         /* writeln("SSL_ERROR_WANT_X509_LOOKUP"); */ break;
       case SSL_ERROR_SYSCALL:
-         writeln("[ERROR]  SSL_ERROR_SYSCALL: RETURN: %d", retcode); break;
-      default: writefln("[ERROR]  SSL_ERROR Error %d %d", err, retcode); break;
+        /* writefln("[ERROR]  SSL_ERROR_SYSCALL: RETURN: %d", retcode); */ break;
+      default: /*  writefln("[ERROR]  SSL_ERROR Error %d %d", err, retcode); */ break;
     }
     return(err);
   }
@@ -174,10 +174,18 @@ version(SSL) {
     free(contexts);
   }
 
-  void sslAssert(bool ret){ if (!ret) {
-    ERR_print_errors_fp(stderr.getFP());
-    throw new Exception("SSL_ERROR");
-  } }
+  void sslAssert(bool ret) { 
+    if (!ret) {
+      ERR_print_errors_fp(stderr.getFP());
+      throw new Exception("SSL_ERROR");
+    }
+  }
+
+
+  unittest {
+    writefln("[FILE]   %s", __FILE__);
+  }
+
 
 } // End version SSL
 
