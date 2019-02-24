@@ -3,11 +3,21 @@ DaNode a small webserver written in the D programming language
 master: [![Build Status](https://travis-ci.org/DannyArends/DaNode.svg?branch=master)](https://travis-ci.org/DannyArends/DaNode)
 development: [![Build Status](https://travis-ci.org/DannyArends/DaNode.svg?branch=development)](https://travis-ci.org/DannyArends/DaNode)
 
-Small web server written in the [D programming language](https://dlang.org/), main features:
-- Support all programming languages that generate output on stdout
-- HTTPs support (using e.g. Let's encrypt)
-- Small footprint: code, cpu and memory
-- API support for PHP, Python, D, R, or add your own
+A small web server written in the [D programming language](https://dlang.org/), to 
+host server side web applications written in any programming language. It is a web 
+server which can provide encrypted content over SSL via [Server Name Identification](https://en.wikipedia.org/wiki/Server_Name_Indication), 
+and has been battle tested and used in production for over 5 years hosting my own [personal website](https://www.dannyarends.nl/).
+
+It was written because I wanted to have a quick way of sharing [Rscript](https://www.r-project.org/about.html) 
+output with other researchers at different universities.
+
+The web servers main features / aims summarized:
+- Support server side web applications written in any programming language
+- HTTPs support (using e.g. [Let's encrypt](https://letsencrypt.org/))
+- [Server Name Identification](https://en.wikipedia.org/wiki/Server_Name_Indication)
+- Aims at small footprint: Code, CPU and RAM
+- API support for PHP, Python, D, R, or add your own in: [api/](api/)
+- Example web applications: [www/localhost/](www/localhost/)
 
 ##### Get DaNode
 
