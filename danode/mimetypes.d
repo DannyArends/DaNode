@@ -66,6 +66,8 @@ pure string mime(string i) {
     case ".fphp" : return CGI_FILE ~ "php5-cgi -n -C";
     case ".py"   : return CGI_FILE ~ "pyton";
     case ".r"    : return CGI_FILE ~ "Rscript --vanilla";
+    case ".bf"    : return CGI_FILE ~ "bf";
+    case ".ada"    : return CGI_FILE ~ "gnatmake";
     default : return UNSUPPORTED_FILE;
   }
 }
