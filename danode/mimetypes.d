@@ -1,12 +1,11 @@
 module danode.mimetypes;
 
-import std.path : extension;
-import std.string : toLower;
+import danode.imports;
 
 immutable string      UNSUPPORTED_FILE = "file/unknown";                            /// Unsupported file mime
 immutable string      CGI_FILE         = "executable/";                             /// CGI mime prefix
 
-pure string mime(string i){
+pure string mime(string i) {
   switch(extension(i).toLower()){
     case ".htx", ".htm", ".html", ".htmls": return "text/html";
     case ".map", ".gitignore", ".txt", ".md" : return "text/plain";
@@ -67,6 +66,8 @@ pure string mime(string i){
     case ".fphp" : return CGI_FILE ~ "php5-cgi -n -C";
     case ".py"   : return CGI_FILE ~ "pyton";
     case ".r"    : return CGI_FILE ~ "Rscript --vanilla";
+    case ".bf"    : return CGI_FILE ~ "bf";
+    case ".ada"    : return CGI_FILE ~ "gnatmake";
     default : return UNSUPPORTED_FILE;
   }
 }

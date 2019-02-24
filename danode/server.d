@@ -1,16 +1,6 @@
 module danode.server;
 
-import core.stdc.stdlib : exit;
-import core.stdc.stdio;
-import core.thread : Thread;
-
-import std.array : Appender, appender;
-import std.datetime : Clock, dur, SysTime, Duration;
-import std.socket;
-import std.stdio : writeln, writefln, stdin;
-import std.string : startsWith, format, chomp;
-import std.getopt : getopt;
-
+import danode.imports;
 import danode.functions : Msecs, sISelect;
 import danode.client : Client;
 import danode.interfaces : DriverInterface;
@@ -84,7 +74,7 @@ class Server : Thread {
           writefln("[ERROR]  unable to accept connection: %s", e.msg);
         }
       } else {
-        writefln("[ERROR]  Socket is not in the socketset");
+        writefln("[ERROR]  socket is not in the socketset");
       }
       return(null);
     }
@@ -128,7 +118,7 @@ class Server : Thread {
             Client client = this.accept(socket);
             if(client !is null) persistent.put(client);
           }
-          version(SSL) {
+          version (SSL) {
             if ((select = set.sISelect(sslsocket)) > 0) {      // writefln("Accepting HTTPs request");
               Client client = this.accept(sslsocket, true);
               if(client !is null) persistent.put(client);
@@ -142,7 +132,7 @@ class Server : Thread {
       }
       writefln("[INFO]  Server socket closed, running: %s", running);
       socket.close();
-      version(SSL) {
+      version (SSL) {
         sslsocket.closeSSL();
       }
     }
@@ -150,9 +140,9 @@ class Server : Thread {
 
 void parseKeyInput(ref Server server){
   string line = chomp(stdin.readln());
-  if(line.startsWith("quit")) server.stop();
-  if(line.startsWith("info")) server.info();
-  if(line.startsWith("verbose")) server.verbose(line);
+  if (line.startsWith("quit")) server.stop();
+  if (line.startsWith("info")) server.info();
+  if (line.startsWith("verbose")) server.verbose(line);
 }
 
 void main(string[] args) {
@@ -170,29 +160,29 @@ void main(string[] args) {
                "keyFile",    &keyFile,      // Server private key
                "wwwRoot",    &wwwRoot,      // Server www root folder
                "verbose|v",  &verbose);     // Verbose level (via commandline)
-  version(unittest){
+  version (unittest) {
     // Do nothing, unittests will run
   } else {
-    version(Posix) {
+    version (Posix) {
       import core.sys.posix.signal : signal, SIGPIPE;
       import danode.signals : handle_signal;
       signal(SIGPIPE, &handle_signal);
     }
-    version(Windows) {
+    version (Windows) {
       writeln("[WARN]   -k has been set to true, we cannot handle keyboard input under windows at the moment");
       keyoff = true;
     }
 
     auto server = new Server(port, backlog, wwwRoot, verbose);
-    version(SSL) {
+    version (SSL) {
       server.initSSL(certDir, keyFile);  // Load SSL certificates, using the server key
     }
     server.start();
-    while(server.running){
-      if(!keyoff){
+    while (server.running) {
+      if (!keyoff) {
         server.parseKeyInput();
       }
-      fflush(stdout);
+      stdout.flush();
       Thread.sleep(dur!"msecs"(250));
     }
     writefln("[INFO]   Server shutting down: %d", server.running);

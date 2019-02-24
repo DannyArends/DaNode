@@ -1,13 +1,6 @@
 module danode.client;
 
-import core.thread : Thread;
-import std.array : Appender, appender;
-import std.conv : to;
-import std.datetime : Clock, SysTime, msecs, dur;
-import std.socket : Address, Socket;
-import std.string;
-import std.stdio : write, writefln, writeln;
-
+import danode.imports;
 import danode.functions : Msecs;
 import danode.router : Router;
 import danode.httpstatus : StatusCode;
@@ -36,9 +29,8 @@ class Client : Thread, ClientInterface {
       if (router.verbose >= DEBUG) writefln("[DEBUG]  new connection established %s:%d", ip(), port() );
       try {
         if (driver.openConnection() == false) {
-          writefln("[WARN]  new connection aborted: unable to open connection");
+          writefln("[WARN]   new connection aborted: unable to open connection");
           terminated = true;
-          return;
         }
         scope (exit) {
           if (driver.isAlive()) driver.closeConnection();
@@ -83,7 +75,7 @@ class Client : Thread, ClientInterface {
 
     final @property bool running() {
       if (driver.socket is null) return(false);
-      return(driver.socket.isAlive() && !terminated);
+      return(!terminated && driver.socket.isAlive());
     }
 
     final @property long starttime(){

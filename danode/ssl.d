@@ -1,21 +1,10 @@
 module danode.ssl;
 
 version(SSL) {
-  import std.socket;
-  import std.file;
-  import std.path : baseName;
-  import std.traits;
-  import std.string;
-  import std.algorithm;
-  import core.thread;
-  import core.stdc.stdlib : malloc, realloc, free;
-  import std.conv : to;
-  import std.stdio : writefln, writeln;
-  import core.stdc.stdio;
-
   import deimos.openssl.ssl;
   import deimos.openssl.err;
 
+  import danode.imports;
   import danode.client;
   import danode.server : Server;
   import danode.client : Response;
@@ -43,7 +32,7 @@ version(SSL) {
       string hostname = to!(string)(cast(const(char*)) SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name));
       if(cverbose >= INFO) writefln("[HTTPS]  Looking for hostname: %s", hostname);
       if(hostname is null) {
-        if(cverbose >= INFO) writefln("[WARN]   Client does not support Server Name Indication (SNI)");
+        if(cverbose >= INFO) writefln("[WARN]   Client does not support Server Name Indication (SNI), using default: contexts[0]");
         return;
       }
       string s;
@@ -87,6 +76,35 @@ version(SSL) {
       }
     }
     return false;
+  }
+
+  // Should be used after SSL_connect(), SSL_accept(), SSL_do_handshake(), 
+  // SSL_read_ex(), SSL_read(), SSL_peek_ex(), SSL_peek(), SSL_write_ex() 
+  // or SSL_write() on the ssl
+  int checkForError(SSL* ssl, Socket socket, int retcode) {
+    int err = SSL_get_error(ssl, retcode);
+    switch (err) {
+      case SSL_ERROR_NONE:
+        /*writeln("SSL_ERROR_NONE"); */ break;
+      case SSL_ERROR_SSL:
+        /* writeln("SSL_ERROR_SSL"); */ break;
+      case SSL_ERROR_ZERO_RETURN:
+        /* writeln("SSL_ERROR_ZERO_RETURN"); */ break;
+      case SSL_ERROR_WANT_READ:
+        /* writeln("SSL_ERROR_WANT_READ"); */ break;
+      case SSL_ERROR_WANT_WRITE:
+        /* writeln("SSL_ERROR_WANT_WRITE"); */ break;
+      case SSL_ERROR_WANT_CONNECT:
+        /* writeln("SSL_ERROR_WANT_CONNECT"); */ break;
+      case SSL_ERROR_WANT_ACCEPT:
+        /* writeln("SSL_ERROR_WANT_ACCEPT"); */ break;
+      case SSL_ERROR_WANT_X509_LOOKUP:
+        /* writeln("SSL_ERROR_WANT_X509_LOOKUP"); */ break;
+      case SSL_ERROR_SYSCALL:
+        /* writefln("[ERROR]  SSL_ERROR_SYSCALL: RETURN: %d", retcode); */ break;
+      default: /*  writefln("[ERROR]  SSL_ERROR Error %d %d", err, retcode); */ break;
+    }
+    return(err);
   }
 
   // loads an SSL context for hostname from the .crt file at path;
@@ -156,10 +174,18 @@ version(SSL) {
     free(contexts);
   }
 
-  void sslAssert(bool ret){ if (!ret) {
-    ERR_print_errors_fp(stderr);
-    throw new Exception("SSL_ERROR");
-  } }
+  void sslAssert(bool ret) { 
+    if (!ret) {
+      ERR_print_errors_fp(stderr.getFP());
+      throw new Exception("SSL_ERROR");
+    }
+  }
+
+
+  unittest {
+    writefln("[FILE]   %s", __FILE__);
+  }
+
 
 } // End version SSL
 
