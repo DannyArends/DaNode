@@ -3,11 +3,11 @@ module danode.http;
 import danode.imports;
 import danode.interfaces : DriverInterface;
 import danode.response : Response;
-import danode.log : NORMAL, INFO, DEBUG;
+import danode.log : warning, error;
 
 class HTTP : DriverInterface {
   public:
-    this(Socket socket, bool blocking = false, int verbose = NORMAL) { // writefln("[HTTP]   driver constructor");
+    this(Socket socket, bool blocking = false) { // writefln("[HTTP]   driver constructor");
       this.socket = socket;
       this.blocking = blocking;
       this.starttime = Clock.currTime(); // Time in ms since this process came alive
@@ -19,13 +19,13 @@ class HTTP : DriverInterface {
       try {
         socket.blocking = this.blocking;
       } catch(Exception e) {
-        writefln("[ERROR]  unable to accept socket: %s", e.msg);
+        error("unable to accept socket: %s", e.msg);
         return(false);
       }
       try {
         this.address = socket.remoteAddress();
       } catch(Exception e) {
-        if(verbose >= INFO) writefln("[WARN]   unable to resolve requesting origin: %s", e.msg);
+        warning("unable to resolve requesting origin: %s", e.msg);
       }
       return(true);
     }
@@ -63,7 +63,7 @@ class HTTP : DriverInterface {
           socket.shutdown(SocketShutdown.BOTH);
           socket.close();
         } catch(Exception e) {
-          if(verbose >= INFO) writefln("[WARN]   unable to close socket: %s", e.msg);
+          warning("unable to close socket: %s", e.msg);
         }
       }
     }
