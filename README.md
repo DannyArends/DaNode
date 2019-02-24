@@ -3,10 +3,10 @@ DaNode a small webserver written in the D programming language
 master: [![Build Status](https://travis-ci.org/DannyArends/DaNode.svg?branch=master)](https://travis-ci.org/DannyArends/DaNode)
 development: [![Build Status](https://travis-ci.org/DannyArends/DaNode.svg?branch=development)](https://travis-ci.org/DannyArends/DaNode)
 
-A small web server written in the [D programming language](https://dlang.org/), to 
+A small web server written in the [D programming language](https://dlang.org/) to 
 host server side web applications written in any programming language. It is a web 
 server which can provide encrypted content over SSL via [Server Name Identification](https://en.wikipedia.org/wiki/Server_Name_Indication), 
-and has been battle tested and used in production for over 5 years hosting my own [personal website](https://www.dannyarends.nl/).
+and has been battle tested in production for over 5 years hosting my own [personal website](https://www.dannyarends.nl/).
 
 It was written because I wanted to have a quick way of sharing [Rscript](https://www.r-project.org/about.html) 
 output with other researchers at different universities. Any language means 'Write your homepage in, erm 
