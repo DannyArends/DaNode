@@ -83,7 +83,7 @@ class Router {
 
       if(localpath.exists()) {  // Requested an existing resource
         if(localpath.isCGI() && config.allowcgi)
-          return response.serveCGI(request, config, filesystem, logger.verbose);
+          return response.serveCGI(request, config, filesystem);
 
         if(localpath.isFILE() && !localpath.isCGI() && localpath.isAllowed())
           return response.serveStaticFile(request, filesystem, logger.verbose);

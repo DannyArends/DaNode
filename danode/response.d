@@ -119,20 +119,20 @@ void notmodified(ref Response response, in Request request, in string mimetype =
 }
 
 void domainNotFound(ref Response response, in Request request) {
-  writefln("[WARN]   requested domain '%s', was not found", request.shorthost());
+  warning("requested domain '%s', was not found", request.shorthost());
   response.payload = new Message(StatusCode.NotFound, format("404 - No such domain is available\n"));
   response.ready = true;
 }
 
-void serveCGI(ref Response response, in Request request, in WebConfig config, in FileSystem fs, int verbose) {
-  if(verbose >= DEBUG) writeln("[DEBUG]  requested a cgi file, execution allowed");
+void serveCGI(ref Response response, in Request request, in WebConfig config, in FileSystem fs) {
+  trace("requested a cgi file, execution allowed");
   string localroot = fs.localroot(request.shorthost());
   string localpath = config.localpath(localroot, request.path);
   if(!response.routed) { // Store POST data (could fail multiple times)
-    if(verbose >= DEBUG)  writeln("[DEBUG]  writing server variables");
+    trace("writing server variables");
     fs.serverVariables(config, request, response);
-    if(verbose >= DEBUG)  writeln("[DEBUG]  creating CGI payload");
-    response.payload = new CGI(request.command(localpath), request.inputfile(fs), verbose);
+    trace("creating CGI payload");
+    response.payload = new CGI(request.command(localpath), request.inputfile(fs));
     response.ready = true;
   }
 }
