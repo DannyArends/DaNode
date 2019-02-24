@@ -1,7 +1,7 @@
 module danode.functions;
 
 import danode.imports;
-import danode.log : error;
+import danode.log : error, custom;
 import danode.mimetypes : CGI_FILE, mime, UNSUPPORTED_FILE;
 
 immutable string timeFmt =  "%s %s %s %s:%s:%s %s";
@@ -15,7 +15,7 @@ static this(){
 // Month to index
 pure int monthToIndex(in string m) {
   for(int x = 1; x < 12; ++x) {
-    if(m == months[x].toLower()) return x;
+    if(m.toLower() == months[x].toLower()) return x;
   }
   return -1;
 }
@@ -111,8 +111,17 @@ int sISelect(SocketSet set, Socket socket, int timeout = 10) {
 
 unittest {
   custom(0, "FILE", "%s", __FILE__);
+  custom(0, "TEST", "monthToIndex('Feb') = %s", monthToIndex("Feb"));
+  custom(0, "TEST", "toD(5, 4) = %s", toD(5, 4));
+  custom(0, "TEST", "toD(12, 3) = %s", toD(12, 3));
   custom(0, "TEST", "htmltime() = %s", htmltime());
-  custom(0, "TEST", "isDIR('danode') = %s", isDIR("danode"));
   custom(0, "TEST", "isFILE('danode/functions.d') = %s", isFILE("danode/functions.d"));
+  custom(0, "TEST", "isDIR('danode') = %s", isDIR("danode"));
+  custom(0, "TEST", "isCGI('www/localhost/dmd.d') = %s", isCGI("www/localhost/dmd.d"));
+  custom(0, "TEST", "isAllowed('www/localhost/data.ill') = %s", isAllowed("www/localhost/data.ill"));
+  custom(0, "TEST", "isAllowed('www/localhost/index.html') = %s", isAllowed("www/localhost/index.html"));
+  custom(0, "TEST", "interpreter('www/localhost/dmd.d') = %s", interpreter("www/localhost/dmd.d"));
+  custom(0, "TEST", "interpreter('www/localhost/php.php') = %s", interpreter("www/localhost/php.php"));
+  custom(0, "TEST", "browseDir('www', 'localhost') = %s", browseDir("www", "www/localhost"));
 }
 

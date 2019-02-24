@@ -185,7 +185,7 @@ class FileSystem {
       return new FileInfo("");
     } }
 
-    final void rebuffer(){
+    final void rebuffer() {
       foreach(ref d; domains.byKey){ foreach(ref f; domains[d].files.byKey){
         domains[d].files[f].buffer();
       } }
@@ -194,8 +194,20 @@ class FileSystem {
 
 unittest {
   custom(0, "FILE", "%s", __FILE__);
-  Log             logger = new Log(1);
-  FileSystem      filesystem = new FileSystem(logger, "./test");
-  custom(0, "TEST", "./test/server.files/server.conf (12 bytes): %s", filesystem.file("./test/server.files","/server.conf").bytes(0,12));
+  Log logger = new Log(0);
+  FileSystem filesystem = new FileSystem(logger, "./www/");
+  custom(0, "TEST", "./www/localhost/dmd.d (6 bytes) = %s", filesystem.file("./www/localhost", "/dmd.d").bytes(0,6));
+  custom(0, "TEST", "filesystem.localroot('localhost') = %s", filesystem.localroot("localhost"));
+  Domain localhost = filesystem.scan("www/localhost");
+  custom(0, "TEST", "localhost.buffersize() = %s", localhost.buffersize());
+  custom(0, "TEST", "localhost.size() = %s", localhost.size());
+  auto file = filesystem.file(filesystem.localroot("localhost"), "localhost/dmd.d");
+  custom(0, "TEST", "file.asStream(0) = %s", file.asStream(0));
+  custom(0, "TEST", "file.statuscode() = %s", file.statuscode());
+  custom(0, "TEST", "file.mimetype() = %s", file.mimetype());
+  custom(0, "TEST", "file.mtime() = %s", file.mtime());
+  custom(0, "TEST", "file.ready() = %s", file.ready());
+  custom(0, "TEST", "file.type() = %s", file.type());
+  custom(0, "TEST", "file.content() = %s", file.content());
 }
 

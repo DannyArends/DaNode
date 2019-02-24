@@ -29,7 +29,7 @@ www/qrcode.test/QR/gen/*
 
 *.in
 *.err
-
+*.lst
 *.log
 *.def
 *.err
