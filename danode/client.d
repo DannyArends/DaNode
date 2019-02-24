@@ -8,7 +8,7 @@ import danode.interfaces : DriverInterface, ClientInterface;
 import danode.response : Response;
 import danode.request : Request;
 import danode.payload : Message;
-import danode.log : NORMAL, INFO, DEBUG;
+import danode.log : custom, info, trace, warning;
 
 class Client : Thread, ClientInterface {
   private:
@@ -26,10 +26,10 @@ class Client : Thread, ClientInterface {
     }
 
    final void run() {
-      if (router.verbose >= DEBUG) writefln("[DEBUG]  new connection established %s:%d", ip(), port() );
+      trace("new connection established %s:%d", ip(), port() );
       try {
         if (driver.openConnection() == false) {
-          writefln("[WARN]   new connection aborted: unable to open connection");
+          warning("new connection aborted: unable to open connection");
           terminated = true;
         }
         scope (exit) {
@@ -63,13 +63,11 @@ class Client : Thread, ClientInterface {
           Thread.yield();
         }
       } catch(Exception e) { 
-        writefln("[WARN]   unknown client exception: %s", e.msg);
+        warning("unknown client exception: %s", e.msg);
         terminated = true;
       }
-      if (router.verbose >= INFO) {
-        writefln("[INFO]   connection %s:%s (%s) closed after %d requests %s (%s msecs)", ip, port, (driver.isSecure() ? "⚐" : "⚑"), 
+      custom(1, "CLIENT", "connection %s:%s (%s) closed after %d requests %s (%s msecs)", ip, port, (driver.isSecure() ? "⚐" : "⚑"), 
                                                                                           driver.requests, driver.senddata, Msecs(driver.starttime));
-      }
       driver.destroy();                                               // Clear the response structure
     }
 
@@ -87,7 +85,7 @@ class Client : Thread, ClientInterface {
     }
 
     final @property void stop(){
-      if (router.verbose >= DEBUG) writefln("[DEBUG]  connection %s:%s stop called", ip, port);
+      trace("connection %s:%s stop called", ip, port);
       terminated = true; 
     }
 
