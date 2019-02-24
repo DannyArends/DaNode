@@ -73,11 +73,11 @@ class Router {
       version(SSL) {
         // SSL is available, or requested the wrong shortdomain
         if (request.isSecure != hasCertificate(fqdn) || request.host != fqdn) {
-          return response.redirect(request, fqdn, hasCertificate(fqdn), logger.verbose);
+          return response.redirect(request, fqdn, hasCertificate(fqdn));
         }
       } else {  // Requested the wrong shortdomain
         if (request.host != fqdn) {
-          return response.redirect(request, fqdn, false, logger.verbose);
+          return response.redirect(request, fqdn, false);
         }
       }
 
@@ -86,7 +86,7 @@ class Router {
           return response.serveCGI(request, config, filesystem);
 
         if(localpath.isFILE() && !localpath.isCGI() && localpath.isAllowed())
-          return response.serveStaticFile(request, filesystem, logger.verbose);
+          return response.serveStaticFile(request, filesystem);
 
         if(localpath.isDIR() && config.isAllowed(localroot, localpath)){
           if(config.redirectdir() && !finalrewrite)  // Route this directory request to the index page
@@ -95,9 +95,9 @@ class Router {
           if(config.redirect && !finalrewrite)  // Modify request as canonical to the index page
             return this.redirectCanonical(request, response, config);
 
-          return response.serveDirectory(request, config, filesystem, logger.verbose);
+          return response.serveDirectory(request, config, filesystem);
         }
-        return response.serveForbidden(request, logger.verbose);
+        return response.serveForbidden(request);
       }
       trace("redirect: %s %d", config.redirect, finalrewrite);
       if(config.redirect && !finalrewrite)  // Route this request as canonical request the index page
