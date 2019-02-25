@@ -85,24 +85,24 @@ version(SSL) {
     int err = SSL_get_error(ssl, retcode);
     switch (err) {
       case SSL_ERROR_NONE:
-        /*writeln("SSL_ERROR_NONE"); */ break;
+        /* warning("SSL_ERROR_NONE"); */ break;
       case SSL_ERROR_SSL:
-        /* writeln("SSL_ERROR_SSL"); */ break;
+        /* warning("SSL_ERROR_SSL"); */ break;
       case SSL_ERROR_ZERO_RETURN:
-        /* writeln("SSL_ERROR_ZERO_RETURN"); */ break;
+        /* warning("SSL_ERROR_ZERO_RETURN"); */ break;
       case SSL_ERROR_WANT_READ:
-        /* writeln("SSL_ERROR_WANT_READ"); */ break;
+        /* warning("SSL_ERROR_WANT_READ"); */ break;
       case SSL_ERROR_WANT_WRITE:
-        /* writeln("SSL_ERROR_WANT_WRITE"); */ break;
+        /* warning("SSL_ERROR_WANT_WRITE"); */ break;
       case SSL_ERROR_WANT_CONNECT:
-        /* writeln("SSL_ERROR_WANT_CONNECT"); */ break;
+        /* warning("SSL_ERROR_WANT_CONNECT"); */ break;
       case SSL_ERROR_WANT_ACCEPT:
-        /* writeln("SSL_ERROR_WANT_ACCEPT"); */ break;
+        /* warning("SSL_ERROR_WANT_ACCEPT"); */ break;
       case SSL_ERROR_WANT_X509_LOOKUP:
-        /* writeln("SSL_ERROR_WANT_X509_LOOKUP"); */ break;
+        /* warning("SSL_ERROR_WANT_X509_LOOKUP"); */ break;
       case SSL_ERROR_SYSCALL:
-        /* writefln("[ERROR]  SSL_ERROR_SYSCALL: RETURN: %d", retcode); */ break;
-      default: /*  writefln("[ERROR]  SSL_ERROR Error %d %d", err, retcode); */ break;
+        /* warning("[ERROR]  SSL_ERROR_SYSCALL: RETURN: %d", retcode); */ break;
+      default: /*  warning("[ERROR]  SSL_ERROR Error %d %d", err, retcode); */ break;
     }
     return(err);
   }
