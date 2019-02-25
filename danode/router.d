@@ -37,7 +37,7 @@ class Router {
       if(idx <= 0) idx = inputSoFar.indexOf("\n\n");
       if(idx <= 0) return(false);
       if(!response.created) {
-        request.parse(ip, port, inputSoFar[0 .. idx], inputSoFar[(idx + 4) .. $], isSecure, logger.verbose);
+        request.parse(ip, port, inputSoFar[0 .. idx], inputSoFar[(idx + 4) .. $], isSecure);
         response = request.create();
       } else {
         request.update(inputSoFar[(idx + 4) .. $]);

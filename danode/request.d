@@ -6,7 +6,7 @@ import danode.interfaces : ClientInterface;
 import danode.functions : interpreter, from, toD, monthToIndex;
 import danode.webconfig : WebConfig;
 import danode.post : PostItem, PostType;
-import danode.log;
+import danode.log : custom, info, trace, warning;
 
 SysTime parseHtmlDate(const string datestr){ // 21 Apr 2014 20:20:13 CET
   SysTime ts =  SysTime(DateTime(-7, 1, 1, 1, 0, 0));
@@ -34,16 +34,14 @@ struct Request {
   string            content;
   PostItem[string]  postinfo;
   bool              isSecure;
-  int               verbose;
 
-  final void parse(in string ip, long port, in string header, in string content, bool isSecure = false, int verbose = NORMAL){
+  final void parse(in string ip, long port, in string header, in string content, bool isSecure = false){
     this.ip  = ip; this.port = port; this.content = content; this.isSecure = isSecure;
     this.setHeader(header);
     this.starttime = Clock.currTime();
     this.requestid = md5UUID(format("%s:%d-%s", ip, port, starttime));
-    this.verbose = verbose;
-    if(verbose == INFO) writefln("[INFO]   request: %s to %s from %s:%d - %s", method, uri, ip, port, requestid);
-    if(verbose == DEBUG) writefln("[DEBUG]  request header: %s", header);
+    info("request: %s to %s from %s:%d - %s", method, uri, ip, port, requestid);
+    trace("request header: %s", header);
   }
 
   final void setHeader(in string header){
@@ -56,7 +54,7 @@ struct Request {
           this.uri = this.url = strip(join(parts[1 .. ($-1)], " "));
           this.protocol = strip(parts[($-1)]);
         } else {
-          writefln("[WARN]   Could not decode header line for client");
+          warning("could not decode header line for client");
         }
       } else {                        // next lines: header-param: attribute 
         parts = line.split(":");
@@ -123,13 +121,13 @@ struct Request {
 
   final void clearUploadFiles() const {
     foreach(f; postfiles) { if(exists(f)) {
-      if(verbose == DEBUG) writefln("[DEBUG]  Removing uploaded file at %s", f); 
+      trace("removing uploaded file at %s", f); 
       remove(f);
     } }
   }
 }
 
 unittest {
-  writefln("[FILE]   %s", __FILE__);
+  custom(0, "FILE", "%s", __FILE__);
 }
 

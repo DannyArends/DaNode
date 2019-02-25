@@ -18,7 +18,8 @@ class Client : Thread, ClientInterface {
   public:
     bool                terminated;          /// Is the client / connection terminated
 
-    this(Router router, DriverInterface driver, long maxtime = 5000){ // writefln("[INFO]   client constructor");
+    this(Router router, DriverInterface driver, long maxtime = 5000) {
+      custom(3, "CLIENT", "client constructor");
       this.driver           = driver;
       this.router           = router;
       this.maxtime          = maxtime;
@@ -59,7 +60,7 @@ class Client : Thread, ClientInterface {
             Thread.sleep(dur!"msecs"(1));
           }
           if(lastmodified >= maxtime) terminated = true;
-          // writefln("[INFO]   connection %s:%s (%s msecs) %s", ip, port, Msecs(driver.starttime), to!string(driver.inbuffer.data));
+          custom(3, "CLIENT", "connection %s:%s (%s msecs) %s", ip, port, Msecs(driver.starttime), to!string(driver.inbuffer.data));
           Thread.yield();
         }
       } catch(Exception e) { 

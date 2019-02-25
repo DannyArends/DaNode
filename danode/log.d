@@ -68,13 +68,13 @@ class Log {
     this(int verbose = NORMAL, string requestLog = "request.log", string perfLog = "perf.log", bool overwrite = false) {
       cverbose = verbose;
       if (exists(requestLog) && overwrite) { // Request log
-        writefln("[WARN]   overwriting log: %s", requestLog); 
+        warning("overwriting log: %s", requestLog); 
         remove(requestLog);
       }
       RequestLogFp = File(requestLog, "a");
 
       if (exists(perfLog) && overwrite) { // Performance log
-        writefln("[WARN]   overwriting log: %s", perfLog);
+        warning("overwriting log: %s", perfLog);
         remove(perfLog);
       }
       PerformanceLogFp = File(perfLog, "a");
@@ -82,7 +82,7 @@ class Log {
 
     @property @nogc int verbose(int verbose = NOTSET) const nothrow {
       if(verbose != NOTSET) {
-        if(cverbose >= INFO) printf("[INFO]   Changing verbose level from %d to %d\n", cverbose, verbose);
+        printf("[INFO]   changing verbose level from %d to %d\n", cverbose, verbose);
         cverbose = verbose;
       }
       return(cverbose); 
