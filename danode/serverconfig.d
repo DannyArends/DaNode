@@ -2,6 +2,7 @@ module danode.serverconfig;
 
 import danode.imports;
 import danode.filesystem : FileInfo;
+import danode.log : custom;
 
 struct ServerConfig {
   string[string]  data;
@@ -23,7 +24,6 @@ struct ServerConfig {
 }
 
 unittest {
-  import std.stdio : writefln;
-  writefln("[FILE]   %s", __FILE__);
+  custom(0, "FILE", "%s", __FILE__);
 }
 

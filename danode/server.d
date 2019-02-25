@@ -113,12 +113,14 @@ class Server : Thread {
       while(running) {
         try {
           persistent.clear();
-          if ((select = set.sISelect(socket)) > 0) {           // writefln("Accepting HTTP request");
+          if ((select = set.sISelect(socket)) > 0) {
+            custom(3, "SERVER", "accepting HTTP request");
             Client client = this.accept(socket);
             if(client !is null) persistent.put(client);
           }
           version (SSL) {
-            if ((select = set.sISelect(sslsocket)) > 0) {      // writefln("Accepting HTTPs request");
+            if ((select = set.sISelect(sslsocket)) > 0) {
+              custom(3, "SERVER", "accepting HTTPs request");
               Client client = this.accept(sslsocket, true);
               if(client !is null) persistent.put(client);
             }
@@ -168,7 +170,7 @@ void main(string[] args) {
       signal(SIGPIPE, &handle_signal);
     }
     version (Windows) {
-      writeln("[WARN]   -k has been set to true, we cannot handle keyboard input under windows at the moment");
+      warning("-k has been set to true, we cannot handle keyboard input under windows at the moment");
       keyoff = true;
     }
 
@@ -184,17 +186,17 @@ void main(string[] args) {
       stdout.flush();
       Thread.sleep(dur!"msecs"(250));
     }
-    writefln("[INFO]   Server shutting down: %d", server.running);
+    info("server shutting down: %d", server.running);
     server.info();
   }
 }
 
 unittest {
-  writefln("[FILE]   %s", __FILE__);
+  custom(0, "FILE", "%s", __FILE__);
   version(SSL) {
-    writefln("[TEST]   SSL support");
+    custom(0, "TEST", "SSL support");
   }else{
-    writefln("[TEST]   No SSL support");
+    custom(0, "TEST", "No SSL support");
   }
 }
 

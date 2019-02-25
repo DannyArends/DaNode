@@ -174,6 +174,6 @@ void notFound(ref Response response, int verbose){
 }
 
 unittest {
-  writefln("[FILE]   %s", __FILE__);
+  custom(0, "FILE", "%s", __FILE__);
 }
 
