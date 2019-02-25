@@ -18,15 +18,16 @@ version(SSL) {
 
     public:
       this(Socket socket, bool blocking = false) {
+        custom(3, "HTTPS", "HTTPS constructor");
         this.socket = socket;
         this.blocking = blocking;
         this.starttime = Clock.currTime(); // Time in ms since this process came alive
         this.modtime = Clock.currTime(); // Time in ms since this process was modified
-        custom(1, "HTTPS", "HTTPS driver initialized");
       }
 
       // Perform the SSL handshake
       bool performHandshake() {
+        custom(2, "HTTPS", "performing handshake");
         bool handshaked = false;
         int ret_accept, ret_error;
         while (!handshaked && Msecs(starttime) < 500) {
@@ -41,6 +42,7 @@ version(SSL) {
             if (ret_error == SSL_ERROR_WANT_WRITE) Thread.sleep(5.msecs);
           }
         }
+        custom(2, "HTTPS", "handshake: %s", handshaked);
         return(handshaked);
       }
 
@@ -59,7 +61,7 @@ version(SSL) {
             this.socket.blocking = this.blocking;
 
             custom(1, "HTTPS", "creating a new ssl connection from context[0]");
-            this.ssl = SSL_new(contexts[0].context); // writefln("[INFO]   SSL created, using standard certificate contexts[0].context");
+            this.ssl = SSL_new(contexts[0].context);
 
             custom(1, "HTTPS", "setting the socket handle I/O to SSL* object");
             this.ssl.SSL_set_fd(socket.handle());
@@ -121,6 +123,7 @@ version(SSL) {
         if ((received = SSL_read(ssl, cast(void*) tmpbuffer, cast(int)maxsize)) > 0) {
           inbuffer.put(tmpbuffer[0 .. received]); modtime = Clock.currTime();
         }
+        if(received > 0) custom(3, "HTTPS", "received %d bytes of data", received);
         return(inbuffer.data.length);
       } }
 
@@ -137,13 +140,14 @@ version(SSL) {
           response.index += send; senddata[requests] += send;
           if(response.index >= response.length) response.completed = true;
         }
+        if(send > 0) custom(3, "HTTPS", "send %d bytes of data", send);
       } }
 
       override bool isSecure() { return(true); }
   }
 
   unittest {
-    writefln("[FILE]   %s", __FILE__);
+    custom(0, "FILE", "%s", __FILE__);
   }
 }
 
