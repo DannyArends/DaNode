@@ -39,6 +39,7 @@ class Process : Thread {
     string            command;              /// Command to execute
     string            inputfile;            /// Path of input file
     bool              completed = false;
+    bool              removeInput = true;
 
     File              pStdIn;               /// Input file stream
     Pipe              pStdOut;              /// Output pipe
@@ -53,14 +54,15 @@ class Process : Thread {
     Appender!(char[])  errbuffer;           /// Error appender buffer
 
   public:
-    this(string command, string inputfile, long maxtime = 4500) {
-      this.command    = command;
-      this.inputfile  = inputfile;
-      this.maxtime    = maxtime;
-      this.starttime  = Clock.currTime();
-      this.modified   = Clock.currTime();
-      this.outbuffer  = appender!(char[])();
-      this.errbuffer  = appender!(char[])();
+    this(string command, string inputfile, bool removeInput = true, long maxtime = 4500) {
+      this.command = command;
+      this.inputfile = inputfile;
+      this.removeInput = removeInput;
+      this.maxtime = maxtime;
+      this.starttime = Clock.currTime();
+      this.modified = Clock.currTime();
+      this.outbuffer = appender!(char[])();
+      this.errbuffer = appender!(char[])();
       super(&run);
     }
 
@@ -122,7 +124,7 @@ class Process : Thread {
         pStdOut = pipe();
         pStdErr = pipe();
         custom(1, "PROC", "command: %s < %s", command, inputfile);
-        auto cpid       = spawnShell(command, pStdIn, pStdOut.writeEnd, pStdErr.writeEnd, null);
+        auto cpid = spawnShell(command, pStdIn, pStdOut.writeEnd, pStdErr.writeEnd, null);
         while(running && lastmodified < maxtime){
           while((ch = readpipe(pStdOut)) != EOF){ modified = Clock.currTime(); outbuffer.put(cast(char)ch); }  // Non blocking slurp of stdout
           while((ch = readpipe(pStdErr)) != EOF){ modified = Clock.currTime(); errbuffer.put(cast(char)ch); }  // Non blocking slurp of stderr
@@ -138,8 +140,8 @@ class Process : Thread {
         while((ch = readpipe(pStdErr)) != EOF){ modified = Clock.currTime(); errbuffer.put(cast(char)ch); }  // Non blocking slurp of stderr
         pStdIn.close();
         trace("command finished %d after %s msecs", status(), time());
-        trace("removing process input file %s", inputfile);
-        remove(inputfile);
+        trace("removing process input file %s ? %s", inputfile, removeInput);
+        if(removeInput) remove(inputfile);
         this.completed = true;
       } catch(Exception e) {
         warning("process.d, exception: '%s'", e.msg);
@@ -147,3 +149,13 @@ class Process : Thread {
     }
 }
 
+unittest {
+  custom(0, "FILE", "%s", __FILE__);
+  auto p = new Process("rdmd www/localhost/dmd.d", "test/dmd.in", false);
+  p.start();
+  while(!p.finished){ Thread.sleep(msecs(5)); }
+  custom(0, "TEST", "status of output: %s", p.status());
+  custom(0, "TEST", "length of output: %s", p.length());
+  custom(0, "TEST", "time of output: %s", p.time());
+  custom(0, "TEST", "output: %s", p.output(0)[0 .. 12]);
+}
