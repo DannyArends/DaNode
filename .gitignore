@@ -6,6 +6,7 @@ www/grassland.test
 www/localhost/ddoc
 danode/server
 danode/server.exe
+danode/danode-test-default.exe
 server
 server.exe
 
@@ -29,7 +30,7 @@ www/qrcode.test/QR/gen/*
 
 *.in
 *.err
-
+*.lst
 *.log
 *.def
 *.err

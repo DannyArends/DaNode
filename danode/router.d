@@ -10,16 +10,16 @@ import danode.payload : Message, CGI;
 import danode.mimetypes : mime;
 import danode.functions : from, has, isCGI, isFILE, isDIR, Msecs, htmltime, isAllowed, writefile;
 import danode.filesystem : FileSystem, FileInfo;
-import danode.post : parsepost, PostType, servervariables;
-import danode.log : cverbose, Log, NORMAL, DEBUG, NOTSET;
+import danode.post : parsePost, PostType, serverVariables;
+import danode.log : trace, Log, NOTSET, NORMAL;
 version(SSL) {
   import danode.ssl : hasCertificate;
 }
 
 class Router {
   private:
-    FileSystem      filesystem;
-    Log             logger;
+    FileSystem filesystem;
+    Log logger;
 
   public:
     this(string wwwRoot = "./www/", int verbose = NORMAL){
@@ -37,7 +37,7 @@ class Router {
       if(idx <= 0) idx = inputSoFar.indexOf("\n\n");
       if(idx <= 0) return(false);
       if(!response.created) {
-        request.parse(ip, port, inputSoFar[0 .. idx], inputSoFar[(idx + 4) .. $], isSecure, logger.verbose);
+        request.parse(ip, port, inputSoFar[0 .. idx], inputSoFar[(idx + 4) .. $], isSecure);
         response = request.create();
       } else {
         request.update(inputSoFar[(idx + 4) .. $]);
@@ -46,8 +46,8 @@ class Router {
     }
 
     final void route(in string ip, long port, ref Request request, ref Response response, in string inputSoFar, bool isSecure) {
-      if(!response.routed && parse(ip, port, request, response, inputSoFar, isSecure)) {
-        if(parsepost(request, response, filesystem, logger.verbose)) {
+      if ( !response.routed && parse(ip, port, request, response, inputSoFar, isSecure)) {
+        if ( parsePost(request, response, filesystem) ) {
           route(request, response);
         }
       }
@@ -56,10 +56,8 @@ class Router {
     final void route(ref Request request, ref Response response, bool finalrewrite = false) {
       string localroot = filesystem.localroot(request.shorthost());
 
-      if (logger.verbose >= DEBUG) {
-        writefln("[DEBUG]  %s client %s:%s", (finalrewrite? "redirecting" : "routing"), request.ip, request.port);
-        writefln("[INFO]   shorthost -> localroot: %s -> %s", request.shorthost(), localroot);
-      }
+      trace("%s client %s:%s", (finalrewrite? "redirecting" : "routing"), request.ip, request.port);
+      trace("shorthost -> localroot: %s -> %s", request.shorthost(), localroot);
 
       if (request.shorthost() == "" || !exists(localroot)) // No domain requested, or we are not hosting it
         return response.domainNotFound(request);
@@ -68,29 +66,27 @@ class Router {
       string fqdn = config.domain(request.shorthost());
       string localpath = config.localpath(localroot, request.path);
 
-      if (logger.verbose >= DEBUG) {
-        writefln("[DEBUG]  configfile at: %s%s", localroot, "/web.config");
-        writefln("[DEBUG]  request.host: %s, fqdn: %s", request.host, fqdn);
-        writefln("[DEBUG]  localpath: %s, exists ? %s", localpath, localpath.exists());
-      }
+      trace("configfile at: %s%s", localroot, "/web.config");
+      trace("request.host: %s, fqdn: %s", request.host, fqdn);
+      trace("localpath: %s, exists ? %s", localpath, localpath.exists());
 
-      version(SSL){
+      version(SSL) {
         // SSL is available, or requested the wrong shortdomain
         if (request.isSecure != hasCertificate(fqdn) || request.host != fqdn) {
-          return response.redirect(request, fqdn, hasCertificate(fqdn), logger.verbose);
+          return response.redirect(request, fqdn, hasCertificate(fqdn));
         }
       } else {  // Requested the wrong shortdomain
         if (request.host != fqdn) {
-          return response.redirect(request, fqdn, false, logger.verbose);
+          return response.redirect(request, fqdn, false);
         }
       }
 
       if(localpath.exists()) {  // Requested an existing resource
         if(localpath.isCGI() && config.allowcgi)
-          return response.serveCGI(request, config, filesystem, logger.verbose);
+          return response.serveCGI(request, config, filesystem);
 
         if(localpath.isFILE() && !localpath.isCGI() && localpath.isAllowed())
-          return response.serveStaticFile(request, filesystem, logger.verbose);
+          return response.serveStaticFile(request, filesystem);
 
         if(localpath.isDIR() && config.isAllowed(localroot, localpath)){
           if(config.redirectdir() && !finalrewrite)  // Route this directory request to the index page
@@ -99,11 +95,11 @@ class Router {
           if(config.redirect && !finalrewrite)  // Modify request as canonical to the index page
             return this.redirectCanonical(request, response, config);
 
-          return response.serveDirectory(request, config, filesystem, logger.verbose);
+          return response.serveDirectory(request, config, filesystem);
         }
-        return response.serveForbidden(request, logger.verbose);
+        return response.serveForbidden(request);
       }
-      //writefln("[DEBUG] redirect: %s %d", config.redirect, finalrewrite);
+      trace("redirect: %s %d", config.redirect, finalrewrite);
       if(config.redirect && !finalrewrite)  // Route this request as canonical request the index page
         return this.redirectCanonical(request, response, config);
 
@@ -111,13 +107,13 @@ class Router {
     }
 
     void redirectDirectory(ref Request request, ref Response response, in WebConfig config){
-      if(logger.verbose >= DEBUG) writeln("[DEBUG]  redirecting directory request to index page");
+      trace("redirecting directory request to index page");
       request.redirectdir(config);
       return route(request, response, true);
     }
 
     void redirectCanonical(ref Request request, ref Response response, in WebConfig config){
-      if(logger.verbose >= DEBUG) writefln("[DEBUG]  redirecting non-existing page (canonical url) to the index page");
+      trace("redirecting non-existing page (canonical url) to the index page");
       request.page = request.uripath();                                                             // Save the URL path
       request.url  = format("%s?%s", config.index, request.query);
       return route(request, response, true);

@@ -11,6 +11,40 @@ extern(C) __gshared int cverbose;         // Verbose level of C-Code
 
 immutable int NOTSET = -1, NORMAL = 0, INFO = 1, TRACE = 2, DEBUG = 3;
 
+/* Verbose level control of stdout */
+void write(T)(const T fmt) { if(cverbose > 0) stdout.write(fmt); }
+
+/* Write an warning string to stdout */
+void warning(A...)(const string fmt, auto ref A args) { if(cverbose >= 0) writefln("[WARN]   " ~ fmt, args); }
+
+/* Informational level of debug to stdout */
+void info(A...)(const string fmt, auto ref A args) { if(cverbose >= 1) stdout.writefln("[INFO]   " ~ fmt, args); }
+
+/* Informational level of debug to stdout */
+void custom(A...)(const int lvl, const string pre, const string fmt, auto ref A args) {
+  if(cverbose >= lvl) {
+    string sep = " ";
+    size_t i = 1;
+    while(i < (7 - pre.length)) { sep ~= " "; i++; }
+    stdout.writefln("[" ~ pre ~ "]" ~ sep ~ fmt, args);
+  }
+}
+
+/* Trace level debug to stdout */
+void trace(A...)(const string fmt, auto ref A args) { if(cverbose >= 2) stdout.writefln("[TRACE]  " ~ fmt, args); }
+
+/* Write an error string to stderr */
+void error(A...)(const string fmt, auto ref A args) { stderr.writefln("[ERROR]  " ~ fmt, args); }
+
+/* Abort with error code, default: -1 */
+void abort(in string s, int exitcode = -1){
+  error(s);
+  exit(exitcode);
+}
+
+/* Expect condition cond, otherwise abort the process */
+void expect(A...)(bool cond, string msg, auto ref A args) { if (!cond) abort(format(msg, args), -1); }
+
 struct Info {
   long[StatusCode]      responses;
   Appender!(long[])     starttimes;
@@ -34,13 +68,13 @@ class Log {
     this(int verbose = NORMAL, string requestLog = "request.log", string perfLog = "perf.log", bool overwrite = false) {
       cverbose = verbose;
       if (exists(requestLog) && overwrite) { // Request log
-        writefln("[WARN]   overwriting log: %s", requestLog); 
+        warning("overwriting log: %s", requestLog); 
         remove(requestLog);
       }
       RequestLogFp = File(requestLog, "a");
 
       if (exists(perfLog) && overwrite) { // Performance log
-        writefln("[WARN]   overwriting log: %s", perfLog);
+        warning("overwriting log: %s", perfLog);
         remove(perfLog);
       }
       PerformanceLogFp = File(perfLog, "a");
@@ -48,7 +82,7 @@ class Log {
 
     @property @nogc int verbose(int verbose = NOTSET) const nothrow {
       if(verbose != NOTSET) {
-        if(cverbose >= INFO) printf("[INFO]   Changing verbose level from %d to %d\n", cverbose, verbose);
+        printf("[INFO]   changing verbose level from %d to %d\n", cverbose, verbose);
         cverbose = verbose;
       }
       return(cverbose); 

@@ -3,11 +3,12 @@ module danode.http;
 import danode.imports;
 import danode.interfaces : DriverInterface;
 import danode.response : Response;
-import danode.log : NORMAL, INFO, DEBUG;
+import danode.log : custom, warning, error;
 
 class HTTP : DriverInterface {
   public:
-    this(Socket socket, bool blocking = false, int verbose = NORMAL) { // writefln("[HTTP]   driver constructor");
+    this(Socket socket, bool blocking = false) {
+      custom(3, "HTTP", "HTTP constructor");
       this.socket = socket;
       this.blocking = blocking;
       this.starttime = Clock.currTime(); // Time in ms since this process came alive
@@ -19,13 +20,13 @@ class HTTP : DriverInterface {
       try {
         socket.blocking = this.blocking;
       } catch(Exception e) {
-        writefln("[ERROR]  unable to accept socket: %s", e.msg);
+        error("unable to accept socket: %s", e.msg);
         return(false);
       }
       try {
         this.address = socket.remoteAddress();
       } catch(Exception e) {
-        if(verbose >= INFO) writefln("[WARN]   unable to resolve requesting origin: %s", e.msg);
+        warning("unable to resolve requesting origin: %s", e.msg);
       }
       return(true);
     }
@@ -39,7 +40,7 @@ class HTTP : DriverInterface {
       if ((received = socket.receive(tmpbuffer)) > 0) {
         inbuffer.put(tmpbuffer[0 .. received]); modtime = Clock.currTime();
       }
-      // if(received > 0) writefln("[INFO]   received %d bytes of data", received);
+      if(received > 0) custom(3, "HTTP", "received %d bytes of data", received);
       return(inbuffer.data.length);
     }
 
@@ -53,7 +54,7 @@ class HTTP : DriverInterface {
         response.index += send; senddata[requests] += send;
         if(response.index >= response.length) response.completed = true;
       }
-      // if(send > 0) writefln("[INFO]   send %d bytes of data", send);
+      if(send > 0) custom(3, "HTTP", "send %d bytes of data", send);
     } }
 
     // Close the connection, by shutting down the socket
@@ -63,7 +64,7 @@ class HTTP : DriverInterface {
           socket.shutdown(SocketShutdown.BOTH);
           socket.close();
         } catch(Exception e) {
-          if(verbose >= INFO) writefln("[WARN]   unable to close socket: %s", e.msg);
+          warning("unable to close socket: %s", e.msg);
         }
       }
     }
@@ -78,6 +79,5 @@ class HTTP : DriverInterface {
 }
 
 unittest {
-  writefln("[FILE]   %s", __FILE__);
+  custom(0, "FILE", "%s", __FILE__);
 }
-

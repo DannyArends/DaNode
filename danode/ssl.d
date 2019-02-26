@@ -8,7 +8,7 @@ version(SSL) {
   import danode.client;
   import danode.server : Server;
   import danode.client : Response;
-  import danode.log : cverbose, NORMAL, INFO, DEBUG;
+  import danode.log : custom, warning, info;
 
   // SSL context structure, stored relation between hostname 
   // and the SSL context, should be allocated only once available to C, and deallocated at exit
@@ -30,22 +30,22 @@ version(SSL) {
     // C callback function to switch SSL contexts after hostname lookup
     static void switchContext(SSL* ssl, int *ad, void *arg) {
       string hostname = to!(string)(cast(const(char*)) SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name));
-      if(cverbose >= INFO) writefln("[HTTPS]  Looking for hostname: %s", hostname);
+      custom(1, "HTTPS", "looking for hostname: %s", hostname);
       if(hostname is null) {
-        if(cverbose >= INFO) writefln("[WARN]   Client does not support Server Name Indication (SNI), using default: contexts[0]");
+        custom(1, "WARN", "client does not support Server Name Indication (SNI), using default: contexts[0]");
         return;
       }
       string s;
       for(int x = 0; x < ncontext; x++) {
         s = to!string(contexts[x].hostname.ptr);
-        if(cverbose >= INFO) writefln("[HTTPS]  context: %s %s", hostname, s);
+        custom(1, "HTTPS", "context: %s %s", hostname, s);
         if(hostname.endsWith(s)) {
-          if(cverbose >= INFO) writefln("[HTTPS]  Switching SSL context to %s", hostname);
+          custom(1, "HTTPS", "switching SSL context to %s", hostname);
           SSL_set_SSL_CTX(ssl, contexts[x].context);
           return;
         }
       }
-      if(cverbose >= INFO) writefln("[WARN]   callback failed to find certificate for %s", hostname);
+      custom(1, "WARN", "callback failed to find certificate for %s", hostname);
       return;
     }
   }
@@ -56,7 +56,7 @@ version(SSL) {
     sslAssert(!(ctx is null));
     sslAssert(SSL_CTX_use_certificate_file(ctx, cast(const char*) toStringz(certFile), SSL_FILETYPE_PEM) > 0);
     if (exists(chainFile) && isFile(chainFile)) {
-      if(cverbose >= INFO) writefln("[INFO]   loading certificate chain from file: %s", chainFile);
+      custom(1, "HTTPS", "loading certificate chain from file: %s", chainFile);
       sslAssert(SSL_CTX_use_certificate_chain_file(ctx, cast(const char*) toStringz(chainFile)) > 0);
     }
     sslAssert(SSL_CTX_use_PrivateKey_file(ctx, cast(const char*) toStringz(keyFile), SSL_FILETYPE_PEM) > 0);
@@ -66,12 +66,12 @@ version(SSL) {
 
   // Does the hostname requested have a certificate ?
   bool hasCertificate(string hostname) {
-    if(cverbose >= INFO) writefln("[HTTPS]  '%s' certificate?", hostname);
+    custom(1, "HTTPS", "'%s' certificate?", hostname);
     string s;
     for(size_t x = 0; x < ncontext; x++) {
       s = to!string(contexts[x].hostname.ptr);
       if(hostname.endsWith(s)) {
-        if(cverbose >= INFO) writefln("[HTTPS]  '%s' certificate found", hostname);
+        custom(1, "HTTPS", "'%s' certificate found", hostname);
         return true;
       }
     }
@@ -85,24 +85,24 @@ version(SSL) {
     int err = SSL_get_error(ssl, retcode);
     switch (err) {
       case SSL_ERROR_NONE:
-        /*writeln("SSL_ERROR_NONE"); */ break;
+        /* warning("SSL_ERROR_NONE"); */ break;
       case SSL_ERROR_SSL:
-        /* writeln("SSL_ERROR_SSL"); */ break;
+        /* warning("SSL_ERROR_SSL"); */ break;
       case SSL_ERROR_ZERO_RETURN:
-        /* writeln("SSL_ERROR_ZERO_RETURN"); */ break;
+        /* warning("SSL_ERROR_ZERO_RETURN"); */ break;
       case SSL_ERROR_WANT_READ:
-        /* writeln("SSL_ERROR_WANT_READ"); */ break;
+        /* warning("SSL_ERROR_WANT_READ"); */ break;
       case SSL_ERROR_WANT_WRITE:
-        /* writeln("SSL_ERROR_WANT_WRITE"); */ break;
+        /* warning("SSL_ERROR_WANT_WRITE"); */ break;
       case SSL_ERROR_WANT_CONNECT:
-        /* writeln("SSL_ERROR_WANT_CONNECT"); */ break;
+        /* warning("SSL_ERROR_WANT_CONNECT"); */ break;
       case SSL_ERROR_WANT_ACCEPT:
-        /* writeln("SSL_ERROR_WANT_ACCEPT"); */ break;
+        /* warning("SSL_ERROR_WANT_ACCEPT"); */ break;
       case SSL_ERROR_WANT_X509_LOOKUP:
-        /* writeln("SSL_ERROR_WANT_X509_LOOKUP"); */ break;
+        /* warning("SSL_ERROR_WANT_X509_LOOKUP"); */ break;
       case SSL_ERROR_SYSCALL:
-        /* writefln("[ERROR]  SSL_ERROR_SYSCALL: RETURN: %d", retcode); */ break;
-      default: /*  writefln("[ERROR]  SSL_ERROR Error %d %d", err, retcode); */ break;
+        /* warning("[ERROR]  SSL_ERROR_SYSCALL: RETURN: %d", retcode); */ break;
+      default: /*  warning("[ERROR]  SSL_ERROR Error %d %d", err, retcode); */ break;
     }
     return(err);
   }
@@ -116,33 +116,33 @@ version(SSL) {
     }
     ctx.hostname[hostname.length] = '\0';
     ctx.context = createCTX(path, keyFile, chainFile);
-    if(cverbose >= INFO) writefln("[INFO]   context created for certificate: %s", to!string(ctx.hostname.ptr));
+    custom(1, "HTTPS", "context created for certificate: %s", to!string(ctx.hostname.ptr));
     SSL_CTX_callback_ctrl(ctx.context,SSL_CTRL_SET_TLSEXT_SERVERNAME_CB, cast(ExternC!(void function())) &switchContext);
     return(ctx);
   }
 
   // loads all crt files in the certDir, using keyfile: server.key
   SSLcontext* initSSL(Server server, string certDir = ".ssl/", string keyFile = ".ssl/server.key", VERSION v = SSL23) {
-    writefln("[HTTPS]  loading Deimos.openSSL, certDir: %s, keyFile: %s, SSL:%s", certDir, keyFile, v);
+    custom(0, "HTTPS", "loading Deimos.openSSL, certDir: %s, keyFile: %s, SSL:%s", certDir, keyFile, v);
     SSL_library_init();
     OpenSSL_add_all_algorithms();
     SSL_load_error_strings();
     contexts = cast(SSLcontext*) malloc(0 * SSLcontext.sizeof);
-    writefln("[HTTPS]  Certificate folder: %d", exists(certDir));
+    custom(0, "HTTPS", "certificate folder: %d", exists(certDir));
     if (!exists(certDir)) {
-      writefln("[WARN]   SSL certificate folder '%s' not found", certDir);
+      warning("SSL certificate folder '%s' not found", certDir);
       return contexts;
     }
     if (!isDir(certDir)) {
-      writefln("[WARN]   SSL certificate folder '%s' not a folder", certDir);
+      warning("SSL certificate folder '%s' not a folder", certDir);
       return contexts;
     }
     if (!exists(keyFile)) {
-      writefln("[WARN]   SSL private key file: '%s' not found", certDir);
+      warning("SSL private key file: '%s' not found", certDir);
       return contexts;
     }
     if (!isFile(keyFile)) {
-      writefln("[WARN]   SSL private key file: '%s' not a file", certDir);
+      warning("SSL private key file: '%s' not a file", certDir);
       return contexts;
     }
 
@@ -151,22 +151,22 @@ version(SSL) {
         string hostname = baseName(d.name, ".crt");
         if (hostname.length < 255) {
           string chainFile = baseName(d.name, ".crt") ~ ".chain";
-          if(cverbose >= INFO) writefln("[INFO]   loading certificate from file: %s", d.name);
+          custom(1, "HTTPS", "loading certificate from file: %s", d.name);
           contexts = cast(SSLcontext*) realloc(contexts, (ncontext+1) * SSLcontext.sizeof);
           contexts[ncontext] = loadContext(d.name, hostname, keyFile, chainFile);
-          if(cverbose >= INFO) writefln("[HTTPS]  stored certificate: %s in context: %d", to!string(contexts[ncontext].hostname.ptr), ncontext);
+          custom(1, "HTTPS", "stored certificate: %s in context: %d", to!string(contexts[ncontext].hostname.ptr), ncontext);
           ncontext++;
         }
       }
     }
-    writefln("[HTTPS]  loaded %s SSL certificates", ncontext);
+    custom(0, "HTTPS", "loaded %s SSL certificates", ncontext);
     return contexts;
   }
 
   void closeSSL(Socket socket) {
-    writefln("[INFO]   closing server SSL socket");
+    custom(1, "HTTPS", "closing server SSL socket");
     socket.close();
-    writefln("[INFO]   cleaning up %d HTTPS contexts", ncontext);
+    custom(1, "HTTPS", "cleaning up %d HTTPS contexts", ncontext);
     for(int x = 0; x < ncontext; x++) {
       // Free the different SSL contexts
       SSL_CTX_free(contexts[x].context);
@@ -181,11 +181,8 @@ version(SSL) {
     }
   }
 
-
   unittest {
-    writefln("[FILE]   %s", __FILE__);
+    custom(0, "FILE", "%s", __FILE__);
   }
-
-
 } // End version SSL
 

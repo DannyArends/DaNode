@@ -5,7 +5,7 @@ import danode.httpstatus : StatusCode;
 import danode.mimetypes : mime;
 import danode.payload : Payload, PayLoadType;
 import danode.functions : has, isCGI;
-import danode.log : Log, NORMAL, INFO, DEBUG;
+import danode.log : custom, info, Log, warning, trace, cverbose, DEBUG;
 
 class FileInfo : Payload {
   public:
@@ -17,20 +17,18 @@ class FileInfo : Payload {
     char[]    buf = null;
     char[]    encbuf = null;
     File*     fp = null;
-    int       verbose = NORMAL;
 
   public:
     this(string path){ this.path = path; }
 
-    final bool needsupdate(size_t buffersize = 4096, int verbose = NORMAL) {
-      this.verbose = verbose;
+    final bool needsupdate(size_t buffersize = 4096) {
       if( fitsInBuffer(buffersize) && needsBuffer() ) {
         if (!buffered) {
-          if(verbose >= INFO) writefln("[INFO]   Need to buffering file record: %s", path);
+          info("need to buffer file record: %s", path);
           return true;
         }
         if (mtime > btime) {
-          if(verbose >= INFO) writefln("[INFO]   Rebuffering stale record: %s", path);
+          info("re-buffer stale file record: %s", path);
           return true;
         }
       }
@@ -42,8 +40,7 @@ class FileInfo : Payload {
       return(false);
     }
 
-    final void buffer(int verbose = NORMAL) { synchronized {
-      this.verbose = verbose;
+    final void buffer() { synchronized {
       if(buf is null) buf = new char[](fileSize());
       buf.length = fileSize();
       try {
@@ -52,16 +49,16 @@ class FileInfo : Payload {
         fp.rawRead(buf);
         fp.close();
       } catch (Exception e) {
-        writefln("[WARN]   exception while buffering '%s': %s", path, e.msg);
+        warning("exception during buffering '%s': %s", path, e.msg);
         return;
       }
       try {
         encbuf = cast(char[])( compress(buf, 9) );
       } catch (Exception e) {
-        writefln("[WARN]   exception while compressing '%s': %s", path, e.msg);
+        warning("exception during compressing '%s': %s", path, e.msg);
       }
       btime = Clock.currTime();
-      if(verbose >= DEBUG) writefln("[DEBUG]  buffered %s: %d|%d bytes", path, fileSize(), encbuf.length);
+      trace("buffered %s: %d|%d bytes", path, fileSize(), encbuf.length);
       buffered = true;
     } }
 
@@ -85,9 +82,9 @@ class FileInfo : Payload {
     final char[] asStream(ptrdiff_t from, ptrdiff_t maxsize = 1024) {
       if(buf is null) buf = new char[](maxsize);
       char[] slice = [];
-      if (verbose >= DEBUG && from == 0) write("[STREAM] .");
+      if (cverbose >= DEBUG && from == 0) write("[STREAM] .");
       if (from >= fileSize()) {
-        if(verbose >= DEBUG) writeln("[DEBUG]  from >= filesize, are we still trying to send?");
+        trace("from >= filesize, are we still trying to send?");
         return([]);
       }
       try {
@@ -97,18 +94,18 @@ class FileInfo : Payload {
           fp.seek(from);
           slice = fp.rawRead!char(buf);
           fp.close();
-          if(verbose >= DEBUG) write(".");
-          if (verbose >= DEBUG && (from + slice.length) >= fileSize()) write("\n");
+          if (cverbose >= DEBUG) write(".");
+          if (cverbose >= DEBUG && (from + slice.length) >= fileSize()) write("\n");
         }
       } catch(Exception e) { 
-        writefln("[WARN]   exception %s while streaming file: %s", e.msg, path);
+        warning("exception %s while streaming file: %s", e.msg, path);
       }
       return(slice);
     }
 
     final char[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 1024){ synchronized {
       if (!realfile) { return []; }
-      if(verbose >= DEBUG) writeln("[DEBUG]  Real file");
+      trace("file provided is a real file");
       if (needsupdate) { buffer(); }
       if (!buffered) {
         return(asStream(from, maxsize));
@@ -137,10 +134,10 @@ class FileSystem {
     string            root;
     Domain[string]    domains;
     Log               logger;
-    long              maxsize;
+    size_t              maxsize;
 
   public:
-    this(Log logger, string root = "./www/", int maxsize = 1024 * 512){
+    this(Log logger, string root = "./www/", size_t maxsize = 1024 * 512){
       this.logger   = logger;
       this.root     = root;
       this.maxsize  = maxsize;
@@ -158,36 +155,34 @@ class FileSystem {
       foreach (DirEntry f; dirEntries(dname, SpanMode.depth)) {
         if (f.isFile()) {
           string shortname = replace(f.name[dname.length .. $], "\\", "/");
-          if (logger.verbose >= INFO) writefln("[SCAN]   File: %s -> %s", f.name, shortname);
+          custom(1, "SCAN", "file: %s -> %s", f.name, shortname);
           if (!domain.files.has(shortname)) {
             domain.files[shortname] = new FileInfo(f.name);
             domain.entries++;
             if (domain.files[shortname].needsupdate(maxsize)) {
-              domain.files[shortname].buffer(logger.verbose);
+              domain.files[shortname].buffer();
               domain.buffered++;
             }
           }
         }
       }
-      if (logger.verbose >= INFO) {
-        writef("[INFO]   domain: %s, files %s|%s", dname, domain.buffered, domain.entries);
-        writefln(", size: %.2f/%.2f kB", domain.buffersize/1024.0, domain.size/1024.0);
-      }
+      custom(0, "SCAN", "domain: %s, files %s|%s", dname, domain.buffered, domain.entries);
+      custom(0, "SCAN", "%s = size: %.2f/%.2f kB", dname, domain.buffersize / 1024.0, domain.size / 1024.0);
       return(domain);
     } }
 
     final string localroot(string hostname) const { return(format("%s%s",this.root, hostname)); }
 
-    final FileInfo file(string localroot, string path, int verbose = NORMAL){ synchronized {
+    final FileInfo file(string localroot, string path){ synchronized {
       if(!domains[localroot].files.has(path) && exists(format("%s%s", localroot, path))){
-        if(logger.verbose >= INFO) writefln("[FILES]  new file %s, rescanning index: %s", path, localroot);
+        custom(1, "SCAN", "new file %s, rescanning index: %s", path, localroot);
         domains[localroot] = scan(localroot);
       }
       if(domains[localroot].files.has(path)) return(domains[localroot].files[path]);
       return new FileInfo("");
     } }
 
-    final void rebuffer(){
+    final void rebuffer() {
       foreach(ref d; domains.byKey){ foreach(ref f; domains[d].files.byKey){
         domains[d].files[f].buffer();
       } }
@@ -195,10 +190,21 @@ class FileSystem {
 }
 
 unittest {
-  import std.stdio : writefln;
-  writefln("[FILE]   %s", __FILE__);
-  Log             logger = new Log(1);
-  FileSystem      filesystem = new FileSystem(logger, "./test");
-  writefln("[TEST]   ./test/server.files/server.conf (12 bytes): %s", filesystem.file("./test/server.files","/server.conf").bytes(0,12));
+  custom(0, "FILE", "%s", __FILE__);
+  Log logger = new Log(0);
+  FileSystem filesystem = new FileSystem(logger, "./www/");
+  custom(0, "TEST", "./www/localhost/dmd.d (6 bytes) = %s", filesystem.file("./www/localhost", "/dmd.d").bytes(0,6));
+  custom(0, "TEST", "filesystem.localroot('localhost') = %s", filesystem.localroot("localhost"));
+  Domain localhost = filesystem.scan("www/localhost");
+  custom(0, "TEST", "localhost.buffersize() = %s", localhost.buffersize());
+  custom(0, "TEST", "localhost.size() = %s", localhost.size());
+  auto file = filesystem.file(filesystem.localroot("localhost"), "localhost/dmd.d");
+  custom(0, "TEST", "file.asStream(0) = %s", file.asStream(0));
+  custom(0, "TEST", "file.statuscode() = %s", file.statuscode());
+  custom(0, "TEST", "file.mimetype() = %s", file.mimetype());
+  custom(0, "TEST", "file.mtime() = %s", file.mtime());
+  custom(0, "TEST", "file.ready() = %s", file.ready());
+  custom(0, "TEST", "file.type() = %s", file.type());
+  custom(0, "TEST", "file.content() = %s", file.content());
 }
 

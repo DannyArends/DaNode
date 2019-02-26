@@ -2,6 +2,7 @@ DaNode a small webserver written in the D programming language
 --------------------------------------------------------------
 master: [![Build Status](https://travis-ci.org/DannyArends/DaNode.svg?branch=master)](https://travis-ci.org/DannyArends/DaNode)
 development: [![Build Status](https://travis-ci.org/DannyArends/DaNode.svg?branch=development)](https://travis-ci.org/DannyArends/DaNode)
+licence: [![license](https://img.shields.io/github/license/DannyArends/DaNode.svg?style=flat)](https://github.com/DannyArends/DaNode/blob/master/LICENSE.txt)
 
 A small web server written in the [D programming language](https://dlang.org/) to 
 host server side web applications written in any programming language. It is a web 

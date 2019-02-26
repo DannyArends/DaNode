@@ -4,7 +4,7 @@ import danode.imports;
 import danode.process : Process;
 import danode.httpstatus : StatusCode;
 import danode.mimetypes : UNSUPPORTED_FILE, mime;
-import danode.log : NORMAL, INFO, DEBUG;
+import danode.log : error;
 
 enum PayLoadType { Message, Script, File }
 enum HeaderType { None, FastCGI, HTTP10, HTTP11 }
@@ -29,10 +29,10 @@ class CGI : Payload {
     string command;
     string path;
 
-    this(string command, string path, int verbose = NORMAL){
+    this(string command, string path){
       this.command = command;
       this.path = path;
-      external = new Process(command, path, verbose); 
+      external = new Process(command, path); 
       external.start();
     }
 
@@ -96,7 +96,7 @@ class CGI : Payload {
       try {
         s = to!StatusCode(to!int(status));
       } catch (Exception e){
-        writeln("[ERROR]  Unable to get statuscode from script");
+        error("unable to get statuscode from script");
       }
       return(s);
     }

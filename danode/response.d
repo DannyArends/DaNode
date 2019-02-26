@@ -10,7 +10,7 @@ import danode.payload : Payload, PayLoadType, HeaderType, Empty, CGI, Message;
 import danode.log;
 import danode.webconfig;
 import danode.filesystem;
-import danode.post : servervariables;
+import danode.post : serverVariables;
 import danode.functions : browseDir;
 
 immutable string SERVERINFO = "DaNode/0.0.2 (Universal)";
@@ -44,7 +44,7 @@ struct Response {
       if (type != HeaderType.None) {
         return(parseHTTPResponseHeader(this, script, type));
       }
-      writefln("[WARN]   script '%s',  failed to generate a header", script.command);
+      warning("script '%s',  failed to generate a header", script.command);
     }
     hdr.put(format("%s %d %s\r\n", protocol, payload.statuscode, reason(payload.statuscode)));
     foreach(key, value; headers) { hdr.put(format("%s: %s\r\n", key, value)); }
@@ -87,10 +87,8 @@ char[] parseHTTPResponseHeader(ref Response response, CGI script, HeaderType typ
     }
   }
   response.hdr.put(script.fullHeader());
-  if(cverbose >= INFO) {
-    writefln("[INFO]   script: status: %d, eoh: %d, content: %d", script.statuscode, script.endOfHeader(), clength);
-    writefln("[INFO]   connection: %s -> %s, to %s in %d bytes", strip(script.getHeader("Connection", "Close")), response.connection, type, response.hdr.data.length);
-  }
+  info("script: status: %d, eoh: %d, content: %d", script.statuscode, script.endOfHeader(), clength);
+  info("connection: %s -> %s, to %s in %d bytes", strip(script.getHeader("Connection", "Close")), response.connection, type, response.hdr.data.length);
   response.cgiheader = true;
   return(response.hdr.data);
 }
@@ -105,8 +103,8 @@ Response create(in Request request, in StatusCode statuscode = StatusCode.Ok, in
   return(response);
 }
 
-void redirect(ref Response response, in Request request, in string fqdn, bool isSecure = false, int verbose = NORMAL) {
-  if(verbose >= DEBUG) writefln("[DEBUG]  redirecting request to %s", fqdn);
+void redirect(ref Response response, in Request request, in string fqdn, bool isSecure = false) {
+  trace("redirecting request to %s", fqdn);
   response.payload = new Empty(StatusCode.MovedPermanently);
   response.customheader("Location", format("http%s://%s%s%s", isSecure? "s": "", fqdn, request.path, request.query));
   response.connection = "Close";
@@ -119,63 +117,63 @@ void notmodified(ref Response response, in Request request, in string mimetype =
 }
 
 void domainNotFound(ref Response response, in Request request) {
-  writefln("[WARN]   requested domain '%s', was not found", request.shorthost());
+  warning("requested domain '%s', was not found", request.shorthost());
   response.payload = new Message(StatusCode.NotFound, format("404 - No such domain is available\n"));
   response.ready = true;
 }
 
-void serveCGI(ref Response response, in Request request, in WebConfig config, in FileSystem fs, int verbose) {
-  if(verbose >= DEBUG) writeln("[DEBUG]  requested a cgi file, execution allowed");
+void serveCGI(ref Response response, in Request request, in WebConfig config, in FileSystem fs) {
+  trace("requested a cgi file, execution allowed");
   string localroot = fs.localroot(request.shorthost());
   string localpath = config.localpath(localroot, request.path);
   if(!response.routed) { // Store POST data (could fail multiple times)
-    if(verbose >= DEBUG)  writeln("[DEBUG]  writing server variables");
-    fs.servervariables(config, request, response, verbose);
-    if(verbose >= DEBUG)  writeln("[DEBUG]  creating CGI payload");
-    response.payload = new CGI(request.command(localpath), request.inputfile(fs), verbose);
+    trace("writing server variables");
+    fs.serverVariables(config, request, response);
+    trace("creating CGI payload");
+    response.payload = new CGI(request.command(localpath), request.inputfile(fs));
     response.ready = true;
   }
 }
 
-void serveStaticFile(ref Response response, in Request request, FileSystem fs, int verbose) {
-  if(verbose >= DEBUG) writeln("[DEBUG]  serving a static file");
+void serveStaticFile(ref Response response, in Request request, FileSystem fs) {
+  trace("serving a static file");
   string localroot = fs.localroot(request.shorthost());
   FileInfo reqFile = fs.file(localroot, request.path);
   if(request.acceptsEncoding("deflate") && reqFile.hasEncodedVersion) {
-    if(verbose >= INFO) writefln("[INFO]   will serve %s with deflate encoding", request.path);
+    info("will serve %s with deflate encoding", request.path);
     reqFile.deflate = true;
     response.customheader("Content-Encoding","deflate");
   }
   response.payload = reqFile;
   if(request.ifModified >= response.payload.mtime()) {                                        // Non modified static content
-    if(verbose >= DEBUG) writeln("[DEBUG]  static file has not changed, sending notmodified");
+    trace("static file has not changed, sending notmodified");
     response.notmodified(request, response.payload.mimetype);
   }
 
   response.ready = true;
 }
 
-void serveDirectory(ref Response response, ref Request request, in WebConfig config, in FileSystem fs, int verbose) {
-  if(verbose >= DEBUG) writeln("[DEBUG]  sending browse directory");
+void serveDirectory(ref Response response, ref Request request, in WebConfig config, in FileSystem fs) {
+  trace("sending browse directory");
   string localroot = fs.localroot(request.shorthost());
   string localpath = config.localpath(localroot, request.path);
   response.payload = new Message(StatusCode.Ok, browseDir(localroot, localpath), "text/html");
   response.ready = true;
 }
 
-void serveForbidden(ref Response response, in Request request, int verbose) {
-  if(verbose >= DEBUG) writefln("[DEBUG]  resource is restricted from being accessed");
+void serveForbidden(ref Response response, in Request request) {
+  trace("resource is restricted from being accessed");
   response.payload = new Message(StatusCode.Forbidden, format("403 - Access to this resource has been restricted\n"));
   response.ready = true;
 }
 
 void notFound(ref Response response, int verbose){
-  if(verbose >= DEBUG) writefln("[DEBUG]  resource not found");
+  trace("resource not found");
   response.payload = new Message(StatusCode.NotFound, format("404 - The requested path does not exists on disk\n"));
   response.ready = true;
 }
 
 unittest {
-  writefln("[FILE]   %s", __FILE__);
+  custom(0, "FILE", "%s", __FILE__);
 }
 

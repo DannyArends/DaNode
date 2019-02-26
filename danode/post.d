@@ -9,7 +9,7 @@ import danode.payload : Message, CGI;
 import danode.mimetypes : mime;
 import danode.filesystem : FileSystem;
 import danode.functions : from, has, isCGI, isFILE, isDIR, writefile;
-import danode.log : NORMAL, INFO, DEBUG;
+import danode.log : info, custom, trace, warning;
 
 immutable string      MPHEADER         = "multipart/form-data";                     /// Multipart header id
 immutable string      XFORMHEADER      = "application/x-www-form-urlencoded";       /// X-form header id
@@ -24,30 +24,30 @@ struct PostItem {
   long      size = 0;
 }
 
-final bool parsepost(ref Request request, ref Response response, in FileSystem filesystem, int verbose = NORMAL){
+final bool parsePost (ref Request request, ref Response response, in FileSystem filesystem) {
   if(response.havepost || request.method != "POST"){ response.havepost = true; return(true); }
   long expectedlength = to!long(from(request.headers, "Content-Length"));
   if(expectedlength == 0){
     response.havepost = true;
     return(true); // When we don't receive any post data it is meaningless to scan for any content
   }
-  if(verbose >= DEBUG) writefln("[POST]   received %s of %s", request.content.length, expectedlength);
+  custom(2, "POST", "received %s of %s", request.content.length, expectedlength);
   if(request.content.length < expectedlength) return(false);
 
   string contenttype  = from(request.headers, "Content-Type");
-  if(verbose >= DEBUG) writefln("[POST]   content type: %s", contenttype);
+  custom(2, "POST", "content type: %s", contenttype);
 
   if(contenttype.indexOf(XFORMHEADER) >= 0){                // X-form
-    if(verbose >= INFO) writefln("[XFORM]  parsing %d bytes", expectedlength);
+    custom(1, "XFORM", "parsing %d bytes", expectedlength);
     foreach(s; request.content.split("&")){
       string[] elem = strip(s).split("=");
       request.postinfo[ elem[0] ] = PostItem( PostType.Input, elem[0], "", elem[1] );
     }
-    if(verbose >= INFO) writefln("[XFORM]  # of items: %s", request.postinfo.length);
+    custom(1, "XFORM", "# of items: %s", request.postinfo.length);
 
   }else if(contenttype.indexOf(MPHEADER) >= 0){             // Multipart
     string mpid = split(contenttype, "boundary=")[1];
-    if(verbose >= INFO) writef("[MPART]  header: %s, parsing %d bytes", mpid, expectedlength);
+    info("header: %s, parsing %d bytes", mpid, expectedlength);
     foreach(size_t i, part; chomp(request.content).split(mpid)){
       string[] elem = strip(part).split("\r\n");
       if(elem[0] != "--"){
@@ -68,15 +68,15 @@ final bool parsepost(ref Request request, ref Response response, in FileSystem f
         }
       }
     }
-    if(verbose >= INFO) writefln(", # of items: %s", request.postinfo.length);
-  }else{ 
-    writefln("[WARN]   unsupported post content type: %s [%s] -> %s", contenttype, expectedlength, request.content);
+    info(", # of items: %s", request.postinfo.length);
+  } else { 
+    warning("unsupported post content type: %s [%s] -> %s", contenttype, expectedlength, request.content);
   }
   response.havepost = true;
   return(response.havepost);
 }
 
-final void servervariables(in FileSystem filesystem, in WebConfig config, in Request request, in Response response, int verbose = NORMAL)  {
+final void serverVariables(in FileSystem filesystem, in WebConfig config, in Request request, in Response response)  {
   Appender!(string) content;
 
   content.put(format("S=PHP_SELF=%s\n",             request.path));
@@ -115,7 +115,7 @@ final void servervariables(in FileSystem filesystem, in WebConfig config, in Req
   }
 
   string filename = request.inputfile(filesystem);
-  if(verbose >= DEBUG) writefln("[IN %s]\n%s[/IN %s]", filename, content.data, filename);
+  trace("[IN %s]\n%s[/IN %s]", filename, content.data, filename);
   writefile(filename, content.data);
 }
 

@@ -2,7 +2,7 @@ module danode.process;
 
 import danode.imports;
 import danode.functions : Msecs;
-import danode.log : NORMAL, INFO, DEBUG;
+import danode.log : custom, warning, trace;
 version(Posix) {
   import core.sys.posix.fcntl : fcntl, F_SETFL, O_NONBLOCK;
 }
@@ -12,15 +12,15 @@ struct WaitResult {
   int status;                // Exit status when terminated
 }
 
-int readpipe(ref Pipe pipe, int verbose = NORMAL){
+int readpipe(ref Pipe pipe){
   File fp = pipe.readEnd;
   try{
     if(fp.isOpen()){
-      if(!nonblocking(fp) && verbose >= DEBUG) writeln("[WARN]   unable to create nonblocking pipe for command");
+      if(!nonblocking(fp)) custom(2, "WARN", "unable to create nonblocking pipe for command");
       return(fgetc(fp.getFP()));
     }
   }catch(Exception e){
-    writefln("[WARN]   Exception during readpipe command: %s", e.msg);
+    warning("exception during readpipe command: %s", e.msg);
     fp.close();
   }
   return(EOF);
@@ -38,8 +38,8 @@ class Process : Thread {
   private:
     string            command;              /// Command to execute
     string            inputfile;            /// Path of input file
-    int               verbose = NORMAL;
     bool              completed = false;
+    bool              removeInput = true;
 
     File              pStdIn;               /// Input file stream
     Pipe              pStdOut;              /// Output pipe
@@ -54,15 +54,15 @@ class Process : Thread {
     Appender!(char[])  errbuffer;           /// Error appender buffer
 
   public:
-    this(string command, string inputfile, int verbose = NORMAL, long maxtime = 4500) {
-      this.command    = command;
-      this.inputfile  = inputfile;
-      this.verbose    = verbose;
-      this.maxtime    = maxtime;
-      this.starttime  = Clock.currTime();
-      this.modified   = Clock.currTime();
-      this.outbuffer  = appender!(char[])();
-      this.errbuffer  = appender!(char[])();
+    this(string command, string inputfile, bool removeInput = true, long maxtime = 4500) {
+      this.command = command;
+      this.inputfile = inputfile;
+      this.removeInput = removeInput;
+      this.maxtime = maxtime;
+      this.starttime = Clock.currTime();
+      this.modified = Clock.currTime();
+      this.outbuffer = appender!(char[])();
+      this.errbuffer = appender!(char[])();
       super(&run);
     }
 
@@ -115,7 +115,7 @@ class Process : Thread {
       try {
         int  ch;
         if( ! exists(inputfile) ) {
-          writefln("[WARN]   no input path: %s", inputfile);
+          warning("no input path: %s", inputfile);
           this.process.terminated = true;
           this.completed = true;
           return;
@@ -123,8 +123,8 @@ class Process : Thread {
         pStdIn = File(inputfile, "r");
         pStdOut = pipe();
         pStdErr = pipe();
-        if(verbose >= INFO) writefln("[INFO]   command: %s < %s", command, inputfile);
-        auto cpid       = spawnShell(command, pStdIn, pStdOut.writeEnd, pStdErr.writeEnd, null);
+        custom(1, "PROC", "command: %s < %s", command, inputfile);
+        auto cpid = spawnShell(command, pStdIn, pStdOut.writeEnd, pStdErr.writeEnd, null);
         while(running && lastmodified < maxtime){
           while((ch = readpipe(pStdOut)) != EOF){ modified = Clock.currTime(); outbuffer.put(cast(char)ch); }  // Non blocking slurp of stdout
           while((ch = readpipe(pStdErr)) != EOF){ modified = Clock.currTime(); errbuffer.put(cast(char)ch); }  // Non blocking slurp of stderr
@@ -132,20 +132,30 @@ class Process : Thread {
           Thread.yield();
         }
         if(!process.terminated){
-          writefln("[WARN]   command: %s < %s did not finish in time", command, inputfile); 
+          warning("command: %s < %s did not finish in time", command, inputfile); 
           kill(cpid, 9); 
           process = WaitResult(true, wait(cpid));
         }
         while((ch = readpipe(pStdOut)) != EOF){ modified = Clock.currTime(); outbuffer.put(cast(char)ch); }  // Non blocking slurp of stdout
         while((ch = readpipe(pStdErr)) != EOF){ modified = Clock.currTime(); errbuffer.put(cast(char)ch); }  // Non blocking slurp of stderr
         pStdIn.close();
-        if(verbose >= DEBUG) writefln("[DEBUG]  command finished %d after %s msecs", status(), time());
-        if(verbose >= DEBUG) writefln("[DEBUG]  removing process input file %s", inputfile);
-        remove(inputfile);
+        trace("command finished %d after %s msecs", status(), time());
+        trace("removing process input file %s ? %s", inputfile, removeInput);
+        if(removeInput) remove(inputfile);
         this.completed = true;
       } catch(Exception e) {
-        writefln("[WARN]   process.d, exception: '%s'", e.msg);
+        warning("process.d, exception: '%s'", e.msg);
       }
     }
 }
 
+unittest {
+  custom(0, "FILE", "%s", __FILE__);
+  auto p = new Process("rdmd www/localhost/dmd.d", "test/dmd.in", false);
+  p.start();
+  while(!p.finished){ Thread.sleep(msecs(5)); }
+  custom(0, "TEST", "status of output: %s", p.status());
+  custom(0, "TEST", "length of output: %s", p.length());
+  custom(0, "TEST", "time of output: %s", p.time());
+  custom(0, "TEST", "output: %s", p.output(0)[0 .. 12]);
+}
