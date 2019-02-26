@@ -5,7 +5,7 @@ import danode.httpstatus : StatusCode;
 import danode.mimetypes : mime;
 import danode.payload : Payload, PayLoadType;
 import danode.functions : has, isCGI;
-import danode.log : custom, info, Log, warning, trace, NORMAL, DEBUG;
+import danode.log : custom, info, Log, warning, trace, cverbose, DEBUG;
 
 class FileInfo : Payload {
   public:
@@ -17,13 +17,11 @@ class FileInfo : Payload {
     char[]    buf = null;
     char[]    encbuf = null;
     File*     fp = null;
-    int       verbose = NORMAL;
 
   public:
     this(string path){ this.path = path; }
 
-    final bool needsupdate(size_t buffersize = 4096, int verbose = NORMAL) {
-      this.verbose = verbose;
+    final bool needsupdate(size_t buffersize = 4096) {
       if( fitsInBuffer(buffersize) && needsBuffer() ) {
         if (!buffered) {
           info("need to buffer file record: %s", path);
@@ -42,8 +40,7 @@ class FileInfo : Payload {
       return(false);
     }
 
-    final void buffer(int verbose = NORMAL) { synchronized {
-      this.verbose = verbose;
+    final void buffer() { synchronized {
       if(buf is null) buf = new char[](fileSize());
       buf.length = fileSize();
       try {
@@ -85,7 +82,7 @@ class FileInfo : Payload {
     final char[] asStream(ptrdiff_t from, ptrdiff_t maxsize = 1024) {
       if(buf is null) buf = new char[](maxsize);
       char[] slice = [];
-      if (verbose >= DEBUG && from == 0) write("[STREAM] .");
+      if (cverbose >= DEBUG && from == 0) write("[STREAM] .");
       if (from >= fileSize()) {
         trace("from >= filesize, are we still trying to send?");
         return([]);
@@ -97,8 +94,8 @@ class FileInfo : Payload {
           fp.seek(from);
           slice = fp.rawRead!char(buf);
           fp.close();
-          if(verbose >= DEBUG) write(".");
-          if (verbose >= DEBUG && (from + slice.length) >= fileSize()) write("\n");
+          if (cverbose >= DEBUG) write(".");
+          if (cverbose >= DEBUG && (from + slice.length) >= fileSize()) write("\n");
         }
       } catch(Exception e) { 
         warning("exception %s while streaming file: %s", e.msg, path);
@@ -137,10 +134,10 @@ class FileSystem {
     string            root;
     Domain[string]    domains;
     Log               logger;
-    long              maxsize;
+    size_t              maxsize;
 
   public:
-    this(Log logger, string root = "./www/", int maxsize = 1024 * 512){
+    this(Log logger, string root = "./www/", size_t maxsize = 1024 * 512){
       this.logger   = logger;
       this.root     = root;
       this.maxsize  = maxsize;
@@ -163,7 +160,7 @@ class FileSystem {
             domain.files[shortname] = new FileInfo(f.name);
             domain.entries++;
             if (domain.files[shortname].needsupdate(maxsize)) {
-              domain.files[shortname].buffer(logger.verbose);
+              domain.files[shortname].buffer();
               domain.buffered++;
             }
           }
@@ -176,7 +173,7 @@ class FileSystem {
 
     final string localroot(string hostname) const { return(format("%s%s",this.root, hostname)); }
 
-    final FileInfo file(string localroot, string path, int verbose = NORMAL){ synchronized {
+    final FileInfo file(string localroot, string path){ synchronized {
       if(!domains[localroot].files.has(path) && exists(format("%s%s", localroot, path))){
         custom(1, "SCAN", "new file %s, rescanning index: %s", path, localroot);
         domains[localroot] = scan(localroot);
