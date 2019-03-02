@@ -88,3 +88,19 @@ abstract class DriverInterface {
     }
 }
 
+class StringDriver : DriverInterface {
+    this(string input) {
+      this.socket = new Socket(AddressFamily.INET, SocketType.STREAM, ProtocolType.TCP);
+      this.systime = Clock.currTime(); // Time in ms since this process came alive
+      this.modtime = Clock.currTime(); // Time in ms since this process was modified
+      inbuffer ~= input;
+    }
+    override bool openConnection() { return(true); }
+    override void closeConnection() nothrow { }
+    override bool isAlive() { return(true); }
+    @nogc override bool isSecure() const nothrow { return(false); }
+    override ptrdiff_t receive(Socket socket, ptrdiff_t maxsize = 4096) { return(inbuffer.data.length); }
+    override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096)  { response.completed = true; }
+}
+
+

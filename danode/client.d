@@ -3,11 +3,11 @@ module danode.client;
 import danode.imports;
 import danode.router : Router;
 import danode.httpstatus : StatusCode;
-import danode.interfaces : DriverInterface, ClientInterface;
+import danode.interfaces : DriverInterface, ClientInterface, StringDriver;
 import danode.response : Response;
 import danode.request : Request;
 import danode.payload : Message;
-import danode.log : custom, info, trace, warning;
+import danode.log : custom, info, trace, warning, NOTSET;
 
 class Client : Thread, ClientInterface {
   private:
@@ -92,5 +92,10 @@ class Client : Thread, ClientInterface {
 
 unittest {
   custom(0, "FILE", "%s", __FILE__);
+  auto router = new Router("./www/", NOTSET);
+  auto driver = new StringDriver("GET /php-cgi.fphp HTTP/1.1\nHost: localhost\n\n");
+  auto client = new Client(router, driver);
+  client.start();
+  custom(0, "TEST", "%s:%s", client.ip(), client.port());
 }
 

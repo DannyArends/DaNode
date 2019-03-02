@@ -112,11 +112,11 @@ final void serverVariables(in FileSystem filesystem, in WebConfig config, in Req
   content.put(format("S=HTTP_ACCEPT_ENCODING=%s\n", request.headers.from("Accept-Encoding")));
   content.put(format("S=HTTP_ACCEPT_LANGUAGE=%s\n", request.headers.from("Accept-Language")));
 
-  foreach(s; request.cookies.split("; ")){
-    content.put(format("C=%s\n", chomp(s)) );
+  foreach (c; request.cookies.split("; ")) {
+    content.put(format("C=%s\n", chomp(c)) );
   }
 
-  foreach(p; request.postinfo){
+  foreach (p; request.postinfo) {
     if(p.type == PostType.Input)  content.put(format("P=%s=%s\n", p.name, p.value));
     if(p.type == PostType.File)   content.put(format("F=%s=%s=%s=%s\n", p.name, p.filename, p.mime, p.value));
   }

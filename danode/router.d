@@ -11,7 +11,7 @@ import danode.mimetypes : mime;
 import danode.functions : from, has, isCGI, isFILE, isDIR, Msecs, htmltime, isAllowed, writefile;
 import danode.filesystem : FileSystem, FileInfo;
 import danode.post : parsePost, PostType, serverVariables;
-import danode.log : custom, trace, Log, NOTSET, NORMAL, DEBUG;
+import danode.log : custom, trace, info, Log, NOTSET, NORMAL;
 version(SSL) {
   import danode.ssl : hasCertificate;
 }
@@ -55,7 +55,7 @@ class Router {
     final void deliver(ref Request request, ref Response response, bool finalrewrite = false) {
       string localroot = filesystem.localroot(request.shorthost());
 
-      trace("%s client %s", (finalrewrite? "redirecting" : "routing"), request.id);
+      info("%s:%s %s client (%s)", request.ip, request.port, (finalrewrite? "redirecting" : "routing"), request.id);
       trace("shorthost -> localroot: %s -> %s", request.shorthost(), localroot);
 
       if (request.shorthost() == "" || !exists(localroot)) // No domain requested, or we are not hosting it
@@ -131,6 +131,7 @@ class Router {
     final @property int verbose(string verbose = "") {
       string[] sp = verbose.split(" ");
       int nval = NOTSET;
+      if(sp.length == 1) nval = to!int(sp[0]);
       if(sp.length >= 2) nval = to!int(sp[1]);
       return(logger.verbose(nval)); 
     }
@@ -140,8 +141,8 @@ unittest {
   custom(0, "FILE", "%s", __FILE__);
   Request request;
   Response response;
-  Router router = new Router("./www/", 0);
-  router.verbose = "1";
+  Router router = new Router("./www/", NOTSET);
+  router.verbose = "2";
   request.parseHeader("GET /dmd.d HTTP/1.1\nHost: localhost");
   router.deliver(request, response);
   request.parseHeader("POST /dmd.d HTTP/1.1\nHost: localhost");
