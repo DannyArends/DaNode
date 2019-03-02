@@ -27,7 +27,7 @@ The web servers main features / aims summarized:
 - [Server Name Identification](https://en.wikipedia.org/wiki/Server_Name_Indication) by using multiple free [Let's encrypt](https://letsencrypt.org/) certificates
 - Small footprint: Code, CPU and RAM
 - API support for PHP, Python, D, R, or add your own in: [api/](api/)
-- [Example](www/localhost/) web applications, including [R](www/localhost/rscript.r), [PHP](www/localhost/php.php), [brainfuck](www/localhost/test.bf) and [Ada](www/localhost/test.ada).
+- [Example](www/localhost/) web applications, including [PHP](www/localhost/php.php), [Perl](www/localhost/perl.pl), [R](www/localhost/rscript.r), [brainfuck](www/localhost/test.bf) and [Ada](www/localhost/test.ada).
 
 ##### Get DaNode
 
