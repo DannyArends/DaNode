@@ -74,7 +74,7 @@ class Router {
         // against a certificate availability, and/or fix the requested the wrong 
         // shortdomain requested by the client (domain.com or www.domain.com)
         if (request.isSecure != hasCertificate(fqdn) || request.host != fqdn) {
-          trace("SSL redirect request.isSecure: %s hasCertificate: %s to fqdn: %s", request.isSecure, hasCertificate(fqdn), fqdn);
+          trace("SSL redirect %s != %s for %s to fqdn: %s", request.isSecure, hasCertificate(fqdn), request.host, fqdn);
           return response.redirect(request, fqdn, hasCertificate(fqdn));
         }
       } else {  
