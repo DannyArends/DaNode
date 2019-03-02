@@ -1,7 +1,7 @@
 module danode.router;
 
 import danode.imports;
-import danode.interfaces : ClientInterface, DriverInterface;
+import danode.interfaces : ClientInterface, DriverInterface, StringDriver;
 import danode.httpstatus : StatusCode;
 import danode.request : Request;
 import danode.response;
@@ -10,7 +10,7 @@ import danode.payload : Message, CGI;
 import danode.mimetypes : mime;
 import danode.functions : from, has, isCGI, isFILE, isDIR, Msecs, htmltime, isAllowed, writefile;
 import danode.filesystem : FileSystem, FileInfo;
-import danode.post : parsePost, PostType, serverVariables;
+import danode.post : parsePost, PostType;
 import danode.log : custom, trace, info, Log, NOTSET, NORMAL;
 version(SSL) {
   import danode.ssl : hasCertificate;
@@ -27,6 +27,9 @@ class Router {
       this.logger = new Log(verbose);
       this.filesystem = new FileSystem(logger, wwwRoot);
     }
+
+    FileSystem getFileSystem() { return(this.filesystem); }
+    WebConfig getWebConfig() { return(this.config); }
 
     void logRequest(in ClientInterface client, in Request request, in Response response) {
       logger.updatePerformanceStatistics(client, request, response);
@@ -97,12 +100,12 @@ class Router {
           return response.serveStaticFile(request, filesystem);
         }
         if (localpath.isDIR() && config.isAllowed(localroot, localpath)) {
-          trace("localpath %s is a directory", localpath);
-          if(config.redirectdir() && !finalrewrite)  // Route this directory request to the index page
+          trace("localpath %s is a directory [%s,%s]", localpath, config.redirectdir(), config.index());
+          if (config.redirectdir() && !finalrewrite)  // Route this directory request to the index page
             return this.redirectDirectory(request, response); // Redirect the directory
 
-          if(config.redirect && !finalrewrite)  // Modify request as canonical to the index page
-            return this.redirectCanonical(request, response);
+          if (config.redirect() && exists(localpath ~ "/" ~ config.index()) && !finalrewrite)  // Route this directory request to the index page
+            return this.redirectCanonical(request, response); // Redirect the directory
 
           return response.serveDirectory(request, config, filesystem);
         }
@@ -112,7 +115,7 @@ class Router {
       if(config.redirect && !finalrewrite)  // Route this request as canonical request the index page
         return this.redirectCanonical(request, response);
 
-      return response.notFound(logger.verbose);  // Request is not hosted on this server
+      return response.notFound();  // Request is not hosted on this server
     }
 
     void redirectDirectory(ref Request request, ref Response response){
@@ -143,17 +146,38 @@ unittest {
   Response response;
   Router router = new Router("./www/", NOTSET);
   router.verbose = "2";
-  request.parseHeader("GET /dmd.d HTTP/1.1\nHost: localhost");
+
+  request.initialize(new StringDriver("GET /dmd.d HTTP/1.1\nHost: localhost\n\n"));
   router.deliver(request, response);
-  request.parseHeader("POST /dmd.d HTTP/1.1\nHost: localhost");
+  custom(0, "TEST", "%s", response.header());
+
+  request.initialize(new StringDriver("GET /keepalive.d HTTP/1.1\nHost: localhost\n\n"));
   router.deliver(request, response);
-  request.parseHeader("GET /data.ill HTTP/1.1\nHost: localhost");
+  custom(0, "TEST", "%s", response.header());
+
+  request.initialize(new StringDriver("POST /dmd.d HTTP/1.1\nHost: localhost"));
   router.deliver(request, response);
-  request.parseHeader("GET /test.txt HTTP/1.1\nHost: localhost");
+
+  request.initialize(new StringDriver("GET /data.ill HTTP/1.1\nHost: localhost"));
   router.deliver(request, response);
-  request.parseHeader("GET /notfound.txt HTTP/1.1\nHost: localhost");
+
+  request.initialize(new StringDriver("GET /test.txt HTTP/1.1\nHost: localhost"));
   router.deliver(request, response);
-  request.parseHeader("GET /notfound.txt HTTP/1.1\nHost: localhost");
+  response.serveStaticFile(request, router.getFileSystem());
+
+  request.initialize(new StringDriver("GET /test/ HTTP/1.1\nHost: localhost"));
+  router.deliver(request, response);
+
+  request.initialize(new StringDriver("GET /test/1.txt HTTP/1.1\nHost: localhost"));
+  router.deliver(request, response);
+
+  request.initialize(new StringDriver("GET /notfound.txt HTTP/1.1\nHost: localhost"));
+  router.deliver(request, response);
+
+  request.initialize(new StringDriver("GET /notfound.txt HTTP/1.1\nHost: localhost"));
+  router.deliver(request, response, true);
+
+  request.initialize(new StringDriver("GET /notfound.txt HTTP/1.1\nHost: NoDomain"));
   router.deliver(request, response, true);
 }
 
