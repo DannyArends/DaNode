@@ -1,6 +1,7 @@
 module danode.interfaces;
 
 import danode.imports;
+import danode.functions : Msecs;
 import danode.response : Response;
 import danode.log : NORMAL, INFO, DEBUG;
 
@@ -24,7 +25,7 @@ abstract class DriverInterface {
     Socket              socket;              /// Client socket for reading and writing
     long                requests = 0;        /// Number of requests we handled
     long[long]          senddata;            /// Size of data send per request
-    SysTime             starttime;           /// Time in ms since this process came alive
+    SysTime             systime;           /// Time in ms since this process came alive
     SysTime             modtime;             /// Time in ms since this process was last modified
     Address             address;             /// Private address field
     bool                blocking = false;    /// Blocking communication ?
@@ -40,5 +41,23 @@ abstract class DriverInterface {
 
     // Send upto maxsize bytes from the response to the client
     void send(ref Response response, Socket conn, ptrdiff_t maxsize = 4096);
+
+    // port being used for communication
+    final @property long port() const { 
+      if (address !is null) return(to!long(address.toPortString())); 
+      return(-1); 
+    }
+
+    // IP address connected to
+    final @property string ip() const {
+      if (address !is null) return(address.toAddrString());
+      return("0.0.0.0"); 
+    }
+
+    // Milliseconds since start of connection
+    final @property long starttime() const { return(Msecs(systime)); }
+
+    // Milliseconds since last modified
+    final @property long lastmodified() const { return(Msecs(modtime)); }
 }
 
