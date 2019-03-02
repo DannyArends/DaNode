@@ -5,6 +5,7 @@ import danode.filesystem : FileSystem;
 import danode.interfaces : ClientInterface, DriverInterface;
 import danode.functions : interpreter, from, toD, monthToIndex;
 import danode.webconfig : WebConfig;
+import danode.http : HTTP;
 import danode.post : PostItem, PostType;
 import danode.log : custom, info, trace, warning;
 
@@ -20,8 +21,11 @@ SysTime parseHtmlDate(const string datestr){ // 21 Apr 2014 20:20:13 CET
 }
 
 struct Request {
-  UUID              requestid; ///md5UUID for this request
-  DriverInterface   driver; /// DriverInterface associated with the Request object
+  string            ip; /// IP location of the client
+  long              port; /// Port at which the client is connected
+  string            body; /// The body of the HTMLrequest
+  bool              isSecure; /// Was security requested
+  UUID              id; /// md5UUID for this request
   string            method = "GET"; /// requested HTTP method (GET, POST, HEAD)
   string            uri = "/"; /// uri requested
   string            url = "/"; /// url requested
@@ -33,17 +37,20 @@ struct Request {
   PostItem[string]  postinfo;  /// Associative array holding the post parameters and values
 
   // Start a new Request, and parseHeader on the DriverInterface
-  final void parse(DriverInterface driver) {
-    this.driver = driver;
+  final void initialize(const DriverInterface driver) {
+    this.ip = driver.ip;
+    this.port = driver.port;
+    this.body = driver.body;
+    this.isSecure = driver.isSecure;
     this.starttime = Clock.currTime();
-    this.requestid = md5UUID(format("%s:%d-%s", driver.ip, driver.port, starttime));
-    parseHeader(driver.header);
-    info("request: %s to %s from %s:%d - %s", method, uri, driver.ip, driver.port, requestid);
+    this.id = md5UUID(format("%s:%d-%s", driver.ip, driver.port, starttime));
+    this.parseHeader(driver.header);
+    info("request: %s to %s from %s:%d - %s", method, uri, this.ip, this.port, this.id);
     trace("request header: %s", driver.header);
   }
 
   // Parse the HTML request header (method, uri, protocol) as well as the supplemental headers
-  final void parseHeader(in string header) {
+  final void parseHeader(const string header) {
     string[] parts;
     foreach(i, line; header.split("\n")){
       if(i == 0) {                    // first line: method uri protocol
@@ -63,7 +70,7 @@ struct Request {
   }
 
   // New input was obtained and / or the driver has been changed, update the driver
-  final void update(DriverInterface driver) { this.driver = driver; }
+  final void update(string body) { this.body = body; }
 
   // The Host header requested in the request
   final @property string host() const { 
@@ -81,12 +88,12 @@ struct Request {
 
   // Input file generated storing the headers of the request
   final @property string inputfile(in FileSystem filesystem) const {
-    return format("%s/%s.in", filesystem.localroot(shorthost()), this.requestid);
+    return format("%s/%s.in", filesystem.localroot(shorthost()), this.id);
   }
 
   // Location of a file with name, uploaded by POST request
   final @property string uploadfile(in FileSystem filesystem, in string name) const {
-    return format("%s/%s.up", filesystem.localroot(shorthost()), md5UUID(format("%s:%d-%s-%s", driver.ip, driver.port, starttime, name)));
+    return format("%s/%s.up", filesystem.localroot(shorthost()), md5UUID(format("%s-%s", this.id, name)));
   }
 
   // Get parameters as associative array

@@ -33,29 +33,29 @@ class Router {
       logger.logRequest(client, request, response);
     }
 
-    final bool parse(DriverInterface driver, ref Request request, ref Response response) const {
+    final bool parse(in DriverInterface driver, ref Request request, ref Response response) const {
       if (!driver.hasHeader()) return(false);
-      if(!response.created) {
-        request.parse(driver);
+      if (!response.created) {
+        request.initialize(driver);
         response = request.create();
       } else {
-        request.update(driver);
+        request.update(driver.body);
       }
       return(true);
     }
 
     final void route(DriverInterface driver, ref Request request, ref Response response) {
       if ( !response.routed && parse(driver, request, response)) {
-        if ( parsePost(request, response, filesystem) ) {
-          route(request, response);
+        if ( parsePost(request, response, filesystem) ) { // We have stored all the post data, and can deliver a response
+          deliver(request, response);
         }
       }
     }
 
-    final void route(ref Request request, ref Response response, bool finalrewrite = false) {
+    final void deliver(ref Request request, ref Response response, bool finalrewrite = false) {
       string localroot = filesystem.localroot(request.shorthost());
 
-      trace("%s client %s:%s", (finalrewrite? "redirecting" : "routing"), request.driver.ip, request.driver.port);
+      trace("%s client %s", (finalrewrite? "redirecting" : "routing"), request.id);
       trace("shorthost -> localroot: %s -> %s", request.shorthost(), localroot);
 
       if (request.shorthost() == "" || !exists(localroot)) // No domain requested, or we are not hosting it
@@ -73,8 +73,8 @@ class Router {
         // Check if teh security requested can be provided, by checking SSL status
         // against a certificate availability, and/or fix the requested the wrong 
         // shortdomain requested by the client (domain.com or www.domain.com)
-        if (request.driver.isSecure != hasCertificate(fqdn) || request.host != fqdn) {
-          trace("SSL redirect %s != %s for %s to fqdn: %s", request.driver.isSecure, hasCertificate(fqdn), request.host, fqdn);
+        if (request.isSecure != hasCertificate(fqdn) || request.host != fqdn) {
+          trace("SSL redirect %s != %s for %s to fqdn: %s", request.isSecure, hasCertificate(fqdn), request.host, fqdn);
           return response.redirect(request, fqdn, hasCertificate(fqdn));
         }
       } else {  
@@ -118,14 +118,14 @@ class Router {
     void redirectDirectory(ref Request request, ref Response response){
       trace("redirecting directory request to index page");
       request.redirectdir(config);
-      return route(request, response, true);
+      return deliver(request, response, true);
     }
 
     void redirectCanonical(ref Request request, ref Response response){
       trace("redirecting non-existing page (canonical url) to the index page");
       request.page = request.uripath(); // Save the URL path
       request.url  = format("%s?%s", config.index, request.query);
-      return route(request, response, true);
+      return deliver(request, response, true);
     }
 
     final @property int verbose(string verbose = "") {
@@ -143,16 +143,16 @@ unittest {
   Router router = new Router("./www/", 0);
   router.verbose = "1";
   request.parseHeader("GET /dmd.d HTTP/1.1\nHost: localhost");
-  router.route(request, response);
+  router.deliver(request, response);
   request.parseHeader("POST /dmd.d HTTP/1.1\nHost: localhost");
-  router.route(request, response);
+  router.deliver(request, response);
   request.parseHeader("GET /data.ill HTTP/1.1\nHost: localhost");
-  router.route(request, response);
+  router.deliver(request, response);
   request.parseHeader("GET /test.txt HTTP/1.1\nHost: localhost");
-  router.route(request, response);
+  router.deliver(request, response);
   request.parseHeader("GET /notfound.txt HTTP/1.1\nHost: localhost");
-  router.route(request, response);
+  router.deliver(request, response);
   request.parseHeader("GET /notfound.txt HTTP/1.1\nHost: localhost");
-  router.route(request, response, true);
+  router.deliver(request, response, true);
 }
 
