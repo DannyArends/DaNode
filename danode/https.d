@@ -21,7 +21,7 @@ version(SSL) {
         custom(3, "HTTPS", "HTTPS constructor");
         this.socket = socket;
         this.blocking = blocking;
-        this.starttime = Clock.currTime(); // Time in ms since this process came alive
+        this.systime = Clock.currTime(); // Time in ms since this process came alive
         this.modtime = Clock.currTime(); // Time in ms since this process was modified
       }
 
