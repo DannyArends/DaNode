@@ -4,6 +4,7 @@ import danode.imports;
 import danode.functions : has, from;
 import danode.filesystem : FileInfo;
 import danode.request : Request;
+import danode.log : trace;
 
 struct WebConfig {
   string[string]  data;
@@ -55,12 +56,18 @@ struct WebConfig {
     return(data.from("allowdirs", "/").split(","));
   }
 
-  @property bool isAllowed(in string localroot, in string path) const nothrow {
-    string npath = path[(localroot.length + 1) .. $]; if(npath == "") return(true);
+  @property bool isAllowed(in string localroot, in string path) const {
+    trace("isAllowed: %s %s", localroot, path);
+    string npath = path[(localroot.length + 1) .. $];
+    trace("npath: %s", npath);
+    if (npath == "") // path / is always allowed
+      return(true);
+
     foreach (d; allowdirs) {
-      if(npath.indexOf(d) == 0) return(true);
-    } 
-    return false; 
+      trace("%s in allowdirs: %s %s", npath, d, npath.indexOf(d));
+      if(indexOf(strip(d), strip(npath)) == 0) return(true);
+    }
+    return(false);
   }
 }
 
