@@ -1,5 +1,5 @@
-DaNode - Multi domain HTTPs enabled web app server for D 
---------------------------------------------------------
+DaNode - A secure and small footprint web server for D 
+------------------------------------------------------
 master: [![Build Status](https://travis-ci.org/DannyArends/DaNode.svg?branch=master)](https://travis-ci.org/DannyArends/DaNode)
 development: [![Build Status](https://travis-ci.org/DannyArends/DaNode.svg?branch=development)](https://travis-ci.org/DannyArends/DaNode)
 licence: [![license](https://img.shields.io/github/license/DannyArends/DaNode.svg?style=flat)](https://github.com/DannyArends/DaNode/blob/master/LICENSE.txt)
