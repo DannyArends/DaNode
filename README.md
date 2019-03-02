@@ -4,7 +4,7 @@ master: [![Build Status](https://travis-ci.org/DannyArends/DaNode.svg?branch=mas
 development: [![Build Status](https://travis-ci.org/DannyArends/DaNode.svg?branch=development)](https://travis-ci.org/DannyArends/DaNode)
 licence: [![license](https://img.shields.io/github/license/DannyArends/DaNode.svg?style=flat)](https://github.com/DannyArends/DaNode/blob/master/LICENSE.txt)
 
-A small footprint web server written in the [D programming language](https://dlang.org/) to 
+Web server written in the [D programming language](https://dlang.org/) to 
 host server side web applications (written in any programming language) on multiple domains. 
 It provides encrypted HTTP content over SSL using 
 [Server Name Identification](https://en.wikipedia.org/wiki/Server_Name_Indication), 
