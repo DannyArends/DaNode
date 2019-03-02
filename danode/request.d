@@ -2,7 +2,7 @@ module danode.request;
 
 import danode.imports;
 import danode.filesystem : FileSystem;
-import danode.interfaces : ClientInterface;
+import danode.interfaces : ClientInterface, DriverInterface;
 import danode.functions : interpreter, from, toD, monthToIndex;
 import danode.webconfig : WebConfig;
 import danode.post : PostItem, PostType;
@@ -35,16 +35,19 @@ struct Request {
   PostItem[string]  postinfo;
   bool              isSecure;
 
-  final void parse(in string ip, long port, in string header, in string content, bool isSecure = false){
-    this.ip  = ip; this.port = port; this.content = content; this.isSecure = isSecure;
-    this.setHeader(header);
+  final void parse(in DriverInterface driver) {
+    this.ip  = driver.ip; 
+    this.port = driver.port;
+    this.content = driver.body; 
+    this.isSecure =  driver.isSecure;
     this.starttime = Clock.currTime();
     this.requestid = md5UUID(format("%s:%d-%s", ip, port, starttime));
+    parseHeader(driver.header);
     info("request: %s to %s from %s:%d - %s", method, uri, ip, port, requestid);
-    trace("request header: %s", header);
+    trace("request header: %s", driver.header);
   }
 
-  final void setHeader(in string header){
+  final void parseHeader(in string header) {
     string[] parts;
     foreach(i, line; header.split("\n")){
       if(i == 0) {                    // first line: method uri protocol

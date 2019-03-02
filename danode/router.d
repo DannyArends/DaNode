@@ -1,7 +1,7 @@
 module danode.router;
 
 import danode.imports;
-import danode.interfaces : ClientInterface;
+import danode.interfaces : ClientInterface, DriverInterface;
 import danode.httpstatus : StatusCode;
 import danode.request : Request;
 import danode.response;
@@ -11,7 +11,7 @@ import danode.mimetypes : mime;
 import danode.functions : from, has, isCGI, isFILE, isDIR, Msecs, htmltime, isAllowed, writefile;
 import danode.filesystem : FileSystem, FileInfo;
 import danode.post : parsePost, PostType, serverVariables;
-import danode.log : trace, Log, NOTSET, NORMAL;
+import danode.log : custom, trace, Log, NOTSET, NORMAL, DEBUG;
 version(SSL) {
   import danode.ssl : hasCertificate;
 }
@@ -20,6 +20,7 @@ class Router {
   private:
     FileSystem filesystem;
     Log logger;
+    WebConfig config;
 
   public:
     this(string wwwRoot = "./www/", int verbose = NORMAL){
@@ -32,21 +33,19 @@ class Router {
       logger.logRequest(client, request, response);
     }
 
-    final bool parse(in string ip, long port, ref Request request, ref Response response, in string inputSoFar, bool isSecure) const {
-      ptrdiff_t idx = inputSoFar.indexOf("\r\n\r\n");
-      if(idx <= 0) idx = inputSoFar.indexOf("\n\n");
-      if(idx <= 0) return(false);
+    final bool parse(in DriverInterface driver, ref Request request, ref Response response) const {
+      if (!driver.hasHeader()) return(false);
       if(!response.created) {
-        request.parse(ip, port, inputSoFar[0 .. idx], inputSoFar[(idx + 4) .. $], isSecure);
+        request.parse(driver);
         response = request.create();
       } else {
-        request.update(inputSoFar[(idx + 4) .. $]);
+        request.update(driver.body);
       }
       return(true);
     }
 
-    final void route(in string ip, long port, ref Request request, ref Response response, in string inputSoFar, bool isSecure) {
-      if ( !response.routed && parse(ip, port, request, response, inputSoFar, isSecure)) {
+    final void route(in DriverInterface driver, ref Request request, ref Response response) {
+      if ( !response.routed && parse(driver, request, response)) {
         if ( parsePost(request, response, filesystem) ) {
           route(request, response);
         }
@@ -62,7 +61,7 @@ class Router {
       if (request.shorthost() == "" || !exists(localroot)) // No domain requested, or we are not hosting it
         return response.domainNotFound(request);
 
-      WebConfig config = WebConfig(filesystem.file(localroot, "/web.config"));
+      config = WebConfig(filesystem.file(localroot, "/web.config"));
       string fqdn = config.domain(request.shorthost());
       string localpath = config.localpath(localroot, request.path);
 
@@ -100,10 +99,10 @@ class Router {
         if (localpath.isDIR() && config.isAllowed(localroot, localpath)) {
           trace("localpath %s is a directory", localpath);
           if(config.redirectdir() && !finalrewrite)  // Route this directory request to the index page
-            return this.redirectDirectory(request, response, config); // Redirect the directory
+            return this.redirectDirectory(request, response); // Redirect the directory
 
           if(config.redirect && !finalrewrite)  // Modify request as canonical to the index page
-            return this.redirectCanonical(request, response, config);
+            return this.redirectCanonical(request, response);
 
           return response.serveDirectory(request, config, filesystem);
         }
@@ -111,18 +110,18 @@ class Router {
       }
       trace("redirect: %s %d", config.redirect, finalrewrite);
       if(config.redirect && !finalrewrite)  // Route this request as canonical request the index page
-        return this.redirectCanonical(request, response, config);
+        return this.redirectCanonical(request, response);
 
       return response.notFound(logger.verbose);  // Request is not hosted on this server
     }
 
-    void redirectDirectory(ref Request request, ref Response response, in WebConfig config){
+    void redirectDirectory(ref Request request, ref Response response){
       trace("redirecting directory request to index page");
       request.redirectdir(config);
       return route(request, response, true);
     }
 
-    void redirectCanonical(ref Request request, ref Response response, in WebConfig config){
+    void redirectCanonical(ref Request request, ref Response response){
       trace("redirecting non-existing page (canonical url) to the index page");
       request.page = request.uripath(); // Save the URL path
       request.url  = format("%s?%s", config.index, request.query);
@@ -139,7 +138,21 @@ class Router {
 
 unittest {
   custom(0, "FILE", "%s", __FILE__);
-  Router filesystem = new Router("./www/");
-
+  Request request;
+  Response response;
+  Router router = new Router("./www/", 0);
+  router.verbose = "1";
+  request.parseHeader("GET /dmd.d HTTP/1.1\nHost: localhost");
+  router.route(request, response);
+  request.parseHeader("POST /dmd.d HTTP/1.1\nHost: localhost");
+  router.route(request, response);
+  request.parseHeader("GET /data.ill HTTP/1.1\nHost: localhost");
+  router.route(request, response);
+  request.parseHeader("GET /test.txt HTTP/1.1\nHost: localhost");
+  router.route(request, response);
+  request.parseHeader("GET /notfound.txt HTTP/1.1\nHost: localhost");
+  router.route(request, response);
+  request.parseHeader("GET /notfound.txt HTTP/1.1\nHost: localhost");
+  router.route(request, response, true);
 }
 
