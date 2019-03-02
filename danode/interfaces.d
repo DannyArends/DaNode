@@ -61,9 +61,15 @@ abstract class DriverInterface {
     final @property long lastmodified() const { return(Msecs(modtime)); }
 
     // Byte input converted to header as string
-    final @property string header() const { return(to!string(inbuffer.data[0 .. headerEnd()])); }
+    final @property string header() const { 
+      if (headerEnd < 0 || headerEnd > inbuffer.data.length) return("");
+      return(to!string(inbuffer.data[0 .. headerEnd()]));
+    }
     // Byte input converted to body as string
-    final @property string body() const { return(to!string(inbuffer.data[bodyStart() .. $])); }
+    final @property string body() const {
+      if (bodyStart < 0 || bodyStart > inbuffer.data.length) return("");
+      return(to!string(inbuffer.data[bodyStart() .. $]));
+    }
 
     // Where does the HTML request header end ?
     final @property ptrdiff_t headerEnd() const { 
