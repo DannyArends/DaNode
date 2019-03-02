@@ -11,12 +11,12 @@ It provides encrypted HTTP content over SSL using
 and has been battle tested in production for over 5 years hosting several of my 
 web domains, such as my own [personal website](https://www.dannyarends.nl/).
 
-It was written because I wanted to have a quick way of sharing 
+Written because I was looking for a quick way of sharing 
 [Rscript](https://www.r-project.org/about.html) output with other researchers at 
-different universities around the world. Soon I wanted to use other programming 
-languages as well and added support to use any language. Any language means 
-'Write your SSL encrypted homepage in
-[brainfuck](https://en.wikipedia.org/wiki/Brainfuck)', but 
+different universities. Once working I wanted to use other programming languages as 
+well and added generic support for other languages. Use any language to 
+write your SSL encrypted homepage, why not
+[brainfuck](https://en.wikipedia.org/wiki/Brainfuck), however 
 [Ada](https://en.wikipedia.org/wiki/Ada), 
 [R](https://www.r-project.org) or 
 [PHP](https://en.wikipedia.org/wiki/PHP) are also fine.
