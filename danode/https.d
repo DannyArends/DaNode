@@ -143,7 +143,7 @@ version(SSL) {
         if(send > 0) custom(3, "HTTPS", "send %d bytes of data", send);
       } }
 
-      override bool isSecure() { return(true); }
+      @nogc override bool isSecure() const nothrow { return(false); }
   }
 
   unittest {

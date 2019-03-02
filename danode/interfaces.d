@@ -25,16 +25,16 @@ abstract class DriverInterface {
     Socket              socket;              /// Client socket for reading and writing
     long                requests = 0;        /// Number of requests we handled
     long[long]          senddata;            /// Size of data send per request
-    SysTime             systime;           /// Time in ms since this process came alive
+    SysTime             systime;             /// Time in ms since this process came alive
     SysTime             modtime;             /// Time in ms since this process was last modified
     Address             address;             /// Private address field
     bool                blocking = false;    /// Blocking communication ?
     int                 verbose = NORMAL;    /// Verbose level
 
-    bool openConnection();    /// Open the connection
-    void closeConnection();   /// Close the connection
-    bool isAlive();           /// Is the connection alive ?
-    bool isSecure();          /// Are we secure ?
+    bool openConnection(); /// Open the connection
+    void closeConnection(); /// Close the connection
+    bool isAlive(); /// Is the connection alive ?
+    @nogc bool isSecure() const nothrow; /// Are we secure ?
 
     // Receive upto maxsize of bytes from the client into the input buffer
     ptrdiff_t receive(Socket conn, ptrdiff_t maxsize = 4096);
@@ -59,5 +59,32 @@ abstract class DriverInterface {
 
     // Milliseconds since last modified
     final @property long lastmodified() const { return(Msecs(modtime)); }
+
+    // Byte input converted to header as string
+    final @property string header() const { return(to!string(inbuffer.data[0 .. headerEnd()])); }
+    // Byte input converted to body as string
+    final @property string body() const { return(to!string(inbuffer.data[bodyStart() .. $])); }
+
+    // Where does the HTML request header end ?
+    final @property ptrdiff_t headerEnd() const { 
+      ptrdiff_t idx = to!string(inbuffer.data).indexOf("\r\n\r\n");
+      if(idx <= 0) idx = to!string(inbuffer.data).indexOf("\n\n");
+      return(idx);
+    }
+
+    // Where does the HTML request body begin ?
+    final @property ptrdiff_t bodyStart() const { 
+      ptrdiff_t idx = to!string(inbuffer.data).indexOf("\r\n\r\n");
+      if (idx > 0) return (idx + 4);
+      idx = to!string(inbuffer.data).indexOf("\n\n");
+      if (idx > 0) return (idx + 2);
+      return(-1);
+    }
+
+    // Do we have a header separator ? "\r\n\r\n" or "\n\n"
+    final @property bool hasHeader() const {
+      if(headerEnd() <= 0) return(false);
+      return(true);
+    }
 }
 

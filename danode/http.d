@@ -75,7 +75,7 @@ class HTTP : DriverInterface {
       return false;
     }
 
-    override bool isSecure(){ return(false); }
+    @nogc override bool isSecure() const nothrow { return(false); }
 }
 
 unittest {
