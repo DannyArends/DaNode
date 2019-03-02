@@ -26,8 +26,9 @@ struct PostItem {
 
 final bool parsePost (ref Request request, ref Response response, in FileSystem filesystem) {
   if(response.havepost || request.method != "POST"){ response.havepost = true; return(true); }
-  long expectedlength = to!long(from(request.headers, "Content-Length"));
-  if(expectedlength == 0){
+  long expectedlength = to!long(from(request.headers, "Content-Length", "0"));
+  if (expectedlength == 0) {
+    custom(0, "POST", "Content-Length was not specified or 0: real length: %s", request.content.length);
     response.havepost = true;
     return(true); // When we don't receive any post data it is meaningless to scan for any content
   }
