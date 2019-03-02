@@ -166,8 +166,8 @@ class FileSystem {
           }
         }
       }
-      custom(0, "SCAN", "domain: %s, files %s|%s", dname, domain.buffered, domain.entries);
-      custom(0, "SCAN", "%s = size: %.2f/%.2f kB", dname, domain.buffersize / 1024.0, domain.size / 1024.0);
+      custom(1, "SCAN", "domain: %s, files %s|%s", dname, domain.buffered, domain.entries);
+      custom(1, "SCAN", "%s = size: %.2f/%.2f kB", dname, domain.buffersize / 1024.0, domain.size / 1024.0);
       return(domain);
     } }
 
