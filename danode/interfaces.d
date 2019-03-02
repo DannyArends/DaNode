@@ -4,18 +4,20 @@ import danode.imports;
 import danode.response : Response;
 import danode.log : NORMAL, INFO, DEBUG;
 
+/* Client interface used by the server */
 interface ClientInterface {
-  @property bool    running();
-  @property long    starttime();
-  @property long    lastmodified();
-  @property void    stop();
+  @property bool    running();          /// Is the client still handling requests
+  @property long    starttime();        /// When was the client last started
+  @property long    lastmodified();     /// When was the client last modified
+  @property void    stop();             /// Stop the client
 
-  @property long    port() const;
-  @property string  ip() const;
+  @property long    port() const;       /// Port at which the client is connected
+  @property string  ip() const;         /// IP location of the client
 
-  void run(); 
+  void run();                           /// Main client loop and logic
 }
 
+/* Connection/Driver interface available to the client */
 abstract class DriverInterface {
   public:
     Appender!(char[])   inbuffer;            /// Input appender buffer
@@ -28,12 +30,15 @@ abstract class DriverInterface {
     bool                blocking = false;    /// Blocking communication ?
     int                 verbose = NORMAL;    /// Verbose level
 
-    bool openConnection();
-    void closeConnection();
-    bool isAlive();
-    bool isSecure();
+    bool openConnection();    /// Open the connection
+    void closeConnection();   /// Close the connection
+    bool isAlive();           /// Is the connection alive ?
+    bool isSecure();          /// Are we secure ?
 
+    // Receive upto maxsize of bytes from the client into the input buffer
     ptrdiff_t receive(Socket conn, ptrdiff_t maxsize = 4096);
+
+    // Send upto maxsize bytes from the response to the client
     void send(ref Response response, Socket conn, ptrdiff_t maxsize = 4096);
 }
 
