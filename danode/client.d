@@ -55,15 +55,13 @@ class Client : Thread, ClientInterface {
               if(!response.keepalive) stop();                 // No keep alive, then stop this client
               response.destroy();                             // Clear the response structure
             }
-          } else { // No data was received
-            Thread.sleep(dur!"msecs"(1));
           }
           if (lastmodified >= maxtime) { // Client are not allowed to be silent for more than maxtime
             warning("client stopped due to maxtime limit: %s > %s", lastmodified, maxtime);
             stop();
           }
           custom(3, "CLIENT", "connection %s:%s (%s msecs) %s", ip, port, starttime, to!string(driver.inbuffer.data));
-          Thread.yield();
+          Thread.sleep(dur!"msecs"(2));
         }
       } catch(Exception e) { 
         warning("unknown client exception: %s", e.msg);
@@ -93,9 +91,12 @@ class Client : Thread, ClientInterface {
 unittest {
   custom(0, "FILE", "%s", __FILE__);
   auto router = new Router("./www/", NOTSET);
-  auto driver = new StringDriver("GET /php-cgi.fphp HTTP/1.1\nHost: localhost\n\n");
+  auto driver = new StringDriver("GET /dmd.d HTTP/1.1\nHost: localhost\n\n");
   auto client = new Client(router, driver);
   client.start();
+  while(client.running()) {
+    Thread.sleep(dur!"msecs"(2));
+  }
   custom(0, "TEST", "%s:%s", client.ip(), client.port());
 }
 
