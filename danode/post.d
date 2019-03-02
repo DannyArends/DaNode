@@ -25,9 +25,12 @@ struct PostItem {
 }
 
 final bool parsePost (ref Request request, ref Response response, in FileSystem filesystem) {
-  if(response.havepost || request.method != "POST"){ response.havepost = true; return(true); }
+  if (response.havepost || request.method != "POST") {
+    response.havepost = true;
+    return(true);
+  }
   long expectedlength = to!long(from(request.headers, "Content-Length", "0"));
-  string content = request.driver.body;
+  string content = request.body;
   if (expectedlength == 0) {
     custom(0, "POST", "Content-Length was not specified or 0: real length: %s", content.length);
     response.havepost = true;
@@ -39,7 +42,8 @@ final bool parsePost (ref Request request, ref Response response, in FileSystem 
   string contenttype  = from(request.headers, "Content-Type");
   custom(2, "POST", "content type: %s", contenttype);
 
-  if(contenttype.indexOf(XFORMHEADER) >= 0){                // X-form
+  if (contenttype.indexOf(XFORMHEADER) >= 0) {
+    // parse the X-form content in the body of the request
     custom(1, "XFORM", "parsing %d bytes", expectedlength);
     foreach(s; content.split("&")){
       string[] elem = strip(s).split("=");
@@ -47,31 +51,32 @@ final bool parsePost (ref Request request, ref Response response, in FileSystem 
     }
     custom(1, "XFORM", "# of items: %s", request.postinfo.length);
 
-  }else if(contenttype.indexOf(MPHEADER) >= 0){             // Multipart
+  } else if(contenttype.indexOf(MPHEADER) >= 0) {
+    // parse the Multipart content in the body of the request
     string mpid = split(contenttype, "boundary=")[1];
     info("header: %s, parsing %d bytes", mpid, expectedlength);
     foreach(size_t i, part; chomp(content).split(mpid)){
       string[] elem = strip(part).split("\r\n");
-      if(elem[0] != "--"){
+      if (elem[0] != "--") {
         string[] mphdr = elem[0].split("; ");
         string key = mphdr[1][6 .. ($-1)];
-        if(mphdr.length == 2){
+        if (mphdr.length == 2) {
           request.postinfo[key] = PostItem(PostType.Input, key, "", join(elem[2 .. ($-1)]));
-        }else if(mphdr.length == 3){
+        } else if (mphdr.length == 3) {
           string fname = mphdr[2][10 .. ($-1)];
-          if(fname != ""){
+          if (fname != "") {
             string localpath = request.uploadfile(filesystem, key);
             string mpcontent = join(elem[3 .. ($-1)], "\r\n");
             request.postinfo[key] = PostItem(PostType.File, key, mphdr[2][10 .. ($-1)], localpath, split(elem[1],": ")[1], mpcontent.length);
             writefile(localpath, mpcontent);
-          }else{
+          } else {
             request.postinfo[key] = PostItem(PostType.Input, key, "");
           }
         }
       }
     }
     info(", # of items: %s", request.postinfo.length);
-  } else { 
+  } else {
     warning("unsupported post content type: %s [%s] -> %s", contenttype, expectedlength, content);
   }
   response.havepost = true;
@@ -93,9 +98,9 @@ final void serverVariables(in FileSystem filesystem, in WebConfig config, in Req
   content.put(format("S=QUERY_STRING=%s\n",         request.query));
   content.put(format("S=HTTP_CONNECTION=%s\n",      (response.keepalive)? "Keep-Alive" : "Close" ));
   content.put(format("S=HTTP_HOST=%s:%s\n",         request.host, request.serverport));
-  content.put(format("S=HTTPS=%s\n",                ""));
-  content.put(format("S=REMOTE_ADDR=%s\n",          request.driver.ip));
-  content.put(format("S=REMOTE_PORT=%s\n",          request.driver.port));
+  content.put(format("S=HTTPS=%s\n",                (request.isSecure)? "1" : "0" ));
+  content.put(format("S=REMOTE_ADDR=%s\n",          request.ip));
+  content.put(format("S=REMOTE_PORT=%s\n",          request.port));
   content.put(format("S=REMOTE_PAGE=%s\n",          request.page));
   content.put(format("S=REQUEST_DIR=%s\n",          request.dir));
   content.put(format("S=SCRIPT_FILENAME=%s\n",      config.localpath(filesystem.localroot(request.shorthost()), request.path)));
