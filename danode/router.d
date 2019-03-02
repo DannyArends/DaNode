@@ -27,7 +27,7 @@ class Router {
       this.filesystem = new FileSystem(logger, wwwRoot);
     }
 
-    void logrequest(in ClientInterface client, in Request request, in Response response) {
+    void logRequest(in ClientInterface client, in Request request, in Response response) {
       logger.updatePerformanceStatistics(client, request, response);
       logger.logRequest(client, request, response);
     }
@@ -70,27 +70,37 @@ class Router {
       trace("request.host: %s, fqdn: %s", request.host, fqdn);
       trace("localpath: %s, exists ? %s", localpath, localpath.exists());
 
-      version(SSL) {
-        // SSL is available, or requested the wrong shortdomain
+      version (SSL) {
+        // Check if teh security requested can be provided, by checking SSL status
+        // against a certificate availability, and/or fix the requested the wrong 
+        // shortdomain requested by the client (domain.com or www.domain.com)
         if (request.isSecure != hasCertificate(fqdn) || request.host != fqdn) {
+          trace("SSL redirect request.isSecure: %s hasCertificate: %s to fqdn: %s", request.isSecure, hasCertificate(fqdn), fqdn);
           return response.redirect(request, fqdn, hasCertificate(fqdn));
         }
-      } else {  // Requested the wrong shortdomain
+      } else {  
+        // No SSL, just check if the client requested the 'wrong' fully qualified 
+        // domain (domain.com or www.domain.com), and redirect them
         if (request.host != fqdn) {
           return response.redirect(request, fqdn, false);
         }
       }
 
-      if(localpath.exists()) {  // Requested an existing resource
-        if(localpath.isCGI() && config.allowcgi)
-          return response.serveCGI(request, config, filesystem);
-
-        if(localpath.isFILE() && !localpath.isCGI() && localpath.isAllowed())
+      if (localpath.exists()) {
+        trace("localpath %s exists", localpath);
+        // A path that can be responded to has been detected, it is an existing resource
+        if (localpath.isCGI() && config.allowcgi) {
+          trace("localpath %s is a CGI file", localpath);
+          return response.serveCGI(request, config, filesystem); // Serve CGI script
+        }
+        if (localpath.isFILE() && !localpath.isCGI() && localpath.isAllowed()) {
+          trace("localpath %s is a normal file", localpath);
           return response.serveStaticFile(request, filesystem);
-
-        if(localpath.isDIR() && config.isAllowed(localroot, localpath)){
+        }
+        if (localpath.isDIR() && config.isAllowed(localroot, localpath)) {
+          trace("localpath %s is a directory", localpath);
           if(config.redirectdir() && !finalrewrite)  // Route this directory request to the index page
-            return this.redirectDirectory(request, response, config);
+            return this.redirectDirectory(request, response, config); // Redirect the directory
 
           if(config.redirect && !finalrewrite)  // Modify request as canonical to the index page
             return this.redirectCanonical(request, response, config);
@@ -125,5 +135,11 @@ class Router {
       if(sp.length >= 2) nval = to!int(sp[1]);
       return(logger.verbose(nval)); 
     }
+}
+
+unittest {
+  custom(0, "FILE", "%s", __FILE__);
+  Router filesystem = new Router("./www/");
+
 }
 
