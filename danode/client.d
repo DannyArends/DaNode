@@ -20,10 +20,10 @@ class Client : Thread, ClientInterface {
 
     this(Router router, DriverInterface driver, long maxtime = 5000) {
       custom(3, "CLIENT", "client constructor");
-      this.driver           = driver;
-      this.router           = router;
-      this.maxtime          = maxtime;
-      super(&run);
+      this.router = router;
+      this.driver = driver;
+      this.maxtime = maxtime;
+      super(&run); // initialize the thread
     }
 
    final void run() {
