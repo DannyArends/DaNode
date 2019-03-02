@@ -20,9 +20,8 @@ SysTime parseHtmlDate(const string datestr){ // 21 Apr 2014 20:20:13 CET
 }
 
 struct Request {
-  UUID              requestid;
-  string            ip;
-  long              port;
+  UUID              requestid; ///md5UUID for this request
+  DriverInterface   driver;
   string            method = "GET";
   string            uri = "/";
   string            url = "/";
@@ -31,19 +30,14 @@ struct Request {
   string            protocol = "HTTP/1.1";
   string[string]    headers;
   SysTime           starttime;
-  string            content;
   PostItem[string]  postinfo;
-  bool              isSecure;
 
-  final void parse(in DriverInterface driver) {
-    this.ip  = driver.ip; 
-    this.port = driver.port;
-    this.content = driver.body; 
-    this.isSecure =  driver.isSecure;
+  final void parse(DriverInterface driver) {
+    this.driver = driver;
     this.starttime = Clock.currTime();
-    this.requestid = md5UUID(format("%s:%d-%s", ip, port, starttime));
+    this.requestid = md5UUID(format("%s:%d-%s", driver.ip, driver.port, starttime));
     parseHeader(driver.header);
-    info("request: %s to %s from %s:%d - %s", method, uri, ip, port, requestid);
+    info("request: %s to %s from %s:%d - %s", method, uri, driver.ip, driver.port, requestid);
     trace("request header: %s", driver.header);
   }
 
@@ -66,7 +60,7 @@ struct Request {
     }
   }
 
-  final void update(in string content){ this.content = content; }
+  final void update(DriverInterface driver){ this.driver = driver; }
 
   final @property string host() const { 
     ptrdiff_t i = headers.from("Host").indexOf(":");
@@ -85,7 +79,7 @@ struct Request {
   }
 
   final @property string uploadfile(in FileSystem filesystem, in string name) const {
-    return format("%s/%s.up", filesystem.localroot(shorthost()), md5UUID(format("%s:%d-%s-%s", ip, port, starttime, name)));
+    return format("%s/%s.up", filesystem.localroot(shorthost()), md5UUID(format("%s:%d-%s-%s", driver.ip, driver.port, starttime, name)));
   }
 
   final string[string] get() const {

@@ -33,18 +33,18 @@ class Router {
       logger.logRequest(client, request, response);
     }
 
-    final bool parse(in DriverInterface driver, ref Request request, ref Response response) const {
+    final bool parse(DriverInterface driver, ref Request request, ref Response response) const {
       if (!driver.hasHeader()) return(false);
       if(!response.created) {
         request.parse(driver);
         response = request.create();
       } else {
-        request.update(driver.body);
+        request.update(driver);
       }
       return(true);
     }
 
-    final void route(in DriverInterface driver, ref Request request, ref Response response) {
+    final void route(DriverInterface driver, ref Request request, ref Response response) {
       if ( !response.routed && parse(driver, request, response)) {
         if ( parsePost(request, response, filesystem) ) {
           route(request, response);
@@ -55,7 +55,7 @@ class Router {
     final void route(ref Request request, ref Response response, bool finalrewrite = false) {
       string localroot = filesystem.localroot(request.shorthost());
 
-      trace("%s client %s:%s", (finalrewrite? "redirecting" : "routing"), request.ip, request.port);
+      trace("%s client %s:%s", (finalrewrite? "redirecting" : "routing"), request.driver.ip, request.driver.port);
       trace("shorthost -> localroot: %s -> %s", request.shorthost(), localroot);
 
       if (request.shorthost() == "" || !exists(localroot)) // No domain requested, or we are not hosting it
@@ -73,8 +73,8 @@ class Router {
         // Check if teh security requested can be provided, by checking SSL status
         // against a certificate availability, and/or fix the requested the wrong 
         // shortdomain requested by the client (domain.com or www.domain.com)
-        if (request.isSecure != hasCertificate(fqdn) || request.host != fqdn) {
-          trace("SSL redirect %s != %s for %s to fqdn: %s", request.isSecure, hasCertificate(fqdn), request.host, fqdn);
+        if (request.driver.isSecure != hasCertificate(fqdn) || request.host != fqdn) {
+          trace("SSL redirect %s != %s for %s to fqdn: %s", request.driver.isSecure, hasCertificate(fqdn), request.host, fqdn);
           return response.redirect(request, fqdn, hasCertificate(fqdn));
         }
       } else {  

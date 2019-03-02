@@ -27,20 +27,21 @@ struct PostItem {
 final bool parsePost (ref Request request, ref Response response, in FileSystem filesystem) {
   if(response.havepost || request.method != "POST"){ response.havepost = true; return(true); }
   long expectedlength = to!long(from(request.headers, "Content-Length", "0"));
+  string content = request.driver.body;
   if (expectedlength == 0) {
-    custom(0, "POST", "Content-Length was not specified or 0: real length: %s", request.content.length);
+    custom(0, "POST", "Content-Length was not specified or 0: real length: %s", content.length);
     response.havepost = true;
     return(true); // When we don't receive any post data it is meaningless to scan for any content
   }
-  custom(2, "POST", "received %s of %s", request.content.length, expectedlength);
-  if(request.content.length < expectedlength) return(false);
+  custom(2, "POST", "received %s of %s", content.length, expectedlength);
+  if(content.length < expectedlength) return(false);
 
   string contenttype  = from(request.headers, "Content-Type");
   custom(2, "POST", "content type: %s", contenttype);
 
   if(contenttype.indexOf(XFORMHEADER) >= 0){                // X-form
     custom(1, "XFORM", "parsing %d bytes", expectedlength);
-    foreach(s; request.content.split("&")){
+    foreach(s; content.split("&")){
       string[] elem = strip(s).split("=");
       request.postinfo[ elem[0] ] = PostItem( PostType.Input, elem[0], "", elem[1] );
     }
@@ -49,7 +50,7 @@ final bool parsePost (ref Request request, ref Response response, in FileSystem 
   }else if(contenttype.indexOf(MPHEADER) >= 0){             // Multipart
     string mpid = split(contenttype, "boundary=")[1];
     info("header: %s, parsing %d bytes", mpid, expectedlength);
-    foreach(size_t i, part; chomp(request.content).split(mpid)){
+    foreach(size_t i, part; chomp(content).split(mpid)){
       string[] elem = strip(part).split("\r\n");
       if(elem[0] != "--"){
         string[] mphdr = elem[0].split("; ");
@@ -60,9 +61,9 @@ final bool parsePost (ref Request request, ref Response response, in FileSystem 
           string fname = mphdr[2][10 .. ($-1)];
           if(fname != ""){
             string localpath = request.uploadfile(filesystem, key);
-            string content = join(elem[3 .. ($-1)], "\r\n");
-            request.postinfo[key] = PostItem(PostType.File, key, mphdr[2][10 .. ($-1)], localpath, split(elem[1],": ")[1], content.length);
-            writefile(localpath, content);
+            string mpcontent = join(elem[3 .. ($-1)], "\r\n");
+            request.postinfo[key] = PostItem(PostType.File, key, mphdr[2][10 .. ($-1)], localpath, split(elem[1],": ")[1], mpcontent.length);
+            writefile(localpath, mpcontent);
           }else{
             request.postinfo[key] = PostItem(PostType.Input, key, "");
           }
@@ -71,7 +72,7 @@ final bool parsePost (ref Request request, ref Response response, in FileSystem 
     }
     info(", # of items: %s", request.postinfo.length);
   } else { 
-    warning("unsupported post content type: %s [%s] -> %s", contenttype, expectedlength, request.content);
+    warning("unsupported post content type: %s [%s] -> %s", contenttype, expectedlength, content);
   }
   response.havepost = true;
   return(response.havepost);
@@ -93,8 +94,8 @@ final void serverVariables(in FileSystem filesystem, in WebConfig config, in Req
   content.put(format("S=HTTP_CONNECTION=%s\n",      (response.keepalive)? "Keep-Alive" : "Close" ));
   content.put(format("S=HTTP_HOST=%s:%s\n",         request.host, request.serverport));
   content.put(format("S=HTTPS=%s\n",                ""));
-  content.put(format("S=REMOTE_ADDR=%s\n",          request.ip));
-  content.put(format("S=REMOTE_PORT=%s\n",          request.port));
+  content.put(format("S=REMOTE_ADDR=%s\n",          request.driver.ip));
+  content.put(format("S=REMOTE_PORT=%s\n",          request.driver.port));
   content.put(format("S=REMOTE_PAGE=%s\n",          request.page));
   content.put(format("S=REQUEST_DIR=%s\n",          request.dir));
   content.put(format("S=SCRIPT_FILENAME=%s\n",      config.localpath(filesystem.localroot(request.shorthost()), request.path)));
