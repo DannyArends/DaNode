@@ -114,7 +114,7 @@ class Router {
 
     void redirectCanonical(ref Request request, ref Response response, in WebConfig config){
       trace("redirecting non-existing page (canonical url) to the index page");
-      request.page = request.uripath();                                                             // Save the URL path
+      request.page = request.uripath(); // Save the URL path
       request.url  = format("%s?%s", config.index, request.query);
       return route(request, response, true);
     }
