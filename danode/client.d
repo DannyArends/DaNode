@@ -1,13 +1,13 @@
 module danode.client;
 
 import danode.imports;
-import danode.router : Router;
+import danode.router : Router, runRequest;
 import danode.httpstatus : StatusCode;
 import danode.interfaces : DriverInterface, ClientInterface, StringDriver;
 import danode.response : Response;
 import danode.request : Request;
 import danode.payload : Message;
-import danode.log : custom, info, trace, warning, NOTSET;
+import danode.log : custom, info, trace, warning, NOTSET, NORMAL;
 
 class Client : Thread, ClientInterface {
   private:
@@ -90,13 +90,24 @@ class Client : Thread, ClientInterface {
 
 unittest {
   custom(0, "FILE", "%s", __FILE__);
-  auto router = new Router("./www/", NOTSET);
-  auto driver = new StringDriver("GET /dmd.d HTTP/1.1\nHost: localhost\n\n");
-  auto client = new Client(router, driver);
-  client.start();
-  while(client.running()) {
-    Thread.sleep(dur!"msecs"(2));
-  }
-  custom(0, "TEST", "%s:%s", client.ip(), client.port());
+  auto router = new Router("./www/", NORMAL);
+  router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\r\n\r\n");
+  router.runRequest("GET /dmd.d HTTP/1.1\nHost: www.localhost\n\n");
+  router.runRequest("GET /dmd.d HTTP/1.1\nHost: www.localhost\r\n\r\n");
+  router.runRequest("GET /dmd.d HTTP/1.1\nHost: notfound\n\n");
+  router.runRequest("GET /dmd.d HTTP/1.1\nHost: notfound\r\n\r\n");
+
+  router.runRequest("GET /dmd.d\nHost: localhost\n\n");
+  router.runRequest("GET /dmd.d\nHost: notfound\n\n");
+
+  router.runRequest("GET\nHost: localhost\n\n");
+  router.runRequest("GET\nHost: notfound\n\n");
+
+  router.runRequest("GET /php-cgi.fphp HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("GET /php-cgi.fphp HTTP/1.1\nHost: localhost\r\n\r\n");
+
+  router.runRequest("GET /phpinfo.fphp HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("GET /phpinfo.fphp HTTP/1.1\nHost: localhost\r\n\r\n");
 }
 
