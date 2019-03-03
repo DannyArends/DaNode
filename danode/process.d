@@ -157,5 +157,5 @@ unittest {
   custom(0, "TEST", "status of output: %s", p.status());
   custom(0, "TEST", "length of output: %s", p.length());
   custom(0, "TEST", "time of output: %s", p.time());
-  custom(0, "TEST", "output: %s", p.output(0)[0 .. 12]);
 }
+
