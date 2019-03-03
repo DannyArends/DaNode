@@ -19,7 +19,7 @@ immutable string SERVERINFO = "DaNode/0.0.2 (Universal)";
 
 struct Response {
   string            protocol     = "HTTP/1.1";
-  string            connection   = "Keep-Alive";
+  string            connection   = "Close";
   string            charset      = "UTF-8";
   long              maxage       = 0;
   string[string]    headers;
@@ -101,7 +101,7 @@ Response create(in Request request, in StatusCode statuscode = StatusCode.Ok, in
   response.customheader("Server", SERVERINFO);
   response.customheader("X-Powered-By", format("%s %s.%s", name, version_major, version_minor));
   response.payload = new Empty(statuscode, mimetype);
-  if(!request.keepalive) response.connection = "Close";
+  if (request.keepalive) response.connection = "Keep-Alive";
   response.created = true;
   return(response);
 }
@@ -129,7 +129,7 @@ void serveCGI(ref Response response, in Request request, in WebConfig config, in
   trace("requested a cgi file, execution allowed");
   string localroot = fs.localroot(request.shorthost());
   string localpath = config.localpath(localroot, request.path);
-  if(!response.routed) { // Store POST data (could fail multiple times)
+  if (!response.routed) { // Store POST data (could fail multiple times)
     trace("writing server variables");
     fs.serverAPI(config, request, response);
     trace("creating CGI payload");

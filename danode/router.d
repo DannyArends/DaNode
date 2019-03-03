@@ -1,6 +1,7 @@
 module danode.router;
 
 import danode.imports;
+import danode.client : Client;
 import danode.interfaces : ClientInterface, DriverInterface, StringDriver;
 import danode.httpstatus : StatusCode;
 import danode.request : Request;
@@ -58,7 +59,7 @@ class Router {
     final void deliver(ref Request request, ref Response response, bool finalrewrite = false) {
       string localroot = filesystem.localroot(request.shorthost());
 
-      info("%s:%s %s client (%s)", request.ip, request.port, (finalrewrite? "redirecting" : "routing"), request.id);
+      trace("%s:%s %s client (%s)", request.ip, request.port, (finalrewrite? "redirecting" : "routing"), request.id);
       trace("shorthost -> localroot: %s -> %s", request.shorthost(), localroot);
 
       if (request.shorthost() == "" || !exists(localroot)) // No domain requested, or we are not hosting it
@@ -140,44 +141,48 @@ class Router {
     }
 }
 
+void runRequest(Router router, string request = "GET /dmd.d HTTP/1.1\nHost: localhost\n\n") {
+  auto driver = new StringDriver(request);
+  auto client = new Client(router, driver, 100);
+  custom(0, "TEST", "%s:%s %s", client.ip(), client.port(), split(request, "\n")[0]);
+  client.start();
+  while (client.running()) {
+    Thread.sleep(dur!"msecs"(2));
+  }
+}
+
 unittest {
   custom(0, "FILE", "%s", __FILE__);
-  Request request;
-  Response response;
-  Router router = new Router("./www/", NOTSET);
-  router.verbose = "2";
 
-  request.initialize(new StringDriver("GET /dmd.d HTTP/1.1\nHost: localhost\n\n"));
-  router.deliver(request, response);
-  custom(0, "TEST", "%s", response.header());
+  auto router = new Router("./www/", NORMAL);
+  router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("POST /dmd.d HTTP/1.1\nHost: localhost\n\n");
 
-  request.initialize(new StringDriver("GET /keepalive.d HTTP/1.1\nHost: localhost\n\n"));
-  router.deliver(request, response);
-  custom(0, "TEST", "%s", response.header());
+  router.runRequest("GET /keepalive.d HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("POST /keepalive.d HTTP/1.1\nHost: localhost\n\n");
 
-  request.initialize(new StringDriver("POST /dmd.d HTTP/1.1\nHost: localhost"));
-  router.deliver(request, response);
+  router.runRequest("GET /notfound.txt HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("POST /notfound.txt HTTP/1.1\nHost: localhost\n\n");
 
-  request.initialize(new StringDriver("GET /data.ill HTTP/1.1\nHost: localhost"));
-  router.deliver(request, response);
+  router.runRequest("GET /data.ill HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("POST /data.ill HTTP/1.1\nHost: localhost\n\n");
 
-  request.initialize(new StringDriver("GET /test.txt HTTP/1.1\nHost: localhost"));
-  router.deliver(request, response);
-  response.serveStaticFile(request, router.getFileSystem());
+  router.runRequest("GET /ISE1.d HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("POST /ISE1.d HTTP/1.1\nHost: localhost\n\n");
 
-  request.initialize(new StringDriver("GET /test/ HTTP/1.1\nHost: localhost"));
-  router.deliver(request, response);
+  router.runRequest("GET /ISE2.d HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("POST /ISE2.d HTTP/1.1\nHost: localhost\n\n");
 
-  request.initialize(new StringDriver("GET /test/1.txt HTTP/1.1\nHost: localhost"));
-  router.deliver(request, response);
+  router.runRequest("GET /test.txt HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("POST /test.txt HTTP/1.1\nHost: localhost\n\n");
 
-  request.initialize(new StringDriver("GET /notfound.txt HTTP/1.1\nHost: localhost"));
-  router.deliver(request, response);
+  router.runRequest("GET /test HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("POST /test HTTP/1.1\nHost: localhost\n\n");
 
-  request.initialize(new StringDriver("GET /notfound.txt HTTP/1.1\nHost: localhost"));
-  router.deliver(request, response, true);
+  router.runRequest("GET /test/1.txt HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("POST /test/1.txt HTTP/1.1\nHost: localhost\n\n");
 
-  request.initialize(new StringDriver("GET /notfound.txt HTTP/1.1\nHost: NoDomain"));
-  router.deliver(request, response, true);
+  router.runRequest("GET /test/notfound.txt HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("POST /test/notfound.txt HTTP/1.1\nHost: localhost\n\n");
 }
 
