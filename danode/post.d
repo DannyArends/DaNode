@@ -32,7 +32,7 @@ final bool parsePost (ref Request request, ref Response response, in FileSystem 
   long expectedlength = to!long(from(request.headers, "Content-Length", "0"));
   string content = request.body;
   if (expectedlength == 0) {
-    custom(0, "POST", "Content-Length was not specified or 0: real length: %s", content.length);
+    custom(2, "POST", "Content-Length was not specified or 0: real length: %s", content.length);
     response.havepost = true;
     return(true); // When we don't receive any post data it is meaningless to scan for any content
   }
