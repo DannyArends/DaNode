@@ -106,7 +106,10 @@ class StringDriver : DriverInterface {
     override bool isAlive() { return(true); }
     @nogc override bool isSecure() const nothrow { return(false); }
     override ptrdiff_t receive(Socket socket, ptrdiff_t maxsize = 4096) { return(inbuffer.data.length); }
-    override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096)  { response.completed = true; }
+    override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096)  { 
+      response.header();
+      response.completed = true;
+    }
 }
 
 
