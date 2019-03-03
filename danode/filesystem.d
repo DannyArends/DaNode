@@ -5,7 +5,7 @@ import danode.httpstatus : StatusCode;
 import danode.mimetypes : mime;
 import danode.payload : Payload, PayLoadType;
 import danode.functions : has, isCGI;
-import danode.log : custom, info, Log, warning, trace, cverbose, DEBUG;
+import danode.log : custom, info, Log, warning, trace, cverbose, NOTSET, NORMAL, DEBUG;
 
 class FileInfo : Payload {
   public:
@@ -166,8 +166,8 @@ class FileSystem {
           }
         }
       }
-      custom(0, "SCAN", "domain: %s, files %s|%s", dname, domain.buffered, domain.entries);
-      custom(0, "SCAN", "%s = size: %.2f/%.2f kB", dname, domain.buffersize / 1024.0, domain.size / 1024.0);
+      custom(1, "SCAN", "domain: %s, files %s|%s", dname, domain.buffered, domain.entries);
+      custom(1, "SCAN", "%s = size: %.2f/%.2f kB", dname, domain.buffersize / 1024.0, domain.size / 1024.0);
       return(domain);
     } }
 
@@ -191,7 +191,7 @@ class FileSystem {
 
 unittest {
   custom(0, "FILE", "%s", __FILE__);
-  Log logger = new Log(0);
+  Log logger = new Log(NORMAL);
   FileSystem filesystem = new FileSystem(logger, "./www/");
   custom(0, "TEST", "./www/localhost/dmd.d (6 bytes) = %s", filesystem.file("./www/localhost", "/dmd.d").bytes(0,6));
   custom(0, "TEST", "filesystem.localroot('localhost') = %s", filesystem.localroot("localhost"));

@@ -11,7 +11,7 @@ class HTTP : DriverInterface {
       custom(3, "HTTP", "HTTP constructor");
       this.socket = socket;
       this.blocking = blocking;
-      this.starttime = Clock.currTime(); // Time in ms since this process came alive
+      this.systime = Clock.currTime(); // Time in ms since this process came alive
       this.modtime = Clock.currTime(); // Time in ms since this process was modified
     }
 
@@ -75,9 +75,10 @@ class HTTP : DriverInterface {
       return false;
     }
 
-    override bool isSecure(){ return(false); }
+    @nogc override bool isSecure() const nothrow { return(false); }
 }
 
 unittest {
   custom(0, "FILE", "%s", __FILE__);
 }
+

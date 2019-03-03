@@ -12,19 +12,6 @@ struct WaitResult {
   int status;                // Exit status when terminated
 }
 
-int readpipe(ref Pipe pipe){
-  File fp = pipe.readEnd;
-  try{
-    if(fp.isOpen()){
-      if(!nonblocking(fp)) custom(2, "WARN", "unable to create nonblocking pipe for command");
-      return(fgetc(fp.getFP()));
-    }
-  }catch(Exception e){
-    warning("exception during readpipe command: %s", e.msg);
-    fp.close();
-  }
-  return(EOF);
-}
 
 bool nonblocking(ref File file) {
   version(Posix) {
@@ -41,7 +28,10 @@ class Process : Thread {
     bool              completed = false;
     bool              removeInput = true;
 
-    File              pStdIn;               /// Input file stream
+    File              fStdIn;               /// Input file stream
+    File              fStdOut;              /// Output file stream
+    File              fStdErr;              /// Error file stream
+
     Pipe              pStdOut;              /// Output pipe
     Pipe              pStdErr;              /// Error pipe
 
@@ -110,7 +100,25 @@ class Process : Thread {
       return errbuffer.data.length; 
     }
 
+    // Read from a pipe
+    void readpipe(ref File fp, ref Appender!(char[]) buffer) {
+      try {
+        int ch;
+        while ((ch = fgetc(fp.getFP())) != EOF && lastmodified < maxtime) { 
+          modified = Clock.currTime(); 
+          buffer.put(cast(char) ch);
+        }  // Non blocking slurp of stdout
+      } catch (Exception e) {
+        warning("exception during readpipe command: %s", e.msg);
+        fp.close();
+      }
+    }
+
     // Execute the process
+    // check the input path, and create a pipe:StdIn to the input file
+    // create 2 pipes for the external process stdout & stderr
+    // execute the process and wait until maxtime has finished or the process returns
+    // inputfile is removed when the run() returns succesfully, on error, it is kept
     final void run() {
       try {
         int  ch;
@@ -120,29 +128,42 @@ class Process : Thread {
           this.completed = true;
           return;
         }
-        pStdIn = File(inputfile, "r");
-        pStdOut = pipe();
-        pStdErr = pipe();
+        fStdIn = File(inputfile, "r");
+        pStdOut = pipe(); pStdErr = pipe();
         custom(1, "PROC", "command: %s < %s", command, inputfile);
-        auto cpid = spawnShell(command, pStdIn, pStdOut.writeEnd, pStdErr.writeEnd, null);
-        while(running && lastmodified < maxtime){
-          while((ch = readpipe(pStdOut)) != EOF){ modified = Clock.currTime(); outbuffer.put(cast(char)ch); }  // Non blocking slurp of stdout
-          while((ch = readpipe(pStdErr)) != EOF){ modified = Clock.currTime(); errbuffer.put(cast(char)ch); }  // Non blocking slurp of stderr
+        auto cpid = spawnShell(command, fStdIn, pStdOut.writeEnd, pStdErr.writeEnd, null);
+
+        fStdOut = pStdOut.readEnd;
+        if(!nonblocking(fStdOut) && fStdOut.isOpen()) custom(2, "WARN", "unable to create nonblocking stdout pipe for command");
+
+        fStdErr = pStdErr.readEnd;
+        if(!nonblocking(fStdErr) && fStdErr.isOpen()) custom(2, "WARN", "unable to create nonblocking error pipe for command");
+
+        while (running && lastmodified < maxtime) {
+          this.readpipe(fStdOut, outbuffer);  // Non blocking slurp of stdout
+          this.readpipe(fStdErr, errbuffer);  // Non blocking slurp of stderr
           process = cast(WaitResult) tryWait(cpid);
-          Thread.yield();
+          Thread.sleep(msecs(1));
         }
         if(!process.terminated){
           warning("command: %s < %s did not finish in time", command, inputfile); 
           kill(cpid, 9); 
           process = WaitResult(true, wait(cpid));
         }
-        while((ch = readpipe(pStdOut)) != EOF){ modified = Clock.currTime(); outbuffer.put(cast(char)ch); }  // Non blocking slurp of stdout
-        while((ch = readpipe(pStdErr)) != EOF){ modified = Clock.currTime(); errbuffer.put(cast(char)ch); }  // Non blocking slurp of stderr
-        pStdIn.close();
         trace("command finished %d after %s msecs", status(), time());
+
+        this.readpipe(fStdOut, outbuffer);  // Non blocking slurp of stdout
+        this.readpipe(fStdErr, errbuffer);  // Non blocking slurp of stderr
+        trace("All output processed after %s msecs", time());
+
+        // Close the file handles
+        fStdIn.close(); fStdOut.close(); fStdErr.close();
+
         trace("removing process input file %s ? %s", inputfile, removeInput);
         if(removeInput) remove(inputfile);
+
         this.completed = true;
+
       } catch(Exception e) {
         warning("process.d, exception: '%s'", e.msg);
       }
@@ -157,5 +178,5 @@ unittest {
   custom(0, "TEST", "status of output: %s", p.status());
   custom(0, "TEST", "length of output: %s", p.length());
   custom(0, "TEST", "time of output: %s", p.time());
-  custom(0, "TEST", "output: %s", p.output(0)[0 .. 12]);
 }
+

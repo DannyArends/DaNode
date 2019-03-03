@@ -21,7 +21,7 @@ version(SSL) {
         custom(3, "HTTPS", "HTTPS constructor");
         this.socket = socket;
         this.blocking = blocking;
-        this.starttime = Clock.currTime(); // Time in ms since this process came alive
+        this.systime = Clock.currTime(); // Time in ms since this process came alive
         this.modtime = Clock.currTime(); // Time in ms since this process was modified
       }
 
@@ -30,7 +30,7 @@ version(SSL) {
         custom(2, "HTTPS", "performing handshake");
         bool handshaked = false;
         int ret_accept, ret_error;
-        while (!handshaked && Msecs(starttime) < 500) {
+        while (!handshaked && starttime < 500) {
           ret_accept = SSL_accept(ssl);
           if (ret_accept == 1) {
             handshaked = true;
@@ -143,7 +143,7 @@ version(SSL) {
         if(send > 0) custom(3, "HTTPS", "send %d bytes of data", send);
       } }
 
-      override bool isSecure() { return(true); }
+      @nogc override bool isSecure() const nothrow { return(true); }
   }
 
   unittest {

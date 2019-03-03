@@ -1,23 +1,25 @@
 module danode.response;
 
 import danode.imports;
+import danode.interfaces : StringDriver;
 import danode.process : Process;
 import danode.functions : htmltime;
 import danode.httpstatus : reason, StatusCode;
 import danode.request : Request;
+import danode.router : Router;
 import danode.mimetypes : UNSUPPORTED_FILE;
 import danode.payload : Payload, PayLoadType, HeaderType, Empty, CGI, Message;
 import danode.log;
 import danode.webconfig;
 import danode.filesystem;
-import danode.post : serverVariables;
+import danode.post : serverAPI;
 import danode.functions : browseDir;
 
 immutable string SERVERINFO = "DaNode/0.0.2 (Universal)";
 
 struct Response {
   string            protocol     = "HTTP/1.1";
-  string            connection   = "Keep-Alive";
+  string            connection   = "Close";
   string            charset      = "UTF-8";
   long              maxage       = 0;
   string[string]    headers;
@@ -32,7 +34,7 @@ struct Response {
 
   final void customheader(string key, string value) nothrow { headers[key] = value; }
 
-  @property final char[] header(int verbose = NORMAL) {
+  @property final char[] header() {
     if (hdr.data) {
       return(hdr.data); // Header was constructed
     }
@@ -41,6 +43,7 @@ struct Response {
       CGI script = to!CGI(payload);
       connection = "Close";
       HeaderType type = script.headerType();
+      info("Header-type: %s", type);
       if (type != HeaderType.None) {
         return(parseHTTPResponseHeader(this, script, type));
       }
@@ -98,7 +101,7 @@ Response create(in Request request, in StatusCode statuscode = StatusCode.Ok, in
   response.customheader("Server", SERVERINFO);
   response.customheader("X-Powered-By", format("%s %s.%s", name, version_major, version_minor));
   response.payload = new Empty(statuscode, mimetype);
-  if(!request.keepalive) response.connection = "Close";
+  if (request.keepalive) response.connection = "Keep-Alive";
   response.created = true;
   return(response);
 }
@@ -126,9 +129,9 @@ void serveCGI(ref Response response, in Request request, in WebConfig config, in
   trace("requested a cgi file, execution allowed");
   string localroot = fs.localroot(request.shorthost());
   string localpath = config.localpath(localroot, request.path);
-  if(!response.routed) { // Store POST data (could fail multiple times)
+  if (!response.routed) { // Store POST data (could fail multiple times)
     trace("writing server variables");
-    fs.serverVariables(config, request, response);
+    fs.serverAPI(config, request, response);
     trace("creating CGI payload");
     response.payload = new CGI(request.command(localpath), request.inputfile(fs));
     response.ready = true;
@@ -167,7 +170,7 @@ void serveForbidden(ref Response response, in Request request) {
   response.ready = true;
 }
 
-void notFound(ref Response response, int verbose){
+void notFound(ref Response response) {
   trace("resource not found");
   response.payload = new Message(StatusCode.NotFound, format("404 - The requested path does not exists on disk\n"));
   response.ready = true;

@@ -1,26 +1,33 @@
-DaNode a small webserver written in the D programming language
---------------------------------------------------------------
+DaNode - A secure and small footprint web server for D 
+------------------------------------------------------
 master: [![Build Status](https://travis-ci.org/DannyArends/DaNode.svg?branch=master)](https://travis-ci.org/DannyArends/DaNode)
 development: [![Build Status](https://travis-ci.org/DannyArends/DaNode.svg?branch=development)](https://travis-ci.org/DannyArends/DaNode)
 licence: [![license](https://img.shields.io/github/license/DannyArends/DaNode.svg?style=flat)](https://github.com/DannyArends/DaNode/blob/master/LICENSE.txt)
 
-A small web server written in the [D programming language](https://dlang.org/) to 
-host server side web applications written in any programming language. It is a web 
-server which can provide encrypted content over SSL via [Server Name Identification](https://en.wikipedia.org/wiki/Server_Name_Indication), 
-and has been battle tested in production for over 5 years hosting my own [personal website](https://www.dannyarends.nl/).
+Web server written in the [D programming language](https://dlang.org/) to 
+host server side web applications (written in any programming language) on multiple domains. 
+It provides encrypted HTTP content over SSL using 
+[Server Name Identification](https://en.wikipedia.org/wiki/Server_Name_Indication), 
+and has been battle tested in production for over 5 years hosting several of my 
+web domains, such as my own [personal website](https://www.dannyarends.nl/).
 
-It was written because I wanted to have a quick way of sharing [Rscript](https://www.r-project.org/about.html) 
-output with other researchers at different universities. Any language means 'Write your homepage in, erm 
-[brainfuck](https://en.wikipedia.org/wiki/Brainfuck)', but [Ada](https://en.wikipedia.org/wiki/Ada) or 
+Written because I was looking for a quick way of sharing 
+[Rscript](https://www.r-project.org/about.html) output with other researchers at 
+different universities. Once working I wanted to use other programming languages as 
+well and added generic support for other languages. Use any language to 
+write your SSL encrypted homepage, why not
+[brainfuck](https://en.wikipedia.org/wiki/Brainfuck), however 
+[Ada](https://en.wikipedia.org/wiki/Ada), 
+[R](https://www.r-project.org) or 
 [PHP](https://en.wikipedia.org/wiki/PHP) are also fine.
 
 The web servers main features / aims summarized:
 - Support server side web applications written in any programming language
-- HTTPs support by [openSSL](https://www.openssl.org/) and [Deimos bindings](https://github.com/D-Programming-Deimos/openssl)
+- SSL/HTTPs support by [openSSL](https://www.openssl.org/) and [Deimos bindings](https://github.com/D-Programming-Deimos/openssl)
 - [Server Name Identification](https://en.wikipedia.org/wiki/Server_Name_Indication) by using multiple free [Let's encrypt](https://letsencrypt.org/) certificates
-- Aims at small footprint: Code, CPU and RAM
+- Small footprint: Code, CPU and RAM
 - API support for PHP, Python, D, R, or add your own in: [api/](api/)
-- [Example](www/localhost/) web applications, including [R](www/localhost/rscript.r), [brainfuck](www/localhost/test.bf) and [Ada](www/localhost/test.ada).
+- [Example](www/localhost/) web applications, including [PHP](www/localhost/php.php), [Perl](www/localhost/perl.pl), [D](www/localhost/keepalive.d), [R](www/localhost/rscript.r), [brainfuck](www/localhost/test.bf) and [Ada](www/localhost/test.ada).
 
 ##### Get DaNode
 
@@ -156,5 +163,6 @@ Or be a maintainer, and adopt (the documentation of) a function.
 
 ##### License
 
-DaNode is written by Danny Arends and is released under the GNU GENERAL PUBLIC LICENSE Version 3 (GPLv3). See [LICENSE.txt](LICENSE.txt).
+DaNode is written by Danny Arends and is released under the GNU GENERAL PUBLIC 
+LICENSE Version 3 (GPLv3). See [LICENSE.txt](LICENSE.txt).
 
