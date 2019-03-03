@@ -29,8 +29,8 @@ class Process : Thread {
     bool              removeInput = true;
 
     File              fStdIn;               /// Input file stream
-    File              fStdOut;               /// Output file stream
-    File              fStdErr;               /// Error file stream
+    File              fStdOut;              /// Output file stream
+    File              fStdErr;              /// Error file stream
 
     Pipe              pStdOut;              /// Output pipe
     Pipe              pStdErr;              /// Error pipe
