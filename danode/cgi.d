@@ -100,8 +100,8 @@ class CGI : Payload {
     }
 
     // Stream of message bytes, skips the script generated header
-    //since the webserver parses the header and generates it's own
-    // TODO: Figure out if there is a bug here, and we do not accidentally eat the first couple of bytes (\r\n\r\n versus \n\n)
+    // since the webserver parses the header and generates it's own
+    // TODO: bug here ? Do not accidentally eat the first couple of bytes (\r\n\r\n versus \n\n)
     const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 1024) {
       if (from + endOfHeader > from)
         from += endOfHeader;
