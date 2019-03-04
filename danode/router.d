@@ -30,14 +30,13 @@ class Router {
       this.filesystem = new FileSystem(logger, wwwRoot);
     }
 
-    FileSystem getFileSystem() { return(this.filesystem); }
-    WebConfig getWebConfig() { return(this.config); }
-
+    // Update the performance statistics and log the finished request
     void logRequest(in ClientInterface client, in Request request, in Response response) {
       logger.updatePerformanceStatistics(client, request, response);
       logger.logRequest(client, request, response);
     }
 
+    // Parse the header of a request, or receive additional post data when the user is uploading
     final bool parse(in DriverInterface driver, ref Request request, ref Response response) const {
       if (!driver.hasHeader()) return(false);
       if (!response.created) {
@@ -49,6 +48,7 @@ class Router {
       return(true);
     }
 
+    // Route a request based on the request header
     final void route(DriverInterface driver, ref Request request, ref Response response) {
       if ( !response.routed && parse(driver, request, response)) {
         if ( parsePost(request, response, filesystem) ) { // We have stored all the post data, and can deliver a response
@@ -57,6 +57,7 @@ class Router {
       }
     }
 
+    // Deliver a response to the request
     final void deliver(ref Request request, ref Response response, bool finalrewrite = false) {
       string localroot = filesystem.localroot(request.shorthost());
 
@@ -120,12 +121,14 @@ class Router {
       return response.notFound();  // Request is not hosted on this server
     }
 
+    // Redirect a directory browsing request to the index script
     void redirectDirectory(ref Request request, ref Response response){
       trace("redirecting directory request to index page");
       request.redirectdir(config);
       return deliver(request, response, true);
     }
 
+    // Perform a canonical redirect of a non-existing page to the index script
     void redirectCanonical(ref Request request, ref Response response){
       trace("redirecting non-existing page (canonical url) to the index page");
       request.page = request.uripath(); // Save the URL path
@@ -133,6 +136,7 @@ class Router {
       return deliver(request, response, true);
     }
 
+    // Set the verbose level by string value
     final @property int verbose(string verbose = "") {
       string[] sp = verbose.split(" ");
       int nval = NOTSET;
@@ -142,6 +146,7 @@ class Router {
     }
 }
 
+// Helper function used to make calls during a unittest, setup a driver, a client and run the request
 void runRequest(Router router, string request = "GET /dmd.d HTTP/1.1\nHost: localhost\n\n") {
   auto driver = new StringDriver(request);
   auto client = new Client(router, driver, 100);
