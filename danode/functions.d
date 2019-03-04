@@ -12,9 +12,9 @@ static this(){
              9 : "Sep", 10: "Oct", 11: "Nov", 12: "Dec"];
 }
 
-// Month to index
+// Month to index of the year
 pure int monthToIndex(in string m) {
-  for(int x = 1; x < 12; ++x) {
+  for (int x = 1; x < 12; ++x) {
     if(m.toLower() == months[x].toLower()) return x;
   }
   return -1;
@@ -48,7 +48,11 @@ pure string toD(T, U)(in T x, in U digits = 6) nothrow {
 }
 
 void writefile(in string localpath, in string content) {
-  if(content.length > 0){ auto fp = File(localpath, "wb"); fp.rawWrite(content); fp.close(); }
+  if (content.length > 0) { 
+    auto fp = File(localpath, "wb");
+    fp.rawWrite(content);
+    fp.close();
+  }
 }
 
 string htmltime(in SysTime d = Clock.currTime()) {
@@ -88,27 +92,29 @@ pure bool isAllowed(in string path) {
 }
 
 // Where does the HTML request header end ?
-ptrdiff_t endofheader(T)(T buffer) { 
+pure ptrdiff_t endofheader(T)(const(T) buffer) {
   ptrdiff_t idx = to!string(buffer).indexOf("\r\n\r\n");
   if(idx <= 0) idx = to!string(buffer).indexOf("\n\n");
   return(idx);
 }
 
-// Where does the HTML request header end ?
-string getheader(T)(T buffer) {
+// get the HTML header contained in the buffer
+pure string getheader(T)(const(T) buffer) {
   auto i = endofheader(buffer);
   if (i > 0 && i < buffer.length)
     return(to!string(buffer[0 .. i]));
   return [];
 }
 
+// Which interpreter (if any) should be used for the path ?
 pure string interpreter(in string path) {
   string[] mime = mime(path).split("/");
   if(mime.length > 1) return(mime[1]);
-  return "";
+  return [];
 }
 
-string browseDir(in string root, in string localpath){
+// Browse the content of a directory, generate a rudimentairy HTML file
+string browseDir(in string root, in string localpath) {
   Appender!(string) content;
   content.put(format("Content of: %s<br>\n", localpath));
   foreach (DirEntry d; dirEntries(localpath, SpanMode.shallow)) {
