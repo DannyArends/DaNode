@@ -8,11 +8,12 @@ version(Posix) {
 }
 
 struct WaitResult {
-  bool terminated;           // Is the process terminated
-  int status;                // Exit status when terminated
+  bool terminated; /// Is the process terminated
+  int status; /// Exit status when terminated
 }
 
-
+// Set a filestream to nonblocking mode
+// TODO: Nonblocking mode is Posix only, this function should work for non-posix systems as well
 bool nonblocking(ref File file) {
   version(Posix) {
     return(fcntl(fileno(file.getFP()), F_SETFL, O_NONBLOCK) != -1); 
@@ -21,6 +22,10 @@ bool nonblocking(ref File file) {
   }
 }
 
+// The Process class provides external process communication via pipes, to the web language interpreter
+// process runs as a thread inside the web server. Output of the running process should be queried via 
+// the output() function. When there is any output on the stderr of the process (stored in errbuffer), 
+// the error buffer will be served. only if the error buffer is empty, will outbuffer be served.
 class Process : Thread {
   private:
     string            command;              /// Command to execute
@@ -56,61 +61,69 @@ class Process : Thread {
       super(&run);
     }
 
-     // Output/Errors so far
+     // Query Output/Errors from 'from' to the end, if the errbuffer contains any output this will be served
+     // from is checked to be in-range of the err/outbuffer, if not an empty array is returned
     final @property const(char)[] output(ptrdiff_t from) const { 
       synchronized {
         if (errbuffer.data.length == 0 && from >= 0 && from <= outbuffer.data.length) {
           return outbuffer.data[from .. $];
         }
-        if(from >= 0 && from <= errbuffer.data.length){
+        if (from >= 0 && from <= errbuffer.data.length) {
           return errbuffer.data[from .. $]; 
         }
         return [];
       }
     }
 
-    // Runtime so far
+    // Runtime of the thread in mseconds
     final @property long time() const {
       synchronized { return(Msecs(starttime)); }
     }
 
-    // Last time modified
+    // Last time the process was modified (e.g. data on stdout/stderr)
     final @property long lastmodified() const {
       synchronized { return(Msecs(modified)); }
     }
 
-    // Command still running ?
+    // Is the external process still running ?
     final @property bool running() const { 
       synchronized { return(!process.terminated); }
     }
 
-    // Command finished ?
+    // Did our internal thread finish processing the external process, etc ?
     final @property bool finished() const { 
       synchronized { return(this.completed); }
     }
 
-    // Exit status
-    final @property int status() const {
-      synchronized { return(process.status); }
+    // Returns the 'flattened' exit status of the external process 
+    // ( -1 = non-0 exit code, 0 = succes, 1 = still running )
+    final @property int status() const { 
+      synchronized { 
+        if (running) return 1;
+        if (process.status == 0) return 0;
+        return -1;
+      }
     }
 
-    // Length of output/error
-    final @property long length() const {
+    // Length of output, if the errbuffer contains any data, the errbuffer will be used
+    final @property long length() const { synchronized { 
       if (errbuffer.data.length == 0) { return(outbuffer.data.length); }
       return errbuffer.data.length; 
-    }
+    } }
 
-    // Read from a pipe
-    void readpipe(ref File fp, ref Appender!(char[]) buffer) {
+    // Read a character from a filestream and append it to buffer
+    // TODO: Use another function an read more bytes at the same time
+    void readpipe (ref File file, ref Appender!(char[]) buffer) {
       try {
         int ch;
-        while ((ch = fgetc(fp.getFP())) != EOF && lastmodified < maxtime) { 
+        auto fp = file.getFP();
+        while ((ch = fgetc(fp)) != EOF && lastmodified < maxtime) { 
           modified = Clock.currTime(); 
           buffer.put(cast(char) ch);
-        }  // Non blocking slurp of stdout
+        }
       } catch (Exception e) {
         warning("exception during readpipe command: %s", e.msg);
-        fp.close();
+        file.close();
       }
     }
 
@@ -122,7 +135,7 @@ class Process : Thread {
     final void run() {
       try {
         int  ch;
-        if( ! exists(inputfile) ) {
+        if( !exists(inputfile) ) {
           warning("no input path: %s", inputfile);
           this.process.terminated = true;
           this.completed = true;
@@ -145,7 +158,7 @@ class Process : Thread {
           process = cast(WaitResult) tryWait(cpid);
           Thread.sleep(msecs(1));
         }
-        if(!process.terminated){
+        if (!process.terminated) {
           warning("command: %s < %s did not finish in time", command, inputfile); 
           kill(cpid, 9); 
           process = WaitResult(true, wait(cpid));
@@ -163,7 +176,6 @@ class Process : Thread {
         if(removeInput) remove(inputfile);
 
         this.completed = true;
-
       } catch(Exception e) {
         warning("process.d, exception: '%s'", e.msg);
       }
