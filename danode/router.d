@@ -1,13 +1,14 @@
 module danode.router;
 
 import danode.imports;
+import danode.cgi : CGI;
 import danode.client : Client;
 import danode.interfaces : ClientInterface, DriverInterface, StringDriver;
 import danode.httpstatus : StatusCode;
 import danode.request : Request;
 import danode.response;
 import danode.webconfig : WebConfig;
-import danode.payload : Message, CGI;
+import danode.payload : Message;
 import danode.mimetypes : mime;
 import danode.functions : from, has, isCGI, isFILE, isDIR, Msecs, htmltime, isAllowed, writefile;
 import danode.filesystem : FileSystem, FileInfo;

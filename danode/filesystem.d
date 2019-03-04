@@ -3,7 +3,7 @@ module danode.filesystem;
 import danode.imports;
 import danode.httpstatus : StatusCode;
 import danode.mimetypes : mime;
-import danode.payload : Payload, PayLoadType;
+import danode.payload : Payload, PayloadType;
 import danode.functions : has, isCGI;
 import danode.log : custom, info, Log, warning, trace, cverbose, NOTSET, NORMAL, DEBUG;
 
@@ -68,7 +68,7 @@ class FileInfo : Payload {
     final @property bool needsBuffer() { return(!path.isCGI()); }
     final @property SysTime mtime() const { if(!realfile){ return btime; } return path.timeLastModified(); }
     final @property long ready() { return(true); }
-    final @property PayLoadType type() const { return(PayLoadType.Message); }
+    final @property PayloadType type() const { return(PayloadType.Message); }
     final @property ptrdiff_t fileSize() const { if(!realfile){ return -1; } return to!ptrdiff_t(path.getSize()); }
     final @property long buffersize() const { return cast(long)(buf.length); }
     final @property string mimetype() const { return mime(path); }

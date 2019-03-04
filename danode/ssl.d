@@ -7,7 +7,7 @@ version(SSL) {
   import danode.imports;
   import danode.client;
   import danode.server : Server;
-  import danode.client : Response;
+  import danode.response : Response;
   import danode.log : custom, warning, info;
 
   // SSL context structure, stored relation between hostname 

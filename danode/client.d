@@ -72,19 +72,25 @@ class Client : Thread, ClientInterface {
       driver.destroy();                                               // Clear the response structure
     }
 
+    // Is the client still running, if the socket was gone it's not otherwise check the terminated flag
     final @property bool running() const {
       if (driver.socket is null) return(false);
       return(!terminated && driver.socket.isAlive());
     }
 
+    // Stop the client by setting the terminated flag
     final @property void stop() {
       trace("connection %s:%s stop called", ip, port);
       terminated = true; 
     }
 
+    // Start time of the client in mseconds (stored in the connection driver)
     final @property long starttime() const { return(driver.starttime); }
+    // When was the client last modified in mseconds (stored in the connection driver)
     final @property long lastmodified() const { return(driver.lastmodified); }
+    // Port of the client
     final @property long port() const { return(driver.port()); } 
+    // ip address of the client
     final @property string ip() const { return(driver.ip()); } 
 }
 

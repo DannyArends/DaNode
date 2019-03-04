@@ -1,6 +1,7 @@
 module danode.response;
 
 import danode.imports;
+import danode.cgi : CGI;
 import danode.interfaces : StringDriver;
 import danode.process : Process;
 import danode.functions : htmltime;
@@ -8,7 +9,7 @@ import danode.httpstatus : reason, StatusCode;
 import danode.request : Request;
 import danode.router : Router;
 import danode.mimetypes : UNSUPPORTED_FILE;
-import danode.payload : Payload, PayLoadType, HeaderType, Empty, CGI, Message;
+import danode.payload : Payload, PayloadType, HeaderType, Empty, Message;
 import danode.log;
 import danode.webconfig;
 import danode.filesystem;
@@ -39,7 +40,7 @@ struct Response {
       return(hdr.data); // Header was constructed
     }
     // Scripts are allowed to have their own header
-    if(payload.type == PayLoadType.Script) {
+    if(payload.type == PayloadType.Script) {
       CGI script = to!CGI(payload);
       connection = "Close";
       HeaderType type = script.headerType();
@@ -52,7 +53,7 @@ struct Response {
     hdr.put(format("%s %d %s\r\n", protocol, payload.statuscode, reason(payload.statuscode)));
     foreach(key, value; headers) { hdr.put(format("%s: %s\r\n", key, value)); }
     hdr.put(format("Date: %s\r\n", htmltime()));
-    if(payload.type != PayLoadType.Script && payload.length >= 0){                        // If we have any payload
+    if(payload.type != PayloadType.Script && payload.length >= 0){                        // If we have any payload
       hdr.put(format("Content-Length: %d\r\n", payload.length));                          // We can send the expected size
       hdr.put(format("Last-Modified: %s\r\n", htmltime(payload.mtime)));                  // It could be modified long ago, lets inform the client
       if(maxage > 0) hdr.put(format("Cache-Control: max-age=%d, public\r\n", maxage));    // Perhaps we can have the client cache it (when very old)

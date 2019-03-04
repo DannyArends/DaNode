@@ -1,11 +1,12 @@
 module danode.post;
 
 import danode.imports;
+import danode.cgi : CGI;
 import danode.httpstatus : StatusCode;
 import danode.request : Request;
 import danode.response : SERVERINFO, Response, redirect, create, notmodified;
 import danode.webconfig : WebConfig;
-import danode.payload : Message, CGI;
+import danode.payload : Message;
 import danode.mimetypes : mime;
 import danode.filesystem : FileSystem;
 import danode.functions : from, has, isCGI, isFILE, isDIR, writefile;

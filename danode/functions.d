@@ -87,6 +87,21 @@ pure bool isAllowed(in string path) {
   return true;
 }
 
+// Where does the HTML request header end ?
+ptrdiff_t endofheader(T)(T buffer) { 
+  ptrdiff_t idx = to!string(buffer).indexOf("\r\n\r\n");
+  if(idx <= 0) idx = to!string(buffer).indexOf("\n\n");
+  return(idx);
+}
+
+// Where does the HTML request header end ?
+string getheader(T)(T buffer) {
+  auto i = endofheader(buffer);
+  if (i > 0 && i < buffer.length)
+    return(to!string(buffer[0 .. i]));
+  return [];
+}
+
 pure string interpreter(in string path) {
   string[] mime = mime(path).split("/");
   if(mime.length > 1) return(mime[1]);
