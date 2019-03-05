@@ -24,38 +24,46 @@ struct WebConfig {
     }
   }
 
+  // Which domain is the prefered domain to be used: http://www.xxx.nl or http://xxx.nl
   @property string domain(string shorthost) const { 
     if (data.from("shorturl", "yes") == "yes") return(shorthost);
     return(format("www.%s", shorthost));
   }
 
+  // Is CGI allowed ?
   @property @nogc bool allowcgi() const nothrow { 
     if (data.from("allowcgi", "no") == "yes") return(true);
     return(false);
   }
 
+  // concats localroot with the path specified
   @property string localpath(in string localroot, in string path) const {
     return(format("%s%s", localroot, path));
   }
 
+  // Should redirection be performed ?
   @property @nogc bool redirect() const nothrow { 
     return(data.from("redirect", "/") != "/");
   }
 
+  // Should directories be redirected to the index page ?
   @property @nogc bool redirectdir() const nothrow { 
     return(data.from("redirectdir", "no") != "no");
   }
 
+  // What index page is specified in the 'redirect' option in the web.config file
   @property string index() const {
     string to = data.from("redirect", "/");
     if (to[0] != '/') return(format("/%s", to));
     return(to);
   }
 
+  // All directories listed in the allowdirs option in the web.config file
   @property string[] allowdirs() const nothrow { 
     return(data.from("allowdirs", "/").split(","));
   }
 
+  // Is the directory allowed to be viewed ?
   @property bool isAllowed(in string localroot, in string path) const {
     trace("isAllowed: %s %s", localroot, path);
     string npath = path[(localroot.length + 1) .. $];
