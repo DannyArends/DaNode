@@ -25,8 +25,9 @@ struct PostItem {
   long      size = 0;
 }
 
-// Parse the POST request data from the client
-// Data supplied by Multipart and X-form post formats are supported
+// Parse the POST request data from the client, or waits (returning false) for more data 
+// when the entire request body is not yet available. POST data supplied in Multipart 
+// and X-form post formats are currently supported
 final bool parsePost (ref Request request, ref Response response, in FileSystem filesystem) {
   if (response.havepost || request.method != "POST") {
     response.havepost = true;
