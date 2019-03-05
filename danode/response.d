@@ -19,28 +19,29 @@ import danode.functions : browseDir;
 immutable string SERVERINFO = "DaNode/0.0.2 (Universal)";
 
 struct Response {
-  string            protocol     = "HTTP/1.1";
-  string            connection   = "Close";
-  string            charset      = "UTF-8";
-  long              maxage       = 0;
+  string            protocol = "HTTP/1.1";
+  string            connection = "Close";
+  string            charset = "UTF-8";
+  long              maxage = 0;
   string[string]    headers;
   Payload           payload;
-  bool              created      = false;
-  bool              havepost     = false;
-  bool              routed       = false;
-  bool              completed    = false;
-  bool              cgiheader    = false;
+  bool              created = false;
+  bool              havepost = false;
+  bool              routed = false;
+  bool              completed = false;
+  bool              cgiheader = false;
   Appender!(char[]) hdr;
-  ptrdiff_t         index        = 0;
+  ptrdiff_t         index = 0;
 
   final void customheader(string key, string value) nothrow { headers[key] = value; }
 
+  // Generate a HTML header for the response
   @property final char[] header() {
     if (hdr.data) {
       return(hdr.data); // Header was constructed
     }
     // Scripts are allowed to have their own header
-    if(payload.type == PayloadType.Script) {
+    if (payload.type == PayloadType.Script) {
       CGI script = to!CGI(payload);
       connection = "Close";
       HeaderType type = script.headerType();
@@ -51,15 +52,19 @@ struct Response {
       warning("script '%s',  failed to generate a header", script.command);
     }
     hdr.put(format("%s %d %s\r\n", protocol, payload.statuscode, reason(payload.statuscode)));
-    foreach(key, value; headers) { hdr.put(format("%s: %s\r\n", key, value)); }
-    hdr.put(format("Date: %s\r\n", htmltime()));
-    if(payload.type != PayloadType.Script && payload.length >= 0){                        // If we have any payload
-      hdr.put(format("Content-Length: %d\r\n", payload.length));                          // We can send the expected size
-      hdr.put(format("Last-Modified: %s\r\n", htmltime(payload.mtime)));                  // It could be modified long ago, lets inform the client
-      if(maxage > 0) hdr.put(format("Cache-Control: max-age=%d, public\r\n", maxage));    // Perhaps we can have the client cache it (when very old)
+    foreach (key, value; headers) { 
+      hdr.put(format("%s: %s\r\n", key, value));
     }
-    hdr.put(format("Content-Type: %s; charset=%s\r\n", payload.mimetype, charset));       // We just send our mime and an encoding
-    hdr.put(format("Connection: %s\r\n\r\n", connection));                                // Client can choose to keep-alive
+    hdr.put(format("Date: %s\r\n", htmltime()));
+    if (payload.type != PayloadType.Script && payload.length >= 0) { // If we have any payload
+      hdr.put(format("Content-Length: %d\r\n", payload.length)); // We can send the expected size
+      hdr.put(format("Last-Modified: %s\r\n", htmltime(payload.mtime))); // It could be modified long ago, lets inform the client
+      if (maxage > 0) { // Perhaps we can have the client cache it (when very old)
+        hdr.put(format("Cache-Control: max-age=%d, public\r\n", maxage));
+      }
+    }
+    hdr.put(format("Content-Type: %s; charset=%s\r\n", payload.mimetype, charset)); // We just send our mime and an encoding
+    hdr.put(format("Connection: %s\r\n\r\n", connection)); // Client can choose to keep-alive
     return(hdr.data);
   }
 
@@ -79,9 +84,10 @@ struct Response {
 
 // parse a HTTPresponse header from an external script
 char[] parseHTTPResponseHeader(ref Response response, CGI script, HeaderType type) {
-  long clength = script.getHeader("Content-Length", -1);                              // Is the content length provided ?
-  if(clength >= 0) response.connection = script.getHeader("Connection", "Close");              // Yes ? then the script, can try to keep alive
-  if(type == HeaderType.FastCGI) {
+  long clength = script.getHeader("Content-Length", -1); // Is the content length provided ?
+  if (clength >= 0) 
+    response.connection = script.getHeader("Connection", "Close"); // Yes ? then the script, can try to keep alive
+  if (type == HeaderType.FastCGI) {
     // FastCGI type header, create response line on Status: indicator
     string status = script.getHeader("Status", "500 Internal Server Error");
     string[] inparts = status.split(" ");
