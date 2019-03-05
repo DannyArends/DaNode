@@ -35,4 +35,3 @@ public import std.stdio : EOF, File;
 public import std.socket : Address, AddressFamily, InternetAddress, ProtocolType, Socket, SocketOption, SocketOptionLevel, SocketSet, SocketShutdown, SocketType;
 public import std.traits: SetFunctionAttributes, functionAttributes;
 public import std.uuid : UUID;
-
