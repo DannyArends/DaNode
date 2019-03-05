@@ -115,5 +115,8 @@ unittest {
 
   router.runRequest("GET /phpinfo.fphp HTTP/1.1\nHost: localhost\n\n");
   router.runRequest("GET /phpinfo.fphp HTTP/1.1\nHost: localhost\r\n\r\n");
+  
+  router.runRequest("HEAD /dmd.d HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("GET /dmd.d HTTP/1.2\nHost: localhost\n\n");
 }
 

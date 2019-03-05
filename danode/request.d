@@ -9,13 +9,15 @@ import danode.http : HTTP;
 import danode.post : PostItem, PostType;
 import danode.log : custom, info, trace, warning;
 
-SysTime parseHtmlDate(const string datestr){ // 21 Apr 2014 20:20:13 CET
+// Try to convert a HTML date in a string into a SysTime
+// Structure that we expect: "21 Apr 2014 20:20:13 CET"
+SysTime parseHtmlDate(const string datestr) {
   SysTime ts =  SysTime(DateTime(-7, 1, 1, 1, 0, 0));
   auto dateregex = regex(r"([0-9]{1,2}) ([a-z]{1,3}) ([0-9]{4}) ([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2}) cet", "g");
   auto m = match(datestr.toLower(), dateregex);
   if(m.captures.length == 7){
-    ts = SysTime(DateTime(to!int(m.captures[3]), monthToIndex(m.captures[2]), to!int(m.captures[1]),        // 21 Apr 2014
-                          to!int(m.captures[4]), to!int(m.captures[5]), to!int(m.captures[6])));    // 20:20:13
+    ts = SysTime(DateTime(to!int(m.captures[3]), monthToIndex(m.captures[2]), to!int(m.captures[1]), // 21 Apr 2014
+                          to!int(m.captures[4]), to!int(m.captures[5]), to!int(m.captures[6])));     // 20:20:13
   }
   return(ts);
 }
@@ -145,4 +147,3 @@ struct Request {
 unittest {
   custom(0, "FILE", "%s", __FILE__);
 }
-
