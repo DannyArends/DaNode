@@ -25,6 +25,8 @@ struct PostItem {
   long      size = 0;
 }
 
+// Parse the POST request data from the client
+// Data supplied by Multipart and X-form post formats are supported
 final bool parsePost (ref Request request, ref Response response, in FileSystem filesystem) {
   if (response.havepost || request.method != "POST") {
     response.havepost = true;
@@ -52,11 +54,11 @@ final bool parsePost (ref Request request, ref Response response, in FileSystem 
     }
     custom(1, "XFORM", "# of items: %s", request.postinfo.length);
 
-  } else if(contenttype.indexOf(MPHEADER) >= 0) {
+  } else if (contenttype.indexOf(MPHEADER) >= 0) {
     // parse the Multipart content in the body of the request
     string mpid = split(contenttype, "boundary=")[1];
     info("header: %s, parsing %d bytes", mpid, expectedlength);
-    foreach(size_t i, part; chomp(content).split(mpid)){
+    foreach (size_t i, part; chomp(content).split(mpid)) {
       string[] elem = strip(part).split("\r\n");
       if (elem[0] != "--") {
         string[] mphdr = elem[0].split("; ");
@@ -78,12 +80,15 @@ final bool parsePost (ref Request request, ref Response response, in FileSystem 
     }
     info(", # of items: %s", request.postinfo.length);
   } else {
-    warning("unsupported post content type: %s [%s] -> %s", contenttype, expectedlength, content);
+    warning("unsupported POST content type: %s [%s] -> %s", contenttype, expectedlength, content);
   }
   response.havepost = true;
   return(response.havepost);
 }
 
+// The serverAPI functions prepares and writes out the input file for external process execution
+// The inputfile contains the SERVER, COOKIES, POST, and FILES information that can be used by the external script
+// This data is picked-up by the different APIs, and presented to the client in the regular way
 final void serverAPI(in FileSystem filesystem, in WebConfig config, in Request request, in Response response)  {
   Appender!(string) content;
 
