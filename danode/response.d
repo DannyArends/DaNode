@@ -77,6 +77,7 @@ struct Response {
   @property final bool ready(bool r = false){ if(r){ routed = r; } return(routed && payload.ready()); }
 }
 
+// parse a HTTPresponse header from an external script
 char[] parseHTTPResponseHeader(ref Response response, CGI script, HeaderType type) {
   long clength = script.getHeader("Content-Length", -1);                              // Is the content length provided ?
   if(clength >= 0) response.connection = script.getHeader("Connection", "Close");              // Yes ? then the script, can try to keep alive
@@ -97,6 +98,7 @@ char[] parseHTTPResponseHeader(ref Response response, CGI script, HeaderType typ
   return(response.hdr.data);
 }
 
+// create a standard response
 Response create(in Request request, in StatusCode statuscode = StatusCode.Ok, in string mimetype = UNSUPPORTED_FILE){
   Response response = Response(request.protocol);
   response.customheader("Server", SERVERINFO);
@@ -107,6 +109,7 @@ Response create(in Request request, in StatusCode statuscode = StatusCode.Ok, in
   return(response);
 }
 
+// send a redirect permanently response
 void redirect(ref Response response, in Request request, in string fqdn, bool isSecure = false) {
   trace("redirecting request to %s", fqdn);
   response.payload = new Empty(StatusCode.MovedPermanently);
@@ -115,17 +118,20 @@ void redirect(ref Response response, in Request request, in string fqdn, bool is
   response.ready = true;
 }
 
+// serve a not modified response
 void notmodified(ref Response response, in Request request, in string mimetype = UNSUPPORTED_FILE) {
   response.payload = new Empty(StatusCode.NotModified, mimetype);
   response.ready = true;
 }
 
+// serve a 404 domain not found page
 void domainNotFound(ref Response response, in Request request) {
   warning("requested domain '%s', was not found", request.shorthost());
   response.payload = new Message(StatusCode.NotFound, format("404 - No such domain is available\n"));
   response.ready = true;
 }
 
+// serve a the output of an external script 
 void serveCGI(ref Response response, in Request request, in WebConfig config, in FileSystem fs) {
   trace("requested a cgi file, execution allowed");
   string localroot = fs.localroot(request.shorthost());
@@ -139,17 +145,18 @@ void serveCGI(ref Response response, in Request request, in WebConfig config, in
   }
 }
 
+// serve a static file from the disc, send encrypted when requested and available
 void serveStaticFile(ref Response response, in Request request, FileSystem fs) {
   trace("serving a static file");
   string localroot = fs.localroot(request.shorthost());
   FileInfo reqFile = fs.file(localroot, request.path);
-  if(request.acceptsEncoding("deflate") && reqFile.hasEncodedVersion) {
+  if (request.acceptsEncoding("deflate") && reqFile.hasEncodedVersion) {
     info("will serve %s with deflate encoding", request.path);
     reqFile.deflate = true;
     response.customheader("Content-Encoding","deflate");
   }
   response.payload = reqFile;
-  if(request.ifModified >= response.payload.mtime()) {                                        // Non modified static content
+  if (request.ifModified >= response.payload.mtime()) {                                        // Non modified static content
     trace("static file has not changed, sending notmodified");
     response.notmodified(request, response.payload.mimetype);
   }
@@ -157,6 +164,7 @@ void serveStaticFile(ref Response response, in Request request, FileSystem fs) {
   response.ready = true;
 }
 
+// serve a directory browsing request, via a message
 void serveDirectory(ref Response response, ref Request request, in WebConfig config, in FileSystem fs) {
   trace("sending browse directory");
   string localroot = fs.localroot(request.shorthost());
@@ -165,12 +173,14 @@ void serveDirectory(ref Response response, ref Request request, in WebConfig con
   response.ready = true;
 }
 
+// serve a forbidden page
 void serveForbidden(ref Response response, in Request request) {
   trace("resource is restricted from being accessed");
   response.payload = new Message(StatusCode.Forbidden, format("403 - Access to this resource has been restricted\n"));
   response.ready = true;
 }
 
+// serve a 404 not found page
 void notFound(ref Response response) {
   trace("resource not found");
   response.payload = new Message(StatusCode.NotFound, format("404 - The requested path does not exists on disk\n"));
@@ -180,4 +190,3 @@ void notFound(ref Response response) {
 unittest {
   custom(0, "FILE", "%s", __FILE__);
 }
-
