@@ -149,7 +149,7 @@ class Router {
 // Helper function used to make calls during a unittest, setup a driver, a client and run the request
 void runRequest(Router router, string request = "GET /dmd.d HTTP/1.1\nHost: localhost\n\n") {
   auto driver = new StringDriver(request);
-  auto client = new Client(router, driver, 100);
+  auto client = new Client(router, driver, 250);
   custom(0, "TEST", "%s:%s %s", client.ip(), client.port(), split(request, "\n")[0]);
   client.start();
   while (client.running()) {
