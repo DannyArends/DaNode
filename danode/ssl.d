@@ -163,6 +163,7 @@ version(SSL) {
     return contexts;
   }
 
+  // Close the server SSL socket, and clean up the different contexts
   void closeSSL(Socket socket) {
     custom(1, "HTTPS", "closing server SSL socket");
     socket.close();
@@ -185,4 +186,3 @@ version(SSL) {
     custom(0, "FILE", "%s", __FILE__);
   }
 } // End version SSL
-
