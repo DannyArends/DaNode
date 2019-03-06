@@ -59,3 +59,4 @@ unittest {
     custom(0, "TEST", "%d: \"%s\"", NotImplemented, reason(NotImplemented));
   }
 }
+
