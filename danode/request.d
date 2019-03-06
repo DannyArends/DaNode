@@ -57,10 +57,10 @@ struct Request {
   // Parse the HTML request header (method, uri, protocol) as well as the supplemental headers
   final bool parseHeader(const string header) {
     string[] parts;
-    foreach(i, line; header.split("\n")){
+    foreach (i, line; header.split("\n")) {
       if (i == 0) { // first line: method uri protocol
         parts = line.split(" ");
-        if(parts.length >= 3) {
+        if (parts.length >= 3) {
           this.method = strip(parts[0]);
           this.uri = this.url = strip(join(parts[1 .. ($-1)], " "));
           this.protocol = strip(parts[($-1)]);
@@ -70,7 +70,7 @@ struct Request {
         }
       } else { // next lines: header-param: attribute 
         parts = line.split(":");
-        if(parts.length > 1) this.headers[strip(parts[0])] = strip(join(parts[1 .. $], ":"));
+        if (parts.length > 1) this.headers[strip(parts[0])] = strip(join(parts[1 .. $], ":"));
       }
     }
     return(true);
@@ -82,15 +82,19 @@ struct Request {
   // The Host header requested in the request
   final @property string host() const { 
     ptrdiff_t i = headers.from("Host").indexOf(":");
-    if(i > 0) return(headers.from("Host")[0 .. i]);
+    if (i > 0) {
+      return(headers.from("Host")[0 .. i]);
+    }
     return(headers.from("Host")); 
   }
 
   // The Post from the Host header in the request
   final @property ushort serverport() const {
     ptrdiff_t i = headers.from("Host").indexOf(":");
-    if(i > 0){ return( to!ushort(headers.from("Host")[(i+1) .. $])); } 
-    return(to!ushort(80));
+    if (i > 0) { 
+      return( to!ushort(headers.from("Host")[(i+1) .. $]));
+    }
+    return(isSecure ? to!ushort(443) : to!ushort(80)); // return the default ports
   }
 
   // Input file generated storing the headers of the request
