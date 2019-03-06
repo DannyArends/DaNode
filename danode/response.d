@@ -186,6 +186,13 @@ void serveForbidden(ref Response response, in Request request) {
   response.ready = true;
 }
 
+// serve a 400 bad request 
+void serveBadRequest(ref Response response, in Request request) {
+  trace("Request was malformed");
+  response.payload = new Message(StatusCode.BadRequest, format("400 - Bad Request\n"));
+  response.ready = true;
+}
+
 // serve a 404 not found page
 void notFound(ref Response response) {
   trace("resource not found");

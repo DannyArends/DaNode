@@ -59,6 +59,8 @@ class Router {
 
     // Deliver a response to the request
     final void deliver(ref Request request, ref Response response, bool finalrewrite = false) {
+      if (request.badrequest) return response.serveBadRequest(request);
+
       string localroot = filesystem.localroot(request.shorthost());
 
       trace("%s:%s %s client (%s)", request.ip, request.port, (finalrewrite? "redirecting" : "routing"), request.id);

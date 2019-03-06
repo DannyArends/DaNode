@@ -27,7 +27,7 @@ struct Request {
   long              port; /// Port at which the client is connected
   string            body; /// The body of the HTMLrequest
   bool              isSecure; /// Was security requested
-  bool              hasHeader; /// Is the header valid ?
+  bool              badrequest; /// Is the header valid ?
   UUID              id; /// md5UUID for this request
   string            method = "GET"; /// requested HTTP method (GET, POST, HEAD)
   string            uri = "/"; /// uri requested
@@ -48,7 +48,7 @@ struct Request {
     this.starttime = Clock.currTime();
     this.id = md5UUID(format("%s:%d-%s", driver.ip, driver.port, starttime));
     if (!this.parseHeader(driver.header)) {
-      this.hasHeader = false;
+      this.badrequest = true;
     }
     info("request: %s to %s from %s:%d - %s", method, uri, this.ip, this.port, this.id);
     trace("request header: %s", driver.header);
