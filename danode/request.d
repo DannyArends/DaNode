@@ -27,6 +27,7 @@ struct Request {
   long              port; /// Port at which the client is connected
   string            body; /// The body of the HTMLrequest
   bool              isSecure; /// Was security requested
+  bool              hasHeader; /// Is the header valid ?
   UUID              id; /// md5UUID for this request
   string            method = "GET"; /// requested HTTP method (GET, POST, HEAD)
   string            uri = "/"; /// uri requested
@@ -46,16 +47,18 @@ struct Request {
     this.isSecure = driver.isSecure;
     this.starttime = Clock.currTime();
     this.id = md5UUID(format("%s:%d-%s", driver.ip, driver.port, starttime));
-    this.parseHeader(driver.header);
+    if (!this.parseHeader(driver.header)) {
+      this.hasHeader = false;
+    }
     info("request: %s to %s from %s:%d - %s", method, uri, this.ip, this.port, this.id);
     trace("request header: %s", driver.header);
   }
 
   // Parse the HTML request header (method, uri, protocol) as well as the supplemental headers
-  final void parseHeader(const string header) {
+  final bool parseHeader(const string header) {
     string[] parts;
     foreach(i, line; header.split("\n")){
-      if(i == 0) {                    // first line: method uri protocol
+      if (i == 0) { // first line: method uri protocol
         parts = line.split(" ");
         if(parts.length >= 3) {
           this.method = strip(parts[0]);
@@ -63,12 +66,14 @@ struct Request {
           this.protocol = strip(parts[($-1)]);
         } else {
           warning("could not decode header line for client");
+          return(false);
         }
-      } else {                        // next lines: header-param: attribute 
+      } else { // next lines: header-param: attribute 
         parts = line.split(":");
         if(parts.length > 1) this.headers[strip(parts[0])] = strip(join(parts[1 .. $], ":"));
       }
     }
+    return(true);
   }
 
   // New input was obtained and / or the driver has been changed, update the driver
