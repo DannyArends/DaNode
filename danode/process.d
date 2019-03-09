@@ -159,7 +159,7 @@ class Process : Thread {
           Thread.sleep(msecs(1));
         }
         if (!process.terminated) {
-          warning("command: %s < %s did not finish in time", command, inputfile); 
+          warning("command: %s < %s did not finish in time [%s msecs]", command, inputfile, maxtime); 
           kill(cpid, 9); 
           process = WaitResult(true, wait(cpid));
         }
