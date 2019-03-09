@@ -1,16 +1,9 @@
 language: d
-sudo: true
-before_install:
-  - sudo apt-get install -y libssl-dev
-addons:
-  apt:
-    update: true
+sudo: false
 matrix:
   include:
     - d: 'dmd'
       env: CONFIG=default
     - d: 'ldc'
       env: CONFIG=default
-    - d: 'dmd'
-      env: CONFIG=travis
 script: dub test -c $CONFIG
