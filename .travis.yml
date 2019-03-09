@@ -4,8 +4,8 @@ d:
 sudo: false
 matrix:
   include:
-    - d: 'default'
+    - d: 'dmd'
       env: CONFIG=default
-    - d: 'ssl'
+    - d: 'dmd'
       env: CONFIG=ssl
 script: dub test -c $CONFIG
