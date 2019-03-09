@@ -2,48 +2,46 @@ module danode.httpstatus;
 
 import danode.log : custom;
 
-enum StatusCode {
-  Continue = 100, SwitchingProtocols = 101,
-  Ok = 200, Saved = 201, Accepted = 202, NoContent = 204, ResetContent = 205, PartialContent = 206,
-  MultipleChoices = 300, MovedPermanently = 301, MovedTemporarily = 302, SeeOther = 303, NotModified = 304, TemporaryRedirect = 307, EmptyResponse = 324,
-  BadRequest = 400, Unauthorized = 401, Forbidden = 403, NotFound = 404, MethodNotAllowed = 405, TimedOut = 407, UriTooLong = 414,
-  ISE = 500, NotImplemented = 501, ServiceUnavailable = 502, VersionUnsupported = 505
+struct StatusCodeT {
+  size_t code;
+  string reason;
+  alias code this;
+}
+
+enum StatusCode : StatusCodeT {
+  Continue = StatusCodeT(100, "Continue"),
+  SwitchingProtocols = StatusCodeT(101, "Switching Protocols"),
+
+  Ok = StatusCodeT(200, "Ok"),
+  Saved = StatusCodeT(201, "Saved"),
+  Accepted = StatusCodeT(202, "Accepted"),
+  NoContent = StatusCodeT(204, "No Content"),
+  ResetContent = StatusCodeT(205,"Reset Content"),
+  PartialContent = StatusCodeT(206,"Partial Content"),
+
+  MultipleChoices = StatusCodeT(300,"Multiple Choices"),
+  MovedPermanently = StatusCodeT(301,"Moved Permanently"),
+  MovedTemporarily = StatusCodeT(302,"Moved Temporarily"),
+  SeeOther = StatusCodeT(303,"See Other"),
+  NotModified = StatusCodeT(304,"Not Modified"),
+  TemporaryRedirect = StatusCodeT(307,"Temporary Redirect"),
+  EmptyResponse = StatusCodeT(324,"Empty Response"),
+
+  BadRequest = StatusCodeT(400,"Bad Request"),
+  Unauthorized = StatusCodeT(401,"Unauthorized"),
+  Forbidden = StatusCodeT(403,"Forbidden"),
+  NotFound = StatusCodeT(404,"Not Found"),
+  MethodNotAllowed = StatusCodeT(405,"Method Not Allowed"),
+  TimedOut = StatusCodeT(407,"Connection Timed Out"),
+  UriTooLong = StatusCodeT(414,"Request-URI Too Long"),
+
+  ISE = StatusCodeT(500,"Internal Server Error"),
+  NotImplemented = StatusCodeT(501,"Not Implemented"),
+  ServiceUnavailable = StatusCodeT(502,"Service Unavailable"),
+  VersionUnsupported = StatusCodeT(505, "HTTP Version Not Supported")
 };
 
-@nogc pure string reason (StatusCode statuscode) nothrow { with(StatusCode) {
-  final switch(statuscode){
-    case Continue                 : return("Continue");
-    case SwitchingProtocols       : return("Switching Protocols");
-
-    case Ok                       : return("Ok");
-    case Saved                    : return("Saved");
-    case Accepted                 : return("Accepted");
-    case NoContent                : return("No Content");
-    case ResetContent             : return("Reset Content");
-    case PartialContent           : return("Partial Content");
-
-    case MultipleChoices          : return("Multiple Choices");
-    case MovedPermanently         : return("Moved Permanently");
-    case MovedTemporarily         : return("Moved Temporarily");
-    case SeeOther                 : return("See Other");
-    case NotModified              : return("Not Modified");
-    case TemporaryRedirect        : return("Temporary Redirect");
-    case EmptyResponse            : return("Empty Response");
-
-    case BadRequest               : return("Bad Request");
-    case Unauthorized             : return("Unauthorized");
-    case Forbidden                : return("Forbidden");
-    case NotFound                 : return("Not Found");
-    case MethodNotAllowed         : return("Method Not Allowed");
-    case TimedOut                 : return("Connection Timed Out");
-    case UriTooLong               : return("Request-URI Too Long");
-
-    case ISE                      : return("Internal Server Error");
-    case NotImplemented           : return("Not Implemented");
-    case ServiceUnavailable       : return("Service Unavailable");
-    case VersionUnsupported       : return("HTTP Version Not Supported");
-  }
-} }
+@nogc pure string reason (const StatusCode statuscode) nothrow { return(statuscode.reason); }
 
 unittest {
   custom(0, "FILE", "%s", __FILE__);
