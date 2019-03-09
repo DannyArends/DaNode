@@ -1,7 +1,5 @@
 language: d
-sudo: true
-before_install:
-  - sudo apt-get install -y libssl-dev php
-addons:
-  apt:
-    update: true
+  - dmd
+  - gdc
+  - ldc
+sudo: false
