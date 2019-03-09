@@ -3,60 +3,59 @@ module danode.request;
 import danode.imports;
 import danode.filesystem : FileSystem;
 import danode.interfaces : ClientInterface, DriverInterface;
-import danode.functions : interpreter, from, toD, monthToIndex;
+import danode.functions : interpreter, from, parseHtmlDate;
 import danode.webconfig : WebConfig;
 import danode.http : HTTP;
 import danode.post : PostItem, PostType;
 import danode.log : custom, info, trace, warning;
 
-// The request method indicates which method is to be performed on the specified resource
+// The Request-Method indicates which method is to be performed on the specified resource
 enum RequestMethod : string {
   GET = "GET", HEAD = "HEAD", POST = "POST", PUT = "PUT", DELETE = "DELETE", 
   CONNECT = "CONNECT", OPTIONS = "OPTIONS", TRACE = "TRACE"
 }
 
-// Try to convert a HTML date in a string into a SysTime
-// Structure that we expect: "21 Apr 2014 20:20:13 CET"
-SysTime parseHtmlDate(const string datestr) {
-  SysTime ts =  SysTime(DateTime(-7, 1, 1, 1, 0, 0));
-  auto dateregex = regex(r"([0-9]{1,2}) ([a-z]{1,3}) ([0-9]{4}) ([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2}) cet", "g");
-  auto m = match(datestr.toLower(), dateregex);
-  if(m.captures.length == 7){
-    ts = SysTime(DateTime(to!int(m.captures[3]), monthToIndex(m.captures[2]), to!int(m.captures[1]), // 21 Apr 2014
-                          to!int(m.captures[4]), to!int(m.captures[5]), to!int(m.captures[6])));     // 20:20:13
+// The HTTP-Version indicates which protocol version is requested to obtain the specified resource
+enum HTTPVersion : string {
+  v09 = "HTTP/0.9", v10 = "HTTP/1.0", v11 = "HTTP/1.1", v20 = "HTTP/2", v30 = "HTTP/3"
+}
+
+// Parse the HTTP-Version, throw an error if it cannot be parsed
+pure HTTPVersion parseHTTPVersion(const string line) {
+  foreach (immutable v; EnumMembers!HTTPVersion) {
+    if (v == line) return(v);
   }
-  return(ts);
+  throw new Exception(format("invalid HTTP-Version requested: %s", line));
 }
 
 // Parse the Request-Line: "method uri protocol"
-bool parseRequestLine(ref Request request, const string line) {
+pure bool parseRequestLine(ref Request request, const string line) {
   auto parts = line.split(" ");
-  if (parts.length < 3) {
-    warning("malformed Request-Line: '%s'", line);
-    return(false);
-  }
+  if (parts.length < 3)
+    throw new Exception(format("malformed Request-Line: '%s'", line));
+
   request.method = to!RequestMethod(strip(parts[0]));
   request.uri = request.url = strip(join(parts[1 .. ($-1)], " "));
-  request.protocol = strip(parts[($-1)]);
+  request.protocol = parseHTTPVersion(strip(parts[($-1)]));
   return(true);
 }
 
 struct Request {
-  string            ip; /// IP location of the client
-  long              port; /// Port at which the client is connected
-  string            body; /// The body of the HTMLrequest
-  bool              isSecure; /// Was security requested
-  bool              badrequest; /// Is the header valid ?
-  UUID              id; /// md5UUID for this request
-  RequestMethod     method = RequestMethod.GET; /// requested HTTP method (GET, HEAD, POST, PUT, DELETE, CONNECT, OPTIONS, TRACE)
-  string            uri = "/"; /// uri requested
-  string            url = "/"; /// url requested
-  string            page; /// page is used when redirecting
-  string            dir; /// dir is used in directory redirection
-  string            protocol = "HTTP/1.1"; /// protocol requested
-  string[string]    headers; /// Associative array holding the header values
-  SysTime           starttime; /// start time of the Request
-  PostItem[string]  postinfo;  /// Associative array holding the post parameters and values
+  string ip; /// IP location of the client
+  long port; /// Port at which the client is connected
+  string body; /// the body of the HTMLrequest
+  bool isSecure; /// was a secure request made
+  bool badrequest; /// Is the header valid ?
+  UUID id; /// md5UUID for this request
+  RequestMethod method = RequestMethod.GET; /// requested HTTP method
+  string uri = "/"; /// uri requested
+  string url = "/"; /// url requested
+  string page; /// page is used when performing a canonical redirect
+  string dir; /// dir is used in directory redirection
+  HTTPVersion protocol = HTTPVersion.v11; /// protocol requested
+  string[string] headers; /// Associative array holding the header values
+  SysTime starttime; /// start time of the Request
+  PostItem[string] postinfo;  /// Associative array holding the post parameters and values
 
   // Start a new Request, and parseHeader on the DriverInterface
   final void initialize(const DriverInterface driver) {
@@ -85,7 +84,7 @@ struct Request {
         }
       }
     } catch (Exception e) {
-      warning("parseHeader exception: '%s'", e.msg);
+      warning("parseHeader exception: %s", e.msg);
       return(false);
     }
     trace("parseHeader %s %s %s, nParams: %d", this.method, this.uri, this.protocol, this.headers.length);
