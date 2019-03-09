@@ -1,5 +1,2 @@
 language: d
-  - dmd
-  - gdc
-  - ldc
 sudo: false
