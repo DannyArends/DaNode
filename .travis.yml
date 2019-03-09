@@ -9,7 +9,6 @@ matrix:
   include:
     - d: 'dmd'
       env: CONFIG=default
-  allow_failures:
     - d: 'dmd'
       env: CONFIG=ssl
 script: dub test -c $CONFIG
