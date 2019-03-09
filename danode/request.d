@@ -9,6 +9,12 @@ import danode.http : HTTP;
 import danode.post : PostItem, PostType;
 import danode.log : custom, info, trace, warning;
 
+// The request method indicates which method is to be performed on the specified resource
+enum RequestMethod : string {
+  GET = "GET", HEAD = "HEAD", POST = "POST", PUT = "PUT", DELETE = "DELETE", 
+  CONNECT = "CONNECT", OPTIONS = "OPTIONS", TRACE = "TRACE"
+}
+
 // Try to convert a HTML date in a string into a SysTime
 // Structure that we expect: "21 Apr 2014 20:20:13 CET"
 SysTime parseHtmlDate(const string datestr) {
@@ -22,6 +28,19 @@ SysTime parseHtmlDate(const string datestr) {
   return(ts);
 }
 
+// Parse the Request-Line: "method uri protocol"
+bool parseRequestLine(ref Request request, const string line) {
+  auto parts = line.split(" ");
+  if (parts.length < 3) {
+    warning("malformed Request-Line: '%s'", line);
+    return(false);
+  }
+  request.method = to!RequestMethod(strip(parts[0]));
+  request.uri = request.url = strip(join(parts[1 .. ($-1)], " "));
+  request.protocol = strip(parts[($-1)]);
+  return(true);
+}
+
 struct Request {
   string            ip; /// IP location of the client
   long              port; /// Port at which the client is connected
@@ -29,7 +48,7 @@ struct Request {
   bool              isSecure; /// Was security requested
   bool              badrequest; /// Is the header valid ?
   UUID              id; /// md5UUID for this request
-  string            method = "GET"; /// requested HTTP method (GET, POST, HEAD)
+  RequestMethod     method = RequestMethod.GET; /// requested HTTP method (GET, HEAD, POST, PUT, DELETE, CONNECT, OPTIONS, TRACE)
   string            uri = "/"; /// uri requested
   string            url = "/"; /// url requested
   string            page; /// page is used when redirecting
@@ -56,23 +75,20 @@ struct Request {
 
   // Parse the HTML request header (method, uri, protocol) as well as the supplemental headers
   final bool parseHeader(const string header) {
-    string[] parts;
-    foreach (i, line; header.split("\n")) {
-      if (i == 0) { // first line: method uri protocol
-        parts = line.split(" ");
-        if (parts.length >= 3) {
-          this.method = strip(parts[0]);
-          this.uri = this.url = strip(join(parts[1 .. ($-1)], " "));
-          this.protocol = strip(parts[($-1)]);
-        } else {
-          warning("could not decode header line for client");
-          return(false);
+    try {
+      foreach (i, line; header.split("\n")) {
+        if (i == 0) {
+          this.parseRequestLine(line);
+        } else { // next lines: header-param: attribute 
+          auto parts = line.split(":");
+          if (parts.length > 1) this.headers[strip(parts[0])] = strip(join(parts[1 .. $], ":"));
         }
-      } else { // next lines: header-param: attribute 
-        parts = line.split(":");
-        if (parts.length > 1) this.headers[strip(parts[0])] = strip(join(parts[1 .. $], ":"));
       }
+    } catch (Exception e) {
+      warning("parseHeader exception: '%s'", e.msg);
+      return(false);
     }
+    trace("parseHeader %s %s %s, nParams: %d", this.method, this.uri, this.protocol, this.headers.length);
     return(true);
   }
 

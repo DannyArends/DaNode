@@ -116,7 +116,17 @@ unittest {
   router.runRequest("GET /phpinfo.fphp HTTP/1.1\nHost: localhost\n\n");
   router.runRequest("GET /phpinfo.fphp HTTP/1.1\nHost: localhost\r\n\r\n");
   
-  router.runRequest("HEAD /dmd.d HTTP/1.1\nHost: localhost\n\n");
   router.runRequest("GET /dmd.d HTTP/1.2\nHost: localhost\n\n");
+
+  // Test all available RequestMethods, and an invalid one
+  router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("HEAD /dmd.d HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("POST /dmd.d HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("PUT /dmd.d HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("DELETE /dmd.d HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("CONNECT /dmd.d HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("OPTIONS * HTTP/1.1\n\n");
+  router.runRequest("TRACE /dmd.d HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("NO /dmd.d HTTP/1.1\nHost: localhost\n\n");
 }
 
