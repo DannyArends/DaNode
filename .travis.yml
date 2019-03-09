@@ -9,6 +9,8 @@ matrix:
   include:
     - d: 'dmd'
       env: CONFIG=default
+    - d: 'ldc'
+      env: CONFIG=default
     - d: 'dmd'
-      env: CONFIG=ssl
+      env: CONFIG=travis
 script: dub test -c $CONFIG

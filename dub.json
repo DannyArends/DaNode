@@ -20,6 +20,14 @@
 		"dependencies": {
 			"openssl": "==1.1.6+1.0.1g"
 		}
+	},
+	{
+		"name": "travis",
+		"targetType": "executable",
+		"versions": ["SSL"],
+		"dependencies": {
+			"openssl": "~>1.0.0+1.0.0e"
+		}
 	}
 	]
 }
