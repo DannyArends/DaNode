@@ -47,12 +47,12 @@ struct Request {
   bool isSecure; /// was a secure request made
   bool badrequest; /// Is the header valid ?
   UUID id; /// md5UUID for this request
-  RequestMethod method = RequestMethod.GET; /// requested HTTP method
+  RequestMethod method; /// requested HTTP method
   string uri = "/"; /// uri requested
   string url = "/"; /// url requested
   string page; /// page is used when performing a canonical redirect
   string dir; /// dir is used in directory redirection
-  HTTPVersion protocol = HTTPVersion.v11; /// protocol requested
+  HTTPVersion protocol; /// protocol requested
   string[string] headers; /// Associative array holding the header values
   SysTime starttime; /// start time of the Request
   PostItem[string] postinfo;  /// Associative array holding the post parameters and values
