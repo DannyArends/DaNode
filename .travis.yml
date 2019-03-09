@@ -1,7 +1,4 @@
 language: d
-d:
-  - dmd
-  - ldc
 sudo: false
 matrix:
   include:
