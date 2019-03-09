@@ -1,5 +1,7 @@
 module danode.ssl;
 
+import danode.log : custom, warning, info;
+
 version(SSL) {
   import deimos.openssl.ssl;
   import deimos.openssl.err;
@@ -8,7 +10,6 @@ version(SSL) {
   import danode.client;
   import danode.server : Server;
   import danode.response : Response;
-  import danode.log : custom, warning, info;
 
   // SSL context structure, stored relation between hostname 
   // and the SSL context, should be allocated only once available to C, and deallocated at exit
@@ -185,4 +186,9 @@ version(SSL) {
   unittest {
     custom(0, "FILE", "%s", __FILE__);
   }
-} // End version SSL
+} else {// End version SSL
+  unittest {
+    custom(0, "WARN", "Skipping unittest for: '%s'", __FILE__);
+  }
+}
+
