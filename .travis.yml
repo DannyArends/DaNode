@@ -7,6 +7,6 @@ matrix:
   include:
     - d: 'dmd'
       env: CONFIG=default
-    - d: 'ldc'
-      env: CONFIG=default
+    - d: 'dmd'
+      env: CONFIG=ssl
 script: dub test -c $CONFIG
