@@ -110,6 +110,9 @@ unittest {
   router.runRequest("GET\nHost: localhost\n\n");
   router.runRequest("GET\nHost: notfound\n\n");
 
+  router.runRequest("GET /php.php HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("GET /php.php HTTP/1.1\nHost: localhost\r\n\r\n");
+
   router.runRequest("GET /php-cgi.fphp HTTP/1.1\nHost: localhost\n\n");
   router.runRequest("GET /php-cgi.fphp HTTP/1.1\nHost: localhost\r\n\r\n");
 
