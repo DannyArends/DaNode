@@ -7,7 +7,6 @@ matrix:
   include:
     - d: 'dmd'
       env: CONFIG=default
-  include:
     - d: 'ldc'
       env: CONFIG=default
   allow_failures:
