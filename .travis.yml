@@ -1,2 +1,11 @@
 language: d
+d:
+  - dmd
 sudo: false
+matrix:
+  include:
+    - d: 'default'
+      env: CONFIG=default
+    - d: 'ssl'
+      env: CONFIG=ssl
+script: dub test -c $CONFIG
