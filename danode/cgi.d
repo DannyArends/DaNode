@@ -15,10 +15,10 @@ class CGI : Payload {
     string command;
     string path;
 
-    this(string command, string path){
+    this(string command, string path, bool removeInput = true, long maxtime = 4500){
       this.command = command;
       this.path = path;
-      external = new Process(command, path); 
+      external = new Process(command, path, removeInput, maxtime); 
       external.start();
     }
 
