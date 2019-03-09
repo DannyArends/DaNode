@@ -4,7 +4,7 @@ import danode.imports;
 import danode.cgi : CGI;
 import danode.client : Client;
 import danode.interfaces : ClientInterface, DriverInterface, StringDriver;
-import danode.httpstatus : StatusCode;
+import danode.statuscode : StatusCode;
 import danode.request : Request;
 import danode.response;
 import danode.webconfig : WebConfig;

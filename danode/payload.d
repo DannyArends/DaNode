@@ -1,7 +1,7 @@
 module danode.payload;
 
 import danode.imports;
-import danode.httpstatus : StatusCode;
+import danode.statuscode : StatusCode;
 import danode.mimetypes : UNSUPPORTED_FILE;
 
 enum PayloadType { Message, Script, File }

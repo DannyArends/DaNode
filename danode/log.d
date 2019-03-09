@@ -5,7 +5,7 @@ import danode.interfaces : ClientInterface;
 import danode.request : Request;
 import danode.response : Response;
 import danode.functions;
-import danode.httpstatus;
+import danode.statuscode : StatusCode;
 
 extern(C) __gshared int cverbose;         // Verbose level of C-Code
 

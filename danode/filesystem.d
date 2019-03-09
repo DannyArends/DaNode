@@ -1,7 +1,7 @@
 module danode.filesystem;
 
 import danode.imports;
-import danode.httpstatus : StatusCode;
+import danode.statuscode : StatusCode;
 import danode.mimetypes : mime;
 import danode.payload : Payload, PayloadType;
 import danode.functions : has, isCGI;

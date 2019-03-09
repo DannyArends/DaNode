@@ -4,7 +4,7 @@ import danode.imports;
 import danode.functions : endofheader, getheader;
 import danode.log : error;
 import danode.process : Process;
-import danode.httpstatus : StatusCode;
+import danode.statuscode : StatusCode;
 import danode.payload : HeaderType, Payload, PayloadType;
 
 class CGI : Payload {

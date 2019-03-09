@@ -2,7 +2,7 @@ module danode.client;
 
 import danode.imports;
 import danode.router : Router, runRequest;
-import danode.httpstatus : StatusCode;
+import danode.statuscode : StatusCode;
 import danode.interfaces : DriverInterface, ClientInterface, StringDriver;
 import danode.response : Response;
 import danode.request : Request;

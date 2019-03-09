@@ -5,7 +5,7 @@ import danode.cgi : CGI;
 import danode.interfaces : StringDriver;
 import danode.process : Process;
 import danode.functions : htmltime;
-import danode.httpstatus : reason, StatusCode;
+import danode.statuscode : StatusCode;
 import danode.request : Request;
 import danode.router : Router;
 import danode.mimetypes : UNSUPPORTED_FILE;
@@ -51,7 +51,7 @@ struct Response {
       }
       warning("script '%s',  failed to generate a header", script.command);
     }
-    hdr.put(format("%s %d %s\r\n", protocol, payload.statuscode, reason(payload.statuscode)));
+    hdr.put(format("%s %d %s\r\n", protocol, payload.statuscode, payload.statuscode.reason));
     foreach (key, value; headers) { 
       hdr.put(format("%s: %s\r\n", key, value));
     }

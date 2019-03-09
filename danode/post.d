@@ -2,7 +2,7 @@ module danode.post;
 
 import danode.imports;
 import danode.cgi : CGI;
-import danode.httpstatus : StatusCode;
+import danode.statuscode : StatusCode;
 import danode.request : Request;
 import danode.response : SERVERINFO, Response, redirect, create, notmodified;
 import danode.webconfig : WebConfig;
