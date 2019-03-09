@@ -4,7 +4,7 @@ import danode.imports;
 import danode.router : Router, runRequest;
 import danode.statuscode : StatusCode;
 import danode.interfaces : DriverInterface, ClientInterface, StringDriver;
-import danode.response : Response;
+import danode.response : Response, setTimedOut;
 import danode.request : Request;
 import danode.payload : Message;
 import danode.log : custom, info, trace, warning, NOTSET, NORMAL;
@@ -41,7 +41,7 @@ class Client : Thread, ClientInterface {
           if (driver.receive(driver.socket) > 0) {     // We've received new data
             if (!response.ready) {                            // If we're not ready to respond yet
               // Parse the data and try to create a response (Could fail multiple times)
-              router.route(driver, request, response);
+              router.route(driver, request, response, maxtime);
             }
             if (response.ready && !response.completed) {      // We know what to respond, but haven't send all of it yet
               driver.send(response, driver.socket);           // Send the response, hit multiple times, send what you can and return
@@ -57,7 +57,11 @@ class Client : Thread, ClientInterface {
             }
           }
           if (lastmodified >= maxtime) { // Client are not allowed to be silent for more than maxtime
-            warning("client stopped due to maxtime limit: %s > %s", lastmodified, maxtime);
+            custom(2, "CLIENT", "inactivity: %s > %s", lastmodified, maxtime);
+            if (!response.ready && request !is Request.init) { // We have an unhandled request
+              driver.setTimedOut(response);
+              router.logRequest(this, request, response);     // Log the response to the request
+            }
             stop();
           }
           custom(3, "CLIENT", "connection %s:%s (%s msecs) %s", ip, port, starttime, to!string(driver.inbuffer.data));
@@ -118,8 +122,9 @@ unittest {
 
   router.runRequest("GET /phpinfo.fphp HTTP/1.1\nHost: localhost\n\n");
   router.runRequest("GET /phpinfo.fphp HTTP/1.1\nHost: localhost\r\n\r\n");
-  
+
   router.runRequest("GET /dmd.d HTTP/1.2\nHost: localhost\n\n");
+  router.runRequest("GET /keepalive.d HTTP/1.1\nHost: localhost\nConnection: keep-alive\n\n");
 
   // Test all available RequestMethods, and an invalid one
   router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\n\n");
