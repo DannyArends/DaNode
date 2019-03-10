@@ -112,6 +112,7 @@ pure ptrdiff_t endofheader(T)(const(T) buffer) {
   return(idx);
 }
 
+// Where does the HTML request body start ?
 pure ptrdiff_t bodystart(T)(const(T) buffer) {
   auto str = to!string(buffer);
   ptrdiff_t idx = str.indexOf("\r\n\r\n");
