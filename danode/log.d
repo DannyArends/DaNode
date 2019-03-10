@@ -5,7 +5,7 @@ import danode.interfaces : ClientInterface;
 import danode.request : Request;
 import danode.response : Response;
 import danode.functions;
-import danode.httpstatus;
+import danode.statuscode : StatusCode;
 
 extern(C) __gshared int cverbose;         // Verbose level of C-Code
 
@@ -67,27 +67,32 @@ class Log {
   public:
     this(int verbose = NORMAL, string requestLog = "request.log", string perfLog = "perf.log", bool overwrite = false) {
       cverbose = verbose;
-      if (exists(requestLog) && overwrite) { // Request log
+
+      // Initialize the request log
+      if (exists(requestLog) && overwrite) {
         warning("overwriting log: %s", requestLog); 
         remove(requestLog);
       }
       RequestLogFp = File(requestLog, "a");
 
-      if (exists(perfLog) && overwrite) { // Performance log
+      // Initialize the performance log
+      if (exists(perfLog) && overwrite) {
         warning("overwriting log: %s", perfLog);
         remove(perfLog);
       }
       PerformanceLogFp = File(perfLog, "a");
     }
 
+    // Set verbose level of the application
     @property @nogc int verbose(int verbose = NOTSET) const nothrow {
-      if(verbose != NOTSET) {
+      if (verbose != NOTSET) {
         printf("[INFO]   changing verbose level from %d to %d\n", cverbose, verbose);
         cverbose = verbose;
       }
       return(cverbose); 
     }
 
+    // Update the performance statistics
     void updatePerformanceStatistics(in ClientInterface cl, in Request rq, in Response rs) {
       string key = format("%s%s", rq.shorthost, rq.uripath);
       if(!statistics.has(key)) statistics[key] = Info();    // Unknown key, create new Info statistics object
@@ -103,6 +108,7 @@ class Log {
       }
     }
 
+    // Log the responses to the request
     void logRequest(in ClientInterface cl, in Request rq, in Response rs) {
       if (cverbose >= NOTSET) {
         string s = format("[%d]    %s %s:%s %s%s %s %s", rs.statuscode, htmltime(), cl.ip, cl.port, rq.shorthost, rq.uri, Msecs(rq.starttime), rs.payload.length);

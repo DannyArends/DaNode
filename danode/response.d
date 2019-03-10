@@ -1,14 +1,15 @@
 module danode.response;
 
 import danode.imports;
-import danode.interfaces : StringDriver;
+import danode.cgi : CGI;
+import danode.interfaces : DriverInterface, StringDriver;
 import danode.process : Process;
 import danode.functions : htmltime;
-import danode.httpstatus : reason, StatusCode;
+import danode.statuscode : StatusCode;
 import danode.request : Request;
 import danode.router : Router;
 import danode.mimetypes : UNSUPPORTED_FILE;
-import danode.payload : Payload, PayLoadType, HeaderType, Empty, CGI, Message;
+import danode.payload : Payload, PayloadType, HeaderType, Empty, Message;
 import danode.log;
 import danode.webconfig;
 import danode.filesystem;
@@ -18,47 +19,54 @@ import danode.functions : browseDir;
 immutable string SERVERINFO = "DaNode/0.0.2 (Universal)";
 
 struct Response {
-  string            protocol     = "HTTP/1.1";
-  string            connection   = "Close";
-  string            charset      = "UTF-8";
-  long              maxage       = 0;
+  string            protocol = "HTTP/1.1";
+  string            connection = "Keep-Alive";
+  string            charset = "UTF-8";
+  long              maxage = 0;
   string[string]    headers;
   Payload           payload;
-  bool              created      = false;
-  bool              havepost     = false;
-  bool              routed       = false;
-  bool              completed    = false;
-  bool              cgiheader    = false;
+  bool              created = false;
+  bool              havepost = false;
+  bool              routed = false;
+  bool              completed = false;
+  bool              cgiheader = false;
   Appender!(char[]) hdr;
-  ptrdiff_t         index        = 0;
+  ptrdiff_t         index = 0;
 
   final void customheader(string key, string value) nothrow { headers[key] = value; }
 
+  // Generate a HTML header for the response
   @property final char[] header() {
     if (hdr.data) {
       return(hdr.data); // Header was constructed
     }
     // Scripts are allowed to have their own header
-    if(payload.type == PayLoadType.Script) {
+    if (payload.type == PayloadType.Script) {
       CGI script = to!CGI(payload);
-      connection = "Close";
       HeaderType type = script.headerType();
-      info("Header-type: %s", type);
-      if (type != HeaderType.None) {
-        return(parseHTTPResponseHeader(this, script, type));
+      long clength = script.getHeader("Content-Length", -1); // Is the content length provided ?
+      if (type != HeaderType.None && clength > 0) {
+        return(parseHTTPResponseHeader(this, script, type, clength));
+      } else {
+        custom(1, "WARN", "script '%s', failed to generate a valid header (%s, %d)", script.command, type, clength);
+        connection = "Close";
       }
-      warning("script '%s',  failed to generate a header", script.command);
     }
-    hdr.put(format("%s %d %s\r\n", protocol, payload.statuscode, reason(payload.statuscode)));
-    foreach(key, value; headers) { hdr.put(format("%s: %s\r\n", key, value)); }
+    // Construct the header for all other requests (and scripts that failed to provide a valid one
+    hdr.put(format("%s %d %s\r\n", protocol, payload.statuscode, payload.statuscode.reason));
+    foreach (key, value; headers) { 
+      hdr.put(format("%s: %s\r\n", key, value));
+    }
     hdr.put(format("Date: %s\r\n", htmltime()));
-    if(payload.type != PayLoadType.Script && payload.length >= 0){                        // If we have any payload
-      hdr.put(format("Content-Length: %d\r\n", payload.length));                          // We can send the expected size
-      hdr.put(format("Last-Modified: %s\r\n", htmltime(payload.mtime)));                  // It could be modified long ago, lets inform the client
-      if(maxage > 0) hdr.put(format("Cache-Control: max-age=%d, public\r\n", maxage));    // Perhaps we can have the client cache it (when very old)
+    if (payload.type != PayloadType.Script && payload.length >= 0) { // If we have any payload
+      hdr.put(format("Content-Length: %d\r\n", payload.length)); // We can send the expected size
+      hdr.put(format("Last-Modified: %s\r\n", htmltime(payload.mtime))); // It could be modified long ago, lets inform the client
+      if (maxage > 0) { // Perhaps we can have the client cache it (when very old)
+        hdr.put(format("Cache-Control: max-age=%d, public\r\n", maxage));
+      }
     }
-    hdr.put(format("Content-Type: %s; charset=%s\r\n", payload.mimetype, charset));       // We just send our mime and an encoding
-    hdr.put(format("Connection: %s\r\n\r\n", connection));                                // Client can choose to keep-alive
+    hdr.put(format("Content-Type: %s; charset=%s\r\n", payload.mimetype, charset)); // We just send our mime and an encoding
+    hdr.put(format("Connection: %s\r\n\r\n", connection)); // Client can choose to keep-alive
     return(hdr.data);
   }
 
@@ -76,10 +84,9 @@ struct Response {
   @property final bool ready(bool r = false){ if(r){ routed = r; } return(routed && payload.ready()); }
 }
 
-char[] parseHTTPResponseHeader(ref Response response, CGI script, HeaderType type) {
-  long clength = script.getHeader("Content-Length", -1);                              // Is the content length provided ?
-  if(clength >= 0) response.connection = script.getHeader("Connection", "Close");              // Yes ? then the script, can try to keep alive
-  if(type == HeaderType.FastCGI) {
+// parse a HTTPresponse header from an external script
+char[] parseHTTPResponseHeader(ref Response response, CGI script, HeaderType type, long clength) {
+  if (type == HeaderType.FastCGI) {
     // FastCGI type header, create response line on Status: indicator
     string status = script.getHeader("Status", "500 Internal Server Error");
     string[] inparts = status.split(" ");
@@ -96,6 +103,7 @@ char[] parseHTTPResponseHeader(ref Response response, CGI script, HeaderType typ
   return(response.hdr.data);
 }
 
+// create a standard response
 Response create(in Request request, in StatusCode statuscode = StatusCode.Ok, in string mimetype = UNSUPPORTED_FILE){
   Response response = Response(request.protocol);
   response.customheader("Server", SERVERINFO);
@@ -106,6 +114,7 @@ Response create(in Request request, in StatusCode statuscode = StatusCode.Ok, in
   return(response);
 }
 
+// send a redirect permanently response
 void redirect(ref Response response, in Request request, in string fqdn, bool isSecure = false) {
   trace("redirecting request to %s", fqdn);
   response.payload = new Empty(StatusCode.MovedPermanently);
@@ -114,18 +123,28 @@ void redirect(ref Response response, in Request request, in string fqdn, bool is
   response.ready = true;
 }
 
+// serve a not modified response
 void notmodified(ref Response response, in Request request, in string mimetype = UNSUPPORTED_FILE) {
   response.payload = new Empty(StatusCode.NotModified, mimetype);
   response.ready = true;
 }
 
+// serve a 404 domain not found page
 void domainNotFound(ref Response response, in Request request) {
   warning("requested domain '%s', was not found", request.shorthost());
   response.payload = new Message(StatusCode.NotFound, format("404 - No such domain is available\n"));
   response.ready = true;
 }
 
-void serveCGI(ref Response response, in Request request, in WebConfig config, in FileSystem fs) {
+// serve a 408 connection timed out page
+void setTimedOut(ref DriverInterface driver, ref Response response) {
+  response.payload = new Message(StatusCode.TimedOut, format("408 - Connection Timed Out\n"));
+  response.ready = true;
+  driver.send(response, driver.socket);           // Send the response, hit multiple times, send what you can and return
+}
+
+// serve a the output of an external script 
+void serveCGI(ref Response response, in Request request, in WebConfig config, in FileSystem fs, bool removeInput = true) {
   trace("requested a cgi file, execution allowed");
   string localroot = fs.localroot(request.shorthost());
   string localpath = config.localpath(localroot, request.path);
@@ -133,22 +152,23 @@ void serveCGI(ref Response response, in Request request, in WebConfig config, in
     trace("writing server variables");
     fs.serverAPI(config, request, response);
     trace("creating CGI payload");
-    response.payload = new CGI(request.command(localpath), request.inputfile(fs));
+    response.payload = new CGI(request.command(localpath), request.inputfile(fs), removeInput, request.maxtime);
     response.ready = true;
   }
 }
 
+// serve a static file from the disc, send encrypted when requested and available
 void serveStaticFile(ref Response response, in Request request, FileSystem fs) {
   trace("serving a static file");
   string localroot = fs.localroot(request.shorthost());
   FileInfo reqFile = fs.file(localroot, request.path);
-  if(request.acceptsEncoding("deflate") && reqFile.hasEncodedVersion) {
+  if (request.acceptsEncoding("deflate") && reqFile.hasEncodedVersion) {
     info("will serve %s with deflate encoding", request.path);
     reqFile.deflate = true;
     response.customheader("Content-Encoding","deflate");
   }
   response.payload = reqFile;
-  if(request.ifModified >= response.payload.mtime()) {                                        // Non modified static content
+  if (request.ifModified >= response.payload.mtime()) {                                        // Non modified static content
     trace("static file has not changed, sending notmodified");
     response.notmodified(request, response.payload.mimetype);
   }
@@ -156,6 +176,7 @@ void serveStaticFile(ref Response response, in Request request, FileSystem fs) {
   response.ready = true;
 }
 
+// serve a directory browsing request, via a message
 void serveDirectory(ref Response response, ref Request request, in WebConfig config, in FileSystem fs) {
   trace("sending browse directory");
   string localroot = fs.localroot(request.shorthost());
@@ -164,12 +185,21 @@ void serveDirectory(ref Response response, ref Request request, in WebConfig con
   response.ready = true;
 }
 
+// serve a forbidden page
 void serveForbidden(ref Response response, in Request request) {
   trace("resource is restricted from being accessed");
   response.payload = new Message(StatusCode.Forbidden, format("403 - Access to this resource has been restricted\n"));
   response.ready = true;
 }
 
+// serve a 400 bad request 
+void serveBadRequest(ref Response response, in Request request) {
+  trace("Request was malformed");
+  response.payload = new Message(StatusCode.BadRequest, format("400 - Bad Request\n"));
+  response.ready = true;
+}
+
+// serve a 404 not found page
 void notFound(ref Response response) {
   trace("resource not found");
   response.payload = new Message(StatusCode.NotFound, format("404 - The requested path does not exists on disk\n"));

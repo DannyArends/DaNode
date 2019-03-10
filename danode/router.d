@@ -1,13 +1,14 @@
 module danode.router;
 
 import danode.imports;
+import danode.cgi : CGI;
 import danode.client : Client;
 import danode.interfaces : ClientInterface, DriverInterface, StringDriver;
-import danode.httpstatus : StatusCode;
+import danode.statuscode : StatusCode;
 import danode.request : Request;
 import danode.response;
 import danode.webconfig : WebConfig;
-import danode.payload : Message, CGI;
+import danode.payload : Message;
 import danode.mimetypes : mime;
 import danode.functions : from, has, isCGI, isFILE, isDIR, Msecs, htmltime, isAllowed, writefile;
 import danode.filesystem : FileSystem, FileInfo;
@@ -29,18 +30,17 @@ class Router {
       this.filesystem = new FileSystem(logger, wwwRoot);
     }
 
-    FileSystem getFileSystem() { return(this.filesystem); }
-    WebConfig getWebConfig() { return(this.config); }
-
+    // Update the performance statistics and log the finished request
     void logRequest(in ClientInterface client, in Request request, in Response response) {
       logger.updatePerformanceStatistics(client, request, response);
       logger.logRequest(client, request, response);
     }
 
-    final bool parse(in DriverInterface driver, ref Request request, ref Response response) const {
+    // Parse the header of a request, or receive additional post data when the user is uploading
+    final bool parse(in DriverInterface driver, ref Request request, ref Response response, long maxtime = 4500) const {
       if (!driver.hasHeader()) return(false);
       if (!response.created) {
-        request.initialize(driver);
+        request.initialize(driver, maxtime);
         response = request.create();
       } else {
         request.update(driver.body);
@@ -48,15 +48,19 @@ class Router {
       return(true);
     }
 
-    final void route(DriverInterface driver, ref Request request, ref Response response) {
-      if ( !response.routed && parse(driver, request, response)) {
+    // Route a request based on the request header
+    final void route(DriverInterface driver, ref Request request, ref Response response, long maxtime = 4500) {
+      if ( !response.routed && parse(driver, request, response, maxtime + 10)) {
         if ( parsePost(request, response, filesystem) ) { // We have stored all the post data, and can deliver a response
           deliver(request, response);
         }
       }
     }
 
+    // Deliver a response to the request
     final void deliver(ref Request request, ref Response response, bool finalrewrite = false) {
+      if (!request.isValid) return response.serveBadRequest(request);
+
       string localroot = filesystem.localroot(request.shorthost());
 
       trace("%s:%s %s client (%s)", request.ip, request.port, (finalrewrite? "redirecting" : "routing"), request.id);
@@ -100,7 +104,7 @@ class Router {
           trace("localpath %s is a normal file", localpath);
           return response.serveStaticFile(request, filesystem);
         }
-        if (localpath.isDIR() && config.isAllowed(localroot, localpath)) {
+        if (localpath.isDIR() && config.dirAllowed(localroot, localpath)) {
           trace("localpath %s is a directory [%s,%s]", localpath, config.redirectdir(), config.index());
           if (config.redirectdir() && !finalrewrite)  // Route this directory request to the index page
             return this.redirectDirectory(request, response); // Redirect the directory
@@ -119,12 +123,14 @@ class Router {
       return response.notFound();  // Request is not hosted on this server
     }
 
+    // Redirect a directory browsing request to the index script
     void redirectDirectory(ref Request request, ref Response response){
       trace("redirecting directory request to index page");
       request.redirectdir(config);
       return deliver(request, response, true);
     }
 
+    // Perform a canonical redirect of a non-existing page to the index script
     void redirectCanonical(ref Request request, ref Response response){
       trace("redirecting non-existing page (canonical url) to the index page");
       request.page = request.uripath(); // Save the URL path
@@ -132,6 +138,7 @@ class Router {
       return deliver(request, response, true);
     }
 
+    // Set the verbose level by string value
     final @property int verbose(string verbose = "") {
       string[] sp = verbose.split(" ");
       int nval = NOTSET;
@@ -141,9 +148,10 @@ class Router {
     }
 }
 
+// Helper function used to make calls during a unittest, setup a driver, a client and run the request
 void runRequest(Router router, string request = "GET /dmd.d HTTP/1.1\nHost: localhost\n\n") {
   auto driver = new StringDriver(request);
-  auto client = new Client(router, driver, 100);
+  auto client = new Client(router, driver, 250);
   custom(0, "TEST", "%s:%s %s", client.ip(), client.port(), split(request, "\n")[0]);
   client.start();
   while (client.running()) {
@@ -172,6 +180,9 @@ unittest {
 
   router.runRequest("GET /ISE2.d HTTP/1.1\nHost: localhost\n\n");
   router.runRequest("POST /ISE2.d HTTP/1.1\nHost: localhost\n\n");
+
+  router.runRequest("GET /ISE3.d HTTP/1.1\nHost: localhost\nConnection: keep-alive\n\n");
+  router.runRequest("POST /ISE3.d HTTP/1.1\nHost: localhost\nConnection: keep-alive\n\n");
 
   router.runRequest("GET /test.txt HTTP/1.1\nHost: localhost\n\n");
   router.runRequest("POST /test.txt HTTP/1.1\nHost: localhost\n\n");

@@ -1,5 +1,7 @@
 module danode.ssl;
 
+import danode.log : custom, warning, info;
+
 version(SSL) {
   import deimos.openssl.ssl;
   import deimos.openssl.err;
@@ -7,8 +9,7 @@ version(SSL) {
   import danode.imports;
   import danode.client;
   import danode.server : Server;
-  import danode.client : Response;
-  import danode.log : custom, warning, info;
+  import danode.response : Response;
 
   // SSL context structure, stored relation between hostname 
   // and the SSL context, should be allocated only once available to C, and deallocated at exit
@@ -163,6 +164,7 @@ version(SSL) {
     return contexts;
   }
 
+  // Close the server SSL socket, and clean up the different contexts
   void closeSSL(Socket socket) {
     custom(1, "HTTPS", "closing server SSL socket");
     socket.close();
@@ -184,5 +186,9 @@ version(SSL) {
   unittest {
     custom(0, "FILE", "%s", __FILE__);
   }
-} // End version SSL
+} else {// End version SSL
+  unittest {
+    custom(0, "WARN", "Skipping unittest for: '%s'", __FILE__);
+  }
+}
 

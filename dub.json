@@ -13,7 +13,7 @@
 		"name": "default",
 		"targetType": "executable",
 	},
-  {
+	{
 		"name": "ssl",
 		"targetType": "executable",
 		"versions": ["SSL"],

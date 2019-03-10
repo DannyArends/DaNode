@@ -1,11 +1,12 @@
 module danode.post;
 
 import danode.imports;
-import danode.httpstatus : StatusCode;
+import danode.cgi : CGI;
+import danode.statuscode : StatusCode;
 import danode.request : Request;
 import danode.response : SERVERINFO, Response, redirect, create, notmodified;
 import danode.webconfig : WebConfig;
-import danode.payload : Message, CGI;
+import danode.payload : Message;
 import danode.mimetypes : mime;
 import danode.filesystem : FileSystem;
 import danode.functions : from, has, isCGI, isFILE, isDIR, writefile;
@@ -24,6 +25,9 @@ struct PostItem {
   long      size = 0;
 }
 
+// Parse the POST request data from the client, or waits (returning false) for more data 
+// when the entire request body is not yet available. POST data supplied in Multipart 
+// and X-form post formats are currently supported
 final bool parsePost (ref Request request, ref Response response, in FileSystem filesystem) {
   if (response.havepost || request.method != "POST") {
     response.havepost = true;
@@ -39,50 +43,60 @@ final bool parsePost (ref Request request, ref Response response, in FileSystem 
   custom(2, "POST", "received %s of %s", content.length, expectedlength);
   if(content.length < expectedlength) return(false);
 
-  string contenttype  = from(request.headers, "Content-Type");
+  string contenttype = from(request.headers, "Content-Type");
   custom(2, "POST", "content type: %s", contenttype);
 
   if (contenttype.indexOf(XFORMHEADER) >= 0) {
-    // parse the X-form content in the body of the request
     custom(1, "XFORM", "parsing %d bytes", expectedlength);
-    foreach(s; content.split("&")){
-      string[] elem = strip(s).split("=");
-      request.postinfo[ elem[0] ] = PostItem( PostType.Input, elem[0], "", elem[1] );
-    }
+    request.parseXform(content);
     custom(1, "XFORM", "# of items: %s", request.postinfo.length);
-
-  } else if(contenttype.indexOf(MPHEADER) >= 0) {
-    // parse the Multipart content in the body of the request
+  } else if (contenttype.indexOf(MPHEADER) >= 0) {
     string mpid = split(contenttype, "boundary=")[1];
-    info("header: %s, parsing %d bytes", mpid, expectedlength);
-    foreach(size_t i, part; chomp(content).split(mpid)){
-      string[] elem = strip(part).split("\r\n");
-      if (elem[0] != "--") {
-        string[] mphdr = elem[0].split("; ");
-        string key = mphdr[1][6 .. ($-1)];
-        if (mphdr.length == 2) {
-          request.postinfo[key] = PostItem(PostType.Input, key, "", join(elem[2 .. ($-1)]));
-        } else if (mphdr.length == 3) {
-          string fname = mphdr[2][10 .. ($-1)];
-          if (fname != "") {
-            string localpath = request.uploadfile(filesystem, key);
-            string mpcontent = join(elem[3 .. ($-1)], "\r\n");
-            request.postinfo[key] = PostItem(PostType.File, key, mphdr[2][10 .. ($-1)], localpath, split(elem[1],": ")[1], mpcontent.length);
-            writefile(localpath, mpcontent);
-          } else {
-            request.postinfo[key] = PostItem(PostType.Input, key, "");
-          }
-        }
-      }
-    }
-    info(", # of items: %s", request.postinfo.length);
+    custom(1, "MPART", "header: %s, parsing %d bytes", mpid, expectedlength);
+    request.parseMultipart(filesystem, content, mpid);
+    custom(1, "MPART", "# of items: %s", request.postinfo.length);
   } else {
-    warning("unsupported post content type: %s [%s] -> %s", contenttype, expectedlength, content);
+    warning("unsupported POST content type: %s [%s] -> %s", contenttype, expectedlength, content);
   }
   response.havepost = true;
   return(response.havepost);
 }
 
+// Parse X-form content in the body of the request
+final void parseXform(ref Request request, const string content) {
+  foreach (s; content.split("&")) {
+    string[] elem = strip(s).split("=");
+    request.postinfo[ elem[0] ] = PostItem( PostType.Input, elem[0], "", elem[1] );
+  }
+}
+
+// Parse Multipart content in the body of the request
+final void parseMultipart(ref Request request, in FileSystem filesystem, const string content, const string mpid) {
+  foreach (size_t i, part; chomp(content).split(mpid)) {
+    string[] elem = strip(part).split("\r\n");
+    if (elem[0] != "--") {
+      string[] mphdr = elem[0].split("; ");
+      string key = mphdr[1][6 .. ($-1)];
+      if (mphdr.length == 2) {
+        request.postinfo[key] = PostItem(PostType.Input, key, "", join(elem[2 .. ($-1)]));
+      } else if (mphdr.length == 3) {
+        string fname = mphdr[2][10 .. ($-1)];
+        if (fname != "") {
+          string localpath = request.uploadfile(filesystem, key);
+          string mpcontent = join(elem[3 .. ($-1)], "\r\n");
+          request.postinfo[key] = PostItem(PostType.File, key, mphdr[2][10 .. ($-1)], localpath, split(elem[1],": ")[1], mpcontent.length);
+          writefile(localpath, mpcontent);
+        } else {
+          request.postinfo[key] = PostItem(PostType.Input, key, "");
+        }
+      }
+    }
+  }
+}
+
+// The serverAPI functions prepares and writes out the input file for external process execution
+// The inputfile contains the SERVER, COOKIES, POST, and FILES information that can be used by the external script
+// This data is picked-up by the different APIs, and presented to the client in the regular way
 final void serverAPI(in FileSystem filesystem, in WebConfig config, in Request request, in Response response)  {
   Appender!(string) content;
 

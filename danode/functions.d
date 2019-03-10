@@ -12,9 +12,22 @@ static this(){
              9 : "Sep", 10: "Oct", 11: "Nov", 12: "Dec"];
 }
 
-// Month to index
+// Try to convert a HTML date in a string into a SysTime
+// Structure that we expect: "21 Apr 2014 20:20:13 CET"
+SysTime parseHtmlDate(const string datestr) {
+  SysTime ts =  SysTime(DateTime(-7, 1, 1, 1, 0, 0));
+  auto dateregex = regex(r"([0-9]{1,2}) ([a-z]{1,3}) ([0-9]{4}) ([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2}) cet", "g");
+  auto m = match(datestr.toLower(), dateregex);
+  if(m.captures.length == 7){
+    ts = SysTime(DateTime(to!int(m.captures[3]), monthToIndex(m.captures[2]), to!int(m.captures[1]), // 21 Apr 2014
+                          to!int(m.captures[4]), to!int(m.captures[5]), to!int(m.captures[6])));     // 20:20:13
+  }
+  return(ts);
+}
+
+// Month to index of the year
 pure int monthToIndex(in string m) {
-  for(int x = 1; x < 12; ++x) {
+  for (int x = 1; x < 12; ++x) {
     if(m.toLower() == months[x].toLower()) return x;
   }
   return -1;
@@ -48,7 +61,11 @@ pure string toD(T, U)(in T x, in U digits = 6) nothrow {
 }
 
 void writefile(in string localpath, in string content) {
-  if(content.length > 0){ auto fp = File(localpath, "wb"); fp.rawWrite(content); fp.close(); }
+  if (content.length > 0) { 
+    auto fp = File(localpath, "wb");
+    fp.rawWrite(content);
+    fp.close();
+  }
 }
 
 string htmltime(in SysTime d = Clock.currTime()) {
@@ -87,13 +104,41 @@ pure bool isAllowed(in string path) {
   return true;
 }
 
+// Where does the HTML request header end ?
+pure ptrdiff_t endofheader(T)(const(T) buffer) {
+  auto str = to!string(buffer);
+  ptrdiff_t idx = str.indexOf("\r\n\r\n");
+  if(idx <= 0) idx = str.indexOf("\n\n");
+  return(idx);
+}
+
+// Where does the HTML request body start ?
+pure ptrdiff_t bodystart(T)(const(T) buffer) {
+  auto str = to!string(buffer);
+  ptrdiff_t idx = str.indexOf("\r\n\r\n");
+  if (idx > 0) return (idx + 4);
+  idx = str.indexOf("\n\n");
+  if (idx > 0) return (idx + 2);
+  return(-1);
+}
+
+// get the HTML header contained in the buffer
+pure string fullheader(T)(const(T) buffer) {
+  auto i = bodystart(buffer);
+  if (i > 0 && i <= buffer.length)
+    return(to!string(buffer[0 .. i]));
+  return [];
+}
+
+// Which interpreter (if any) should be used for the path ?
 pure string interpreter(in string path) {
   string[] mime = mime(path).split("/");
   if(mime.length > 1) return(mime[1]);
-  return "";
+  return [];
 }
 
-string browseDir(in string root, in string localpath){
+// Browse the content of a directory, generate a rudimentairy HTML file
+string browseDir(in string root, in string localpath) {
   Appender!(string) content;
   content.put(format("Content of: %s<br>\n", localpath));
   foreach (DirEntry d; dirEntries(localpath, SpanMode.shallow)) {

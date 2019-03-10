@@ -1,7 +1,7 @@
 module danode.interfaces;
 
 import danode.imports;
-import danode.functions : Msecs;
+import danode.functions : Msecs, bodystart, endofheader, fullheader;
 import danode.response : Response;
 import danode.log : NORMAL, INFO, DEBUG;
 
@@ -61,10 +61,8 @@ abstract class DriverInterface {
     final @property long lastmodified() const { return(Msecs(modtime)); }
 
     // Byte input converted to header as string
-    final @property string header() const { 
-      if (headerEnd < 0 || headerEnd > inbuffer.data.length) return("");
-      return(to!string(inbuffer.data[0 .. headerEnd()]));
-    }
+    final @property string header() const { return(fullheader(inbuffer.data)); }
+
     // Byte input converted to body as string
     final @property string body() const {
       if (bodyStart < 0 || bodyStart > inbuffer.data.length) return("");
@@ -72,24 +70,14 @@ abstract class DriverInterface {
     }
 
     // Where does the HTML request header end ?
-    final @property ptrdiff_t headerEnd() const { 
-      ptrdiff_t idx = to!string(inbuffer.data).indexOf("\r\n\r\n");
-      if(idx <= 0) idx = to!string(inbuffer.data).indexOf("\n\n");
-      return(idx);
-    }
+    final @property ptrdiff_t endOfHeader() const { return(endofheader(inbuffer.data)); }
 
     // Where does the HTML request body begin ?
-    final @property ptrdiff_t bodyStart() const { 
-      ptrdiff_t idx = to!string(inbuffer.data).indexOf("\r\n\r\n");
-      if (idx > 0) return (idx + 4);
-      idx = to!string(inbuffer.data).indexOf("\n\n");
-      if (idx > 0) return (idx + 2);
-      return(-1);
-    }
+    final @property ptrdiff_t bodyStart() const { return(bodystart(inbuffer.data)); }
 
     // Do we have a header separator ? "\r\n\r\n" or "\n\n"
     final @property bool hasHeader() const {
-      if(headerEnd() <= 0) return(false);
+      if(endOfHeader <= 0) return(false);
       return(true);
     }
 }

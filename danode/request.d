@@ -3,70 +3,92 @@ module danode.request;
 import danode.imports;
 import danode.filesystem : FileSystem;
 import danode.interfaces : ClientInterface, DriverInterface;
-import danode.functions : interpreter, from, toD, monthToIndex;
+import danode.functions : interpreter, from, parseHtmlDate;
 import danode.webconfig : WebConfig;
 import danode.http : HTTP;
 import danode.post : PostItem, PostType;
 import danode.log : custom, info, trace, warning;
 
-SysTime parseHtmlDate(const string datestr){ // 21 Apr 2014 20:20:13 CET
-  SysTime ts =  SysTime(DateTime(-7, 1, 1, 1, 0, 0));
-  auto dateregex = regex(r"([0-9]{1,2}) ([a-z]{1,3}) ([0-9]{4}) ([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2}) cet", "g");
-  auto m = match(datestr.toLower(), dateregex);
-  if(m.captures.length == 7){
-    ts = SysTime(DateTime(to!int(m.captures[3]), monthToIndex(m.captures[2]), to!int(m.captures[1]),        // 21 Apr 2014
-                          to!int(m.captures[4]), to!int(m.captures[5]), to!int(m.captures[6])));    // 20:20:13
+// The Request-Method indicates which method is to be performed on the specified resource
+enum RequestMethod : string {
+  GET = "GET", HEAD = "HEAD", POST = "POST", PUT = "PUT", DELETE = "DELETE", 
+  CONNECT = "CONNECT", OPTIONS = "OPTIONS", TRACE = "TRACE"
+}
+
+// The HTTP-Version indicates which protocol version is requested to obtain the specified resource
+enum HTTPVersion : string {
+  v09 = "HTTP/0.9", v10 = "HTTP/1.0", v11 = "HTTP/1.1", v20 = "HTTP/2", v30 = "HTTP/3"
+}
+
+// Parse the HTTP-Version, throw an error if it cannot be parsed
+pure HTTPVersion parseHTTPVersion(const string line) {
+  foreach (immutable v; EnumMembers!HTTPVersion) {
+    if (v == line) return(v);
   }
-  return(ts);
+  throw new Exception(format("invalid HTTP-Version requested: %s", line));
+}
+
+// Parse the Request-Line: "method uri protocol"
+pure bool parseRequestLine(ref Request request, const string line) {
+  auto parts = line.split(" ");
+  if (parts.length < 3)
+    throw new Exception(format("malformed Request-Line: '%s'", line));
+
+  request.method = to!RequestMethod(strip(parts[0]));
+  request.uri = request.url = strip(join(parts[1 .. ($-1)], " "));
+  request.protocol = parseHTTPVersion(strip(parts[($-1)]));
+  return(true);
 }
 
 struct Request {
-  string            ip; /// IP location of the client
-  long              port; /// Port at which the client is connected
-  string            body; /// The body of the HTMLrequest
-  bool              isSecure; /// Was security requested
-  UUID              id; /// md5UUID for this request
-  string            method = "GET"; /// requested HTTP method (GET, POST, HEAD)
-  string            uri = "/"; /// uri requested
-  string            url = "/"; /// url requested
-  string            page; /// page is used when redirecting
-  string            dir; /// dir is used in directory redirection
-  string            protocol = "HTTP/1.1"; /// protocol requested
-  string[string]    headers; /// Associative array holding the header values
-  SysTime           starttime; /// start time of the Request
-  PostItem[string]  postinfo;  /// Associative array holding the post parameters and values
+  string ip; /// IP location of the client
+  long port; /// Port at which the client is connected
+  string body; /// the body of the HTMLrequest
+  bool isSecure; /// was a secure request made
+  bool isValid; /// Is the header valid ?
+  UUID id; /// md5UUID for this request
+  RequestMethod method; /// requested HTTP method
+  string uri = "/"; /// uri requested
+  string url = "/"; /// url requested
+  string page; /// page is used when performing a canonical redirect
+  string dir; /// dir is used in directory redirection
+  HTTPVersion protocol; /// protocol requested
+  string[string] headers; /// Associative array holding the header values
+  SysTime starttime; /// start time of the Request
+  PostItem[string] postinfo;  /// Associative array holding the post parameters and values
+  long maxtime;  /// Maximum time in ms before the request is discarded
 
   // Start a new Request, and parseHeader on the DriverInterface
-  final void initialize(const DriverInterface driver) {
+  final void initialize(const DriverInterface driver, long maxtime = 4500) {
     this.ip = driver.ip;
     this.port = driver.port;
     this.body = driver.body;
     this.isSecure = driver.isSecure;
     this.starttime = Clock.currTime();
+    this.maxtime = maxtime;
     this.id = md5UUID(format("%s:%d-%s", driver.ip, driver.port, starttime));
-    this.parseHeader(driver.header);
+    this.isValid = this.parseHeader(driver.header);
     info("request: %s to %s from %s:%d - %s", method, uri, this.ip, this.port, this.id);
     trace("request header: %s", driver.header);
   }
 
   // Parse the HTML request header (method, uri, protocol) as well as the supplemental headers
-  final void parseHeader(const string header) {
-    string[] parts;
-    foreach(i, line; header.split("\n")){
-      if(i == 0) {                    // first line: method uri protocol
-        parts = line.split(" ");
-        if(parts.length >= 3) {
-          this.method = strip(parts[0]);
-          this.uri = this.url = strip(join(parts[1 .. ($-1)], " "));
-          this.protocol = strip(parts[($-1)]);
-        } else {
-          warning("could not decode header line for client");
+  final bool parseHeader(const string header) {
+    try {
+      foreach (i, line; header.split("\n")) {
+        if (i == 0) {
+          this.parseRequestLine(line);
+        } else { // next lines: header-param: attribute 
+          auto parts = line.split(":");
+          if (parts.length > 1) this.headers[strip(parts[0])] = strip(join(parts[1 .. $], ":"));
         }
-      } else {                        // next lines: header-param: attribute 
-        parts = line.split(":");
-        if(parts.length > 1) this.headers[strip(parts[0])] = strip(join(parts[1 .. $], ":"));
       }
+    } catch (Exception e) {
+      warning("parseHeader exception: %s", e.msg);
+      return(false);
     }
+    trace("parseHeader %s %s %s, nParams: %d", this.method, this.uri, this.protocol, this.headers.length);
+    return(true);
   }
 
   // New input was obtained and / or the driver has been changed, update the driver
@@ -75,15 +97,19 @@ struct Request {
   // The Host header requested in the request
   final @property string host() const { 
     ptrdiff_t i = headers.from("Host").indexOf(":");
-    if(i > 0) return(headers.from("Host")[0 .. i]);
+    if (i > 0) {
+      return(headers.from("Host")[0 .. i]);
+    }
     return(headers.from("Host")); 
   }
 
   // The Post from the Host header in the request
   final @property ushort serverport() const {
     ptrdiff_t i = headers.from("Host").indexOf(":");
-    if(i > 0){ return( to!ushort(headers.from("Host")[(i+1) .. $])); } 
-    return(to!ushort(80));
+    if (i > 0) { 
+      return( to!ushort(headers.from("Host")[(i+1) .. $]));
+    }
+    return(isSecure ? to!ushort(443) : to!ushort(80)); // return the default ports
   }
 
   // Input file generated storing the headers of the request
@@ -145,4 +171,3 @@ struct Request {
 unittest {
   custom(0, "FILE", "%s", __FILE__);
 }
-
