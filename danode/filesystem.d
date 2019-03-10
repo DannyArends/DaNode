@@ -19,8 +19,9 @@ class FileInfo : Payload {
     File*     fp = null;
 
   public:
-    this(string path){ this.path = path; }
+    this(string path) { this.path = path; }
 
+    // Does the file needs updating
     final bool needsupdate(size_t buffersize = 4096) {
       if( fitsInBuffer(buffersize) && needsBuffer() ) {
         if (!buffered) {
@@ -35,11 +36,13 @@ class FileInfo : Payload {
       return false;
     }
 
+    // Does the file fit in the buffer
     final bool fitsInBuffer(size_t buffersize = 4096) {
       if(fileSize() > 0 && fileSize() < buffersize){ return(true); }
       return(false);
     }
 
+    // Buffer the file
     final void buffer() { synchronized {
       if(buf is null) buf = new char[](fileSize());
       buf.length = fileSize();
@@ -79,6 +82,7 @@ class FileInfo : Payload {
       return(fileSize());
     }
 
+    // Send the file as a stream
     final char[] asStream(ptrdiff_t from, ptrdiff_t maxsize = 1024) {
       if(buf is null) buf = new char[](maxsize);
       char[] slice = [];
@@ -144,12 +148,14 @@ class FileSystem {
       scan();
     }
 
+    // Scan the whole filesystem
     final void scan(){ synchronized {
       foreach (DirEntry d; dirEntries(root, SpanMode.shallow)){ if(d.isDir()){
         domains[d.name] = scan(d.name);
       } }
     } }
 
+    // Scan a single directory
     final Domain scan(string dname){ synchronized {
       Domain domain;
       foreach (DirEntry f; dirEntries(dname, SpanMode.depth)) {
@@ -171,8 +177,10 @@ class FileSystem {
       return(domain);
     } }
 
+    // Get the localroot of the domain
     final string localroot(string hostname) const { return(format("%s%s",this.root, hostname)); }
 
+    // Get the file at path from the localroot
     final FileInfo file(string localroot, string path){ synchronized {
       if(!domains[localroot].files.has(path) && exists(format("%s%s", localroot, path))){
         custom(1, "SCAN", "new file %s, rescanning index: %s", path, localroot);
@@ -182,6 +190,7 @@ class FileSystem {
       return new FileInfo("");
     } }
 
+    // Rebuffer all files
     final void rebuffer() {
       foreach(ref d; domains.byKey){ foreach(ref f; domains[d].files.byKey){
         domains[d].files[f].buffer();
