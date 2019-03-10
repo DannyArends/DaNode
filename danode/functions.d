@@ -106,15 +106,25 @@ pure bool isAllowed(in string path) {
 
 // Where does the HTML request header end ?
 pure ptrdiff_t endofheader(T)(const(T) buffer) {
-  ptrdiff_t idx = to!string(buffer).indexOf("\r\n\r\n");
-  if(idx <= 0) idx = to!string(buffer).indexOf("\n\n");
+  auto str = to!string(buffer);
+  ptrdiff_t idx = str.indexOf("\r\n\r\n");
+  if(idx <= 0) idx = str.indexOf("\n\n");
   return(idx);
 }
 
+pure ptrdiff_t bodystart(T)(const(T) buffer) {
+  auto str = to!string(buffer);
+  ptrdiff_t idx = str.indexOf("\r\n\r\n");
+  if (idx > 0) return (idx + 4);
+  idx = str.indexOf("\n\n");
+  if (idx > 0) return (idx + 2);
+  return(-1);
+}
+
 // get the HTML header contained in the buffer
-pure string getheader(T)(const(T) buffer) {
-  auto i = endofheader(buffer);
-  if (i > 0 && i < buffer.length)
+pure string fullheader(T)(const(T) buffer) {
+  auto i = bodystart(buffer);
+  if (i > 0 && i <= buffer.length)
     return(to!string(buffer[0 .. i]));
   return [];
 }

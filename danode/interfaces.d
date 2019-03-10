@@ -1,7 +1,7 @@
 module danode.interfaces;
 
 import danode.imports;
-import danode.functions : Msecs, endofheader, getheader;
+import danode.functions : Msecs, bodystart, endofheader, fullheader;
 import danode.response : Response;
 import danode.log : NORMAL, INFO, DEBUG;
 
@@ -61,7 +61,7 @@ abstract class DriverInterface {
     final @property long lastmodified() const { return(Msecs(modtime)); }
 
     // Byte input converted to header as string
-    final @property string header() const { return(getheader(inbuffer.data)); }
+    final @property string header() const { return(fullheader(inbuffer.data)); }
 
     // Byte input converted to body as string
     final @property string body() const {
@@ -73,13 +73,7 @@ abstract class DriverInterface {
     final @property ptrdiff_t endOfHeader() const { return(endofheader(inbuffer.data)); }
 
     // Where does the HTML request body begin ?
-    final @property ptrdiff_t bodyStart() const { 
-      ptrdiff_t idx = to!string(inbuffer.data).indexOf("\r\n\r\n");
-      if (idx > 0) return (idx + 4);
-      idx = to!string(inbuffer.data).indexOf("\n\n");
-      if (idx > 0) return (idx + 2);
-      return(-1);
-    }
+    final @property ptrdiff_t bodyStart() const { return(bodystart(inbuffer.data)); }
 
     // Do we have a header separator ? "\r\n\r\n" or "\n\n"
     final @property bool hasHeader() const {

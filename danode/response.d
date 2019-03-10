@@ -20,7 +20,7 @@ immutable string SERVERINFO = "DaNode/0.0.2 (Universal)";
 
 struct Response {
   string            protocol = "HTTP/1.1";
-  string            connection = "Close";
+  string            connection = "Keep-Alive";
   string            charset = "UTF-8";
   long              maxage = 0;
   string[string]    headers;
@@ -43,14 +43,16 @@ struct Response {
     // Scripts are allowed to have their own header
     if (payload.type == PayloadType.Script) {
       CGI script = to!CGI(payload);
-      connection = "Close";
       HeaderType type = script.headerType();
-      info("Header-type: %s", type);
-      if (type != HeaderType.None) {
-        return(parseHTTPResponseHeader(this, script, type));
+      long clength = script.getHeader("Content-Length", -1); // Is the content length provided ?
+      if (type != HeaderType.None && clength > 0) {
+        return(parseHTTPResponseHeader(this, script, type, clength));
+      } else {
+        custom(1, "WARN", "script '%s', failed to generate a valid header (%s, %d)", script.command, type, clength);
+        connection = "Close";
       }
-      warning("script '%s',  failed to generate a header", script.command);
     }
+    // Construct the header for all other requests (and scripts that failed to provide a valid one
     hdr.put(format("%s %d %s\r\n", protocol, payload.statuscode, payload.statuscode.reason));
     foreach (key, value; headers) { 
       hdr.put(format("%s: %s\r\n", key, value));
@@ -83,10 +85,7 @@ struct Response {
 }
 
 // parse a HTTPresponse header from an external script
-char[] parseHTTPResponseHeader(ref Response response, CGI script, HeaderType type) {
-  long clength = script.getHeader("Content-Length", -1); // Is the content length provided ?
-  if (clength >= 0) 
-    response.connection = script.getHeader("Connection", "Close"); // Yes ? then the script, can try to keep alive
+char[] parseHTTPResponseHeader(ref Response response, CGI script, HeaderType type, long clength) {
   if (type == HeaderType.FastCGI) {
     // FastCGI type header, create response line on Status: indicator
     string status = script.getHeader("Status", "500 Internal Server Error");
