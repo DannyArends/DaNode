@@ -104,7 +104,7 @@ class Router {
           trace("localpath %s is a normal file", localpath);
           return response.serveStaticFile(request, filesystem);
         }
-        if (localpath.isDIR() && config.isAllowed(localroot, localpath)) {
+        if (localpath.isDIR() && config.dirAllowed(localroot, localpath)) {
           trace("localpath %s is a directory [%s,%s]", localpath, config.redirectdir(), config.index());
           if (config.redirectdir() && !finalrewrite)  // Route this directory request to the index page
             return this.redirectDirectory(request, response); // Redirect the directory

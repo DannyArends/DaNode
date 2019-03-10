@@ -64,8 +64,8 @@ struct WebConfig {
   }
 
   // Is the directory allowed to be viewed ?
-  @property bool isAllowed(in string localroot, in string path) const {
-    trace("isAllowed: %s %s", localroot, path);
+  @property bool dirAllowed(in string localroot, in string path) const {
+    trace("dirAllowed: %s %s", localroot, path);
     string npath = path[(localroot.length + 1) .. $];
     trace("npath: %s", npath);
     if (npath == "") // path / is always allowed
