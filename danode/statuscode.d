@@ -67,8 +67,8 @@ unittest {
   import danode.log : custom;
   custom(0, "FILE", "%s", __FILE__);
   custom(0, "TEST", "statuscodes: %s", EnumMembers!StatusCode.length);
-  foreach (immutable v; EnumMembers!StatusCode) {
+  /*foreach (immutable v; EnumMembers!StatusCode) {
     custom(2, "TEST", "[%s] %s: \"%s\"", v.code, v, v.reason);
-  }
+  }*/
 }
 
