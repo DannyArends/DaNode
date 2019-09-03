@@ -6,7 +6,7 @@ import danode.mimetypes : CGI_FILE, mime, UNSUPPORTED_FILE;
 
 immutable string timeFmt =  "%s %s %s %s:%s:%s %s";
 immutable string[int] months; 
-static this(){
+shared static this(){
   months = [ 1 : "Jan", 2 : "Feb", 3 : "Mar", 4 : "Apr",
              5 : "May", 6 : "Jun", 7 : "Jul", 8 : "Aug",
              9 : "Sep", 10: "Oct", 11: "Nov", 12: "Dec"];
