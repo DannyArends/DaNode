@@ -50,7 +50,7 @@ Start the web server at a specific port (e.g. 8080)
 
     ./danode/server -p 8080
 
-Confirm that the web server is running by going to: http://127.0.0.1:8080/
+Confirm that the web server is running by going to: http://localhost:8080/
 
 ##### Enable HTTPs support
 
