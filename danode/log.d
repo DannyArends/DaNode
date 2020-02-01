@@ -45,6 +45,15 @@ void abort(in string s, int exitcode = -1){
 /* Expect condition cond, otherwise abort the process */
 void expect(A...)(bool cond, string msg, auto ref A args) { if (!cond) abort(format(msg, args), -1); }
 
+double mean(const(long)[] data){
+  if(data.length == 0) return(0.0f);
+  long sum = 0;
+  for(size_t x = 0; x < data.length; x++){
+    sum += data[x];
+  }
+  return(sum / cast(double)(data.length));
+}
+
 struct Info {
   long[StatusCode]      responses;
   Appender!(long[])     starttimes;
