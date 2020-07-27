@@ -97,7 +97,13 @@ version(SSL) {
       override void closeConnection() { synchronized {
         if (socket !is null) {
           try {
-            if(socket.isAlive()) SSL_shutdown(ssl);
+            if (socket.isAlive()) {
+              if (ssl) {
+                SSL_shutdown(ssl);
+              } else {
+                error("No SSL object to close, are certificates available?");
+              }
+            }
             socket.shutdown(SocketShutdown.BOTH);
             socket.close();
           } catch(Exception e) {
