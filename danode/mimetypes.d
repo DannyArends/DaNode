@@ -44,10 +44,11 @@ pure string mime(string i) {
     case ".tar"  : return "application/x-tar";
     case ".z"    : return "application/x-compress";
     case ".zip"  : return "application/x-zip-compressed";
-    case ".bz"    : return "application/x-bzip";
-    case ".bz2"    : return "application/x-bzip2";
-    case ".jar"    : return "application/java-archive";
+    case ".bz"   : return "application/x-bzip";
+    case ".bz2"  : return "application/x-bzip2";
+    case ".jar"  : return "application/java-archive";
 
+    case ".bib", ".bibtex"  : return "application/x-bibtex";
     case ".doc", ".dot"  : return "application/msword";
     case ".docx" : return "applications/vnd.openxmlformats-officedocument.wordprocessingml.document";
     case ".dotx" : return "applications/vnd.openxmlformats-officedocument.wordprocessingml.template";
