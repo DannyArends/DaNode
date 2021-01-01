@@ -115,9 +115,9 @@ class FileInfo : Payload {
         return(asStream(from, maxsize));
       } else {
         if(hasEncodedVersion && deflate) {
-          if(from < encbuf.length) return( encbuf[from .. to!ptrdiff_t(fmin(from+maxsize, $))] );
+          if(from < encbuf.length) return( encbuf[from .. to!ptrdiff_t(min(from+maxsize, $))] );
         } else {
-          if(from < buf.length) return( buf[from .. to!ptrdiff_t(fmin(from+maxsize, $))] );
+          if(from < buf.length) return( buf[from .. to!ptrdiff_t(min(from+maxsize, $))] );
         }
       }
       return([]);

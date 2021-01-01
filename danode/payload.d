@@ -39,7 +39,7 @@ class Message : Payload {
     final @property string mimetype() const { return mime; }
     final @property StatusCode statuscode() const { return status; }
     char[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 1024) { 
-      return( message[from .. to!ptrdiff_t(fmin(from+maxsize, $))].dup );
+      return( message[from .. to!ptrdiff_t(min(from+maxsize, $))].dup );
     }
 }
 

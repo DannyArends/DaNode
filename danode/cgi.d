@@ -107,7 +107,7 @@ class CGI : Payload {
     const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 1024) {
       if (from + endOfHeader > from)
         from += bodyStart;
-      return(external.output(from)[0 .. to!ptrdiff_t(fmin(from+maxsize, $))]);
+      return(external.output(from)[0 .. to!ptrdiff_t(min(from+maxsize, $))]);
     }
 
     // Position of the end of the header
