@@ -53,7 +53,7 @@ version(SSL) {
 
   // Create a new SSL context pointer using a certificate, chain and privateKey file
   SSL_CTX* createCTX(string certFile, string keyFile, string chainFile) {
-    SSL_CTX* ctx = SSL_CTX_new(SSLv23_server_method());
+    SSL_CTX* ctx = SSL_CTX_new(SSLv3_server_method());
     sslAssert(!(ctx is null));
     sslAssert(SSL_CTX_use_certificate_file(ctx, cast(const char*) toStringz(certFile), SSL_FILETYPE_PEM) > 0);
     if (exists(chainFile) && isFile(chainFile)) {

@@ -64,7 +64,7 @@ version(SSL) {
             this.ssl = SSL_new(contexts[0].context);
 
             custom(1, "HTTPS", "setting the socket handle I/O to SSL* object");
-            this.ssl.SSL_set_fd(socket.handle());
+            this.ssl.SSL_set_fd(to!int(socket.handle()));
 
             custom(1, "HTTPS", "SSL_set_accept_state to server mode");
             SSL_set_accept_state(this.ssl);
