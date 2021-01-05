@@ -11,6 +11,15 @@ version(SSL) {
   import danode.server : Server;
   import danode.response : Response;
 
+  //--- Add shims for OpenSSL 1.1, from: https://github.com/CyberShadow/ae
+  alias SSLv3_server_method = TLSv1_server_method;
+  void SSL_load_error_strings() {}
+  struct OPENSSL_INIT_SETTINGS;
+  extern(C) void OPENSSL_init_ssl(ulong opts, const OPENSSL_INIT_SETTINGS *settings) nothrow;
+  void SSL_library_init() { OPENSSL_init_ssl(0, null); }
+  void OpenSSL_add_all_algorithms() { SSL_library_init(); }
+  // --- //
+  
   // SSL context structure, stored relation between hostname 
   // and the SSL context, should be allocated only once available to C, and deallocated at exit
   struct SSLcontext {
