@@ -11,7 +11,7 @@
 	"targetPath": "danode",
 	"targetName": "server",
 	"configurations": [
-  {
+	{
 		"name": "default",
 		"targetType": "executable",
 	},
