@@ -6,8 +6,6 @@
 	"importPaths": ["danode"],
 	"sourcePaths": ["danode"],
 	"mainSourceFile": "danode/server.d",
-	"lflags-windows-x86_64": ["/LIBPATH:C:/OpenSSL-Win64/lib"],
-	"libs-windows-x86_64": ["libssl", "libcrypto"],
 	"targetPath": "danode",
 	"targetName": "server",
 	"configurations": [
@@ -19,6 +17,8 @@
 		"name": "ssl",
 		"targetType": "executable",
 		"versions": ["SSL"],
+    "lflags-windows-x86_64": ["/LIBPATH:C:/OpenSSL-Win64/lib"],
+    "libs-windows-x86_64": ["libssl", "libcrypto"],
 		"dependencies": {
 			"openssl": "==1.1.6+1.0.1g"
 		}

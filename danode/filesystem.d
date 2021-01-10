@@ -14,16 +14,21 @@ class FileInfo : Payload {
     string    path;
     SysTime   btime;
     bool      buffered = false;
+    size_t    buffermaxsize;
     char[]    buf = null;
     char[]    encbuf = null;
     File*     fp = null;
 
   public:
-    this(string path) { this.path = path; }
+    this(string path, size_t buffermaxsize) {
+      this.path = path;
+      this.buffermaxsize = buffermaxsize;
+    }
 
     // Does the file needs updating
-    final bool needsupdate(size_t buffersize = 4096) {
-      if( fitsInBuffer(buffersize) && needsBuffer() ) {
+    final bool needsupdate() {
+      if (!isStaticFile()) return false;
+      if (fileSize() > 0 && fileSize() < buffermaxsize) {
         if (!buffered) {
           info("need to buffer file record: %s", path);
           return true;
@@ -32,14 +37,10 @@ class FileInfo : Payload {
           info("re-buffer stale file record: %s", path);
           return true;
         }
+      }else{
+        info("file %s does not fit into the buffer (%d)", path, buffermaxsize);
       }
       return false;
-    }
-
-    // Does the file fit in the buffer
-    final bool fitsInBuffer(size_t buffersize = 4096) {
-      if(fileSize() > 0 && fileSize() < buffersize){ return(true); }
-      return(false);
     }
 
     // Buffer the file
@@ -68,7 +69,7 @@ class FileInfo : Payload {
     final @property string content(){ return( to!string(bytes(0, length)) ); }
     final @property bool realfile() const { return(path.exists()); }
     final @property bool hasEncodedVersion() const { return(encbuf !is null); }
-    final @property bool needsBuffer() { return(!path.isCGI()); }
+    final @property bool isStaticFile() { return(!path.isCGI()); }
     final @property SysTime mtime() const { if(!realfile){ return btime; } return path.timeLastModified(); }
     final @property long ready() { return(true); }
     final @property PayloadType type() const { return(PayloadType.Message); }
@@ -163,9 +164,9 @@ class FileSystem {
           string shortname = replace(f.name[dname.length .. $], "\\", "/");
           custom(1, "SCAN", "file: %s -> %s", f.name, shortname);
           if (!domain.files.has(shortname)) {
-            domain.files[shortname] = new FileInfo(f.name);
+            domain.files[shortname] = new FileInfo(f.name, maxsize);
             domain.entries++;
-            if (domain.files[shortname].needsupdate(maxsize)) {
+            if (domain.files[shortname].needsupdate()) {
               domain.files[shortname].buffer();
               domain.buffered++;
             }
@@ -187,7 +188,7 @@ class FileSystem {
         domains[localroot] = scan(localroot);
       }
       if(domains[localroot].files.has(path)) return(domains[localroot].files[path]);
-      return new FileInfo("");
+      return new FileInfo("", maxsize);
     } }
 
     // Rebuffer all files
