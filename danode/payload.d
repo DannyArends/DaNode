@@ -52,17 +52,18 @@ class Message : Payload {
     }
 }
 
+/* Implementation of the Payload interface, by using an underlying file (static / deflate / cgi) */
 class FilePayload : Payload {
   public:
-    bool      deflate = false;
+    bool      deflate = false; // Is a deflate version of the file available ?
   private:
-    string    path;
-    SysTime   btime;
-    bool      buffered = false;
-    size_t    buffermaxsize;
-    char[]    buf = null;
-    char[]    encbuf = null;
-    File*     fp = null;
+    string    path; // Path of the file
+    SysTime   btime; // Time buffered
+    bool      buffered = false; // Is buffered ?
+    size_t    buffermaxsize; // Maximum size of the buffer
+    char[]    buf = null; // Byte buffer of the file
+    char[]    encbuf = null; // Encoded buffer for the file
+    File*     fp = null; // Pointer to the file
 
   public:
     this(string path, size_t buffermaxsize) {
@@ -70,10 +71,10 @@ class FilePayload : Payload {
       this.buffermaxsize = buffermaxsize;
     }
 
-    // Does the file needs updating
+    /* Does the file require to be updated before sending ? */
     final bool needsupdate() {
-      if (!isStaticFile()) return false;
-      if (fileSize() > 0 && fileSize() < buffermaxsize) {
+      if (!isStaticFile()) return false; // CGI files are never buffered, since they are executed
+      if (fileSize() > 0 && fileSize() < buffermaxsize) { //
         if (!buffered) {
           info("need to buffer file record: %s", path);
           return true;
@@ -88,7 +89,9 @@ class FilePayload : Payload {
       return false;
     }
 
-    // Buffer the file
+    /* Reads the file into the internal buffer, and compress the buffer to the enc buffer
+       Updates the buffer time and status.
+    */
     final void buffer() { synchronized {
       if(buf is null) buf = new char[](fileSize());
       buf.length = fileSize();
@@ -141,7 +144,7 @@ class FilePayload : Payload {
       return(fileSize());
     }
 
-    /* Send the file from the underlying raw byte source stream */
+    /* Send the file from the underlying raw byte source stream using fseek, fp are closed */
     final char[] asStream(ptrdiff_t from, ptrdiff_t maxsize = 1024) {
       if(buf is null) buf = new char[](maxsize);
       char[] slice = [];

@@ -67,7 +67,7 @@ class FileSystem {
       return(domain);
     } }
 
-    /* Get the localroot of the domain (TODO is there a bug, did I asumme this.root should always end in a /) */
+    /* Get the localroot of the domain (TODO: Is there a bug, did I require that this.root should always end in a '/' ?) */
     final string localroot(string hostname) const { return(format("%s%s", this.root, hostname)); }
 
     /* Get the FilePayload at path from the localroot, with update check on buffers */
