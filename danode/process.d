@@ -12,8 +12,7 @@ struct WaitResult {
   int status; /// Exit status when terminated
 }
 
-// Set a filestream to nonblocking mode
-// TODO: Nonblocking mode is Posix only, this function should work for non-posix systems as well
+/* Set a filestream to nonblocking mode, if not Posix, use winbase.h */
 bool nonblocking(ref File file) {
   version(Posix) {
     return(fcntl(fileno(file.getFP()), F_SETFL, O_NONBLOCK) != -1); 
