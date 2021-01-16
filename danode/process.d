@@ -51,7 +51,6 @@ class Process : Thread {
     Pipe              pStdErr;              /// Error pipe
 
     WaitResult        process;              /// Process try/wait results
-    Pid               cpid;
     SysTime           starttime;            /// Time in ms since this process came alive
     SysTime           modified;             /// Time in ms since this process was modified
     long              maxtime;              /// Maximum time in ms before we kill the process
@@ -158,7 +157,7 @@ class Process : Thread {
         fStdIn = File(inputfile, "r");
         pStdOut = pipe(); pStdErr = pipe();
         custom(1, "PROC", "command: %s < %s", command, inputfile);
-        cpid = spawnShell(command, fStdIn, pStdOut.writeEnd, pStdErr.writeEnd, null);
+        auto cpid = spawnShell(command, fStdIn, pStdOut.writeEnd, pStdErr.writeEnd, null);
 
         fStdOut = pStdOut.readEnd;
         if(!nonblocking(fStdOut) && fStdOut.isOpen()) custom(2, "WARN", "unable to create nonblocking stdout pipe for command");
@@ -173,7 +172,7 @@ class Process : Thread {
           Thread.sleep(msecs(1));
         }
         if (!process.terminated) {
-          warning("command: %s < %s did not finish in time [%s msecs]", command, inputfile, maxtime); 
+          warning("command: %s < %s did not finish in time [%s msecs]", command, inputfile, time()); 
           killProcess(cpid, 9); 
           process = WaitResult(true, wait(cpid));
         }
