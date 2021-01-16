@@ -28,17 +28,14 @@ bool nonblocking(ref File file) {
 version(Posix) {
   alias kill killProcess;
 }else{
-  /* Windows hack spawn a new process and kill the unning process */
-  void killProcess(Pid pid, uint signal){
-    string cmd = format("taskkill /F /T /PID %d", pid.processID);
-    executeShell(cmd);
-  }
+  /* Windows hack spawn a new process and kill the still running process */
+  void killProcess(Pid pid, uint signal) { executeShell(format("taskkill /F /T /PID %d", pid.processID)); }
 }
 
-// The Process class provides external process communication via pipes, to the web language interpreter
-// process runs as a thread inside the web server. Output of the running process should be queried via 
-// the output() function. When there is any output on the stderr of the process (stored in errbuffer), 
-// the error buffer will be served. only if the error buffer is empty, will outbuffer be served.
+/* The Process class provides external process communication via pipes, to the web language interpreter
+   process runs as a thread inside the web server. Output of the running process should be queried via 
+   the output() function. When there is any output on the stderr of the process (stored in errbuffer), 
+   the error buffer will be served. only if the error buffer is empty, will outbuffer be served. */
 class Process : Thread {
   private:
     string            command;              /// Command to execute
