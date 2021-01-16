@@ -28,7 +28,7 @@ bool nonblocking(ref File file) {
 version(Posix) {
   alias kill killProcess;
 }else{
-  /* Windows hack spawn a new process and kill the still running process */
+  /* Windows hack: Spawn a new process to kill the still running process */
   void killProcess(Pid pid, uint signal) { executeShell(format("taskkill /F /T /PID %d", pid.processID)); }
 }
 
@@ -173,7 +173,7 @@ class Process : Thread {
         }
         if (!process.terminated) {
           warning("command: %s < %s did not finish in time [%s msecs]", command, inputfile, time()); 
-          killProcess(cpid, 9); 
+          killProcess(cpid, 9);
           process = WaitResult(true, wait(cpid));
         }
         trace("command finished %d after %s msecs", status(), time());
