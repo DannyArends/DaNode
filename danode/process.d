@@ -18,7 +18,20 @@ bool nonblocking(ref File file) {
   version(Posix) {
     return(fcntl(fileno(file.getFP()), F_SETFL, O_NONBLOCK) != -1); 
   }else{
-    return(false);
+    import core.sys.windows.winbase;
+    auto x = PIPE_NOWAIT;
+    auto res = SetNamedPipeHandleState(file.windowsHandle(), &x, null, null);
+    return(res != 0);
+  }
+}
+
+version(Posix) {
+  alias kill killProcess;
+}else{
+  /* Windows hack spawn a new process and kill the unning process */
+  void killProcess(Pid pid, uint signal){
+    string cmd = format("taskkill /F /T /PID %d", pid.processID);
+    executeShell(cmd);
   }
 }
 
@@ -41,6 +54,7 @@ class Process : Thread {
     Pipe              pStdErr;              /// Error pipe
 
     WaitResult        process;              /// Process try/wait results
+    Pid               cpid;
     SysTime           starttime;            /// Time in ms since this process came alive
     SysTime           modified;             /// Time in ms since this process was modified
     long              maxtime;              /// Maximum time in ms before we kill the process
@@ -126,7 +140,10 @@ class Process : Thread {
         file.close();
       }
     }
+    
+    @property void notifyovertime() { maxtime = -1; }
 
+    
     // Execute the process
     // check the input path, and create a pipe:StdIn to the input file
     // create 2 pipes for the external process stdout & stderr
@@ -144,7 +161,7 @@ class Process : Thread {
         fStdIn = File(inputfile, "r");
         pStdOut = pipe(); pStdErr = pipe();
         custom(1, "PROC", "command: %s < %s", command, inputfile);
-        auto cpid = spawnShell(command, fStdIn, pStdOut.writeEnd, pStdErr.writeEnd, null);
+        cpid = spawnShell(command, fStdIn, pStdOut.writeEnd, pStdErr.writeEnd, null);
 
         fStdOut = pStdOut.readEnd;
         if(!nonblocking(fStdOut) && fStdOut.isOpen()) custom(2, "WARN", "unable to create nonblocking stdout pipe for command");
@@ -160,7 +177,7 @@ class Process : Thread {
         }
         if (!process.terminated) {
           warning("command: %s < %s did not finish in time [%s msecs]", command, inputfile, maxtime); 
-          kill(cpid, 9); 
+          killProcess(cpid, 9); 
           process = WaitResult(true, wait(cpid));
         }
         trace("command finished %d after %s msecs", status(), time());

@@ -9,6 +9,7 @@ import danode.functions : isCGI;
 enum PayloadType { Message, Script, File }
 enum HeaderType { None, FastCGI, HTTP10, HTTP11 }
 
+/* Payload interface, Payload is carried by the Response structure, not the Request structure */
 interface Payload {
   public:
     @property long                ready();
@@ -21,6 +22,7 @@ interface Payload {
     const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 1024);
 }
 
+/* Implementation of the Payload interface, by using an empty string message */
 class Empty : Message {
   public:
     this(StatusCode status, string mime = UNSUPPORTED_FILE) {
@@ -28,6 +30,7 @@ class Empty : Message {
     }
 }
 
+/* Implementation of the Payload interface, by using an underlying string buffer */
 class Message : Payload {
   private:
     StatusCode status;

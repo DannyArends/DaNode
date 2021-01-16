@@ -3,7 +3,7 @@ module danode.response;
 import danode.imports;
 import danode.cgi : CGI;
 import danode.interfaces : DriverInterface, StringDriver;
-import danode.process : Process;
+import danode.process : Process, WaitResult;
 import danode.functions : htmltime;
 import danode.statuscode : StatusCode;
 import danode.request : Request;
@@ -138,6 +138,10 @@ void domainNotFound(ref Response response, in Request request) {
 
 // serve a 408 connection timed out page
 void setTimedOut(ref DriverInterface driver, ref Response response) {
+  if(response.payload && response.payload.type == PayloadType.Script){
+    CGI cgi = to!CGI(response.payload);
+    cgi.notifyovertime();
+  }
   response.payload = new Message(StatusCode.TimedOut, format("408 - Connection Timed Out\n"));
   response.ready = true;
   driver.send(response, driver.socket);           // Send the response, hit multiple times, send what you can and return
@@ -152,7 +156,7 @@ void serveCGI(ref Response response, in Request request, in WebConfig config, in
     trace("writing server variables");
     fs.serverAPI(config, request, response);
     trace("creating CGI payload");
-    response.payload = new CGI(request.command(localpath), request.inputfile(fs), removeInput, request.maxtime);
+    response.payload = new CGI(request.command(localpath), request.inputfile(fs), removeInput, request.maxtime-5);
     response.ready = true;
   }
 }
