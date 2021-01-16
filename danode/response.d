@@ -9,10 +9,10 @@ import danode.statuscode : StatusCode;
 import danode.request : Request;
 import danode.router : Router;
 import danode.mimetypes : UNSUPPORTED_FILE;
-import danode.payload : Payload, PayloadType, HeaderType, Empty, Message;
+import danode.payload : Payload, FilePayload, PayloadType, HeaderType, Empty, Message;
 import danode.log;
 import danode.webconfig;
-import danode.filesystem;
+import danode.filesystem : FileSystem;
 import danode.post : serverAPI;
 import danode.functions : browseDir;
 
@@ -161,7 +161,7 @@ void serveCGI(ref Response response, in Request request, in WebConfig config, in
 void serveStaticFile(ref Response response, in Request request, FileSystem fs) {
   trace("serving a static file");
   string localroot = fs.localroot(request.shorthost());
-  FileInfo reqFile = fs.file(localroot, request.path);
+  FilePayload reqFile = fs.file(localroot, request.path);
   if (request.acceptsEncoding("deflate") && reqFile.hasEncodedVersion) {
     info("will serve %s with deflate encoding", request.path);
     reqFile.deflate = true;

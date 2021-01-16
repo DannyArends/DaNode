@@ -2,14 +2,14 @@ module danode.webconfig;
 
 import danode.imports;
 import danode.functions : has, from;
-import danode.filesystem : FileInfo;
+import danode.payload : FilePayload;
 import danode.request : Request;
 import danode.log : trace;
 
 struct WebConfig {
   string[string]  data;
 
-  this(FileInfo file, string def = "no") {
+  this(FilePayload file, string def = "no") {
     string[] elements;
     foreach (line; split(file.content, "\n")) {
       if (chomp(strip(line)) != "" && line[0] != '#') {
