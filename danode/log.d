@@ -112,7 +112,7 @@ class Log {
     void logRequest(in ClientInterface cl, in Request rq, in Response rs) {
       if (cverbose >= NOTSET) {
         string s = format("[%d]    %s %s:%s %s%s %s %s", rs.statuscode, htmltime(), cl.ip, cl.port, rq.shorthost, decodeComponent(rq.uri), Msecs(rq.starttime), rs.payload.length);
-        RequestLogFp.writefln(s);
+        RequestLogFp.writeln(s);
         custom(-1, "REQ", s);
         RequestLogFp.flush();
       }
