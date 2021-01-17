@@ -68,7 +68,7 @@ class Client : Thread, ClientInterface {
           Thread.sleep(dur!"msecs"(2));
         }
       } catch(Exception e) { 
-        warning("unknown client exception: %s", e.msg);
+        warning("unknown client exception: %s", e);
         stop();
       }
       custom(1, "CLIENT", "connection %s:%s (%s) closed after %d requests %s (%s msecs)", ip, port, (driver.isSecure() ? "⚐" : "⚑"), 
