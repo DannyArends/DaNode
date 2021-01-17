@@ -72,11 +72,17 @@ class FileSystem {
 
     /* Get the FilePayload at path from the localroot, with update check on buffers */
     final FilePayload file(string localroot, string path){ synchronized {
-      if(!domains[localroot].files.has(path) && exists(format("%s%s", localroot, path))){
-        custom(1, "SCAN", "new file %s, rescanning index: %s", path, localroot);
+      // New file created after last scan ? -> Scan the whole folder for changes
+      if (!domains[localroot].files.has(path) && exists(format("%s%s", localroot, path))) {
+        custom(1, "SCAN", "New file %s, rescanning index: %s", path, localroot);
         domains[localroot] = scan(localroot);
       }
-      if(domains[localroot].files.has(path)) return(domains[localroot].files[path]);
+      // File exists, buffer the individual file if modified after buffer date
+      if (domains[localroot].files.has(path)) {
+        if (domains[localroot].files[path].needsupdate) domains[localroot].files[path].buffer();
+        return(domains[localroot].files[path]);
+      }
+      custom(1, "SCAN", "File not in index, but exists %s, %s", path, localroot);
       return new FilePayload("", maxsize);
     } }
 

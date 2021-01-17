@@ -71,7 +71,7 @@ class Client : Thread, ClientInterface {
         warning("unknown client exception: %s", e);
         stop();
       }
-      custom(1, "CLIENT", "connection %s:%s (%s) closed after %d requests %s (%s msecs)", ip, port, (driver.isSecure() ? "⚐" : "⚑"), 
+      custom(1, "CLIENT", "connection %s:%s (%s) closed after %d requests %s (%s msecs)", ip, port, (driver.isSecure() ? "SSL" : "HTTP"), 
                                                                                           driver.requests, driver.senddata, starttime);
       driver.destroy();                                               // Clear the response structure
     }
