@@ -38,6 +38,8 @@ class CGI : Payload {
       return -1; 
     }
 
+    @property void notifyovertime() { external.notifyovertime(); }
+
     // Last modified time (not interesting for scripts)
     final @property SysTime mtime() { return Clock.currTime(); }
 

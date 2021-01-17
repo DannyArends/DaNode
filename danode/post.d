@@ -94,9 +94,9 @@ final void parseMultipart(ref Request request, in FileSystem filesystem, const s
   }
 }
 
-// The serverAPI functions prepares and writes out the input file for external process execution
-// The inputfile contains the SERVER, COOKIES, POST, and FILES information that can be used by the external script
-// This data is picked-up by the different APIs, and presented to the client in the regular way
+/* The serverAPI functions prepares and writes out the input file for external process execution
+   The inputfile contains the SERVER, COOKIES, POST, and FILES information that can be used by the external script
+   This data is picked-up by the different CGI APIs, and presented to the client in the regular way */
 final void serverAPI(in FileSystem filesystem, in WebConfig config, in Request request, in Response response)  {
   Appender!(string) content;
 

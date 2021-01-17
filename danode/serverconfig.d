@@ -1,13 +1,13 @@
 module danode.serverconfig;
 
 import danode.imports;
-import danode.filesystem : FileInfo;
+import danode.payload : FilePayload;
 import danode.log : custom;
 
 struct ServerConfig {
   string[string]  data;
 
-  this(FileInfo file, string def = "no") {
+  this(FilePayload file, string def = "no") {
     string[] elements;
     foreach(line; split(file.content, "\n")){
       if(chomp(strip(line)) != "" && line[0] != '#'){

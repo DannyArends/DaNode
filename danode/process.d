@@ -12,20 +12,29 @@ struct WaitResult {
   int status; /// Exit status when terminated
 }
 
-// Set a filestream to nonblocking mode
-// TODO: Nonblocking mode is Posix only, this function should work for non-posix systems as well
+/* Set a filestream to nonblocking mode, if not Posix, use winbase.h */
 bool nonblocking(ref File file) {
   version(Posix) {
     return(fcntl(fileno(file.getFP()), F_SETFL, O_NONBLOCK) != -1); 
   }else{
-    return(false);
+    import core.sys.windows.winbase;
+    auto x = PIPE_NOWAIT;
+    auto res = SetNamedPipeHandleState(file.windowsHandle(), &x, null, null);
+    return(res != 0);
   }
 }
 
-// The Process class provides external process communication via pipes, to the web language interpreter
-// process runs as a thread inside the web server. Output of the running process should be queried via 
-// the output() function. When there is any output on the stderr of the process (stored in errbuffer), 
-// the error buffer will be served. only if the error buffer is empty, will outbuffer be served.
+version(Posix) {
+  alias kill killProcess;
+}else{
+  /* Windows hack: Spawn a new process to kill the still running process */
+  void killProcess(Pid pid, uint signal) { executeShell(format("taskkill /F /T /PID %d", pid.processID)); }
+}
+
+/* The Process class provides external process communication via pipes, to the web language interpreter
+   process runs as a thread inside the web server. Output of the running process should be queried via 
+   the output() function. When there is any output on the stderr of the process (stored in errbuffer), 
+   the error buffer will be served. only if the error buffer is empty, will outbuffer be served. */
 class Process : Thread {
   private:
     string            command;              /// Command to execute
@@ -126,7 +135,10 @@ class Process : Thread {
         file.close();
       }
     }
+    
+    @property void notifyovertime() { maxtime = -1; }
 
+    
     // Execute the process
     // check the input path, and create a pipe:StdIn to the input file
     // create 2 pipes for the external process stdout & stderr
@@ -159,8 +171,8 @@ class Process : Thread {
           Thread.sleep(msecs(1));
         }
         if (!process.terminated) {
-          warning("command: %s < %s did not finish in time [%s msecs]", command, inputfile, maxtime); 
-          kill(cpid, 9); 
+          warning("command: %s < %s did not finish in time [%s msecs]", command, inputfile, time()); 
+          killProcess(cpid, 9);
           process = WaitResult(true, wait(cpid));
         }
         trace("command finished %d after %s msecs", status(), time());
