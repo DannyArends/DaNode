@@ -82,7 +82,7 @@ class FileSystem {
         if (domains[localroot].files[path].needsupdate) domains[localroot].files[path].buffer();
         return(domains[localroot].files[path]);
       }
-      custom(1, "SCAN", "File not in index, but exists %s, %s", path, localroot);
+      custom(1, "SCAN", "should not be here not in index, but exists %s, %s", path, localroot);
       return new FilePayload("", maxsize);
     } }
 
