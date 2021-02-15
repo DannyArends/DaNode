@@ -10,7 +10,7 @@ import danode.response;
 import danode.webconfig : WebConfig;
 import danode.payload : Message, FilePayload;
 import danode.mimetypes : mime;
-import danode.functions : from, has, isCGI, isFILE, isDIR, Msecs, htmltime, isAllowed, writefile;
+import danode.functions : from, has, isCGI, isFILE, isDIR, Msecs, htmltime, isAllowed;
 import danode.filesystem : FileSystem;
 import danode.post : parsePost, PostType;
 import danode.log : custom, trace, info, Log, NOTSET, NORMAL;
