@@ -18,10 +18,10 @@
     $configloc   = str_split($argv[0],$idx);
     $configloc   = $configloc[0]."/web.config";
     if(file_exists($configloc)){
-      $configcont  = split("\n", file_get_contents($configloc));
+      $configcont  = explode("\n", file_get_contents($configloc));
       foreach($configcont as $line){
         if(substr($line,0,1) != '#' && chop($line) != ""){
-          $marray = split('=', $line);
+          $marray = explode('=', $line);
           $config[chop($marray[0])] = strrev(chop(strrev(chop($marray[1]))));
         }
       }
@@ -42,18 +42,18 @@
   $f = fopen( 'php://stdin', 'r' );
   stream_set_blocking($f, 0);
   while(false !== ($line = fgets($f))){
-    $marray = split('=', $line);
+    $marray = explode('=', $line);
     if(isset($marray[0]) && isset($marray[1]) && isset($marray[2])){
       if($marray[0] == "S"){
-        $_SERVER[urldecode($marray[1])] = urldecode(chop(join(array_slice($marray, 2),"=")));
+        $_SERVER[urldecode($marray[1])] = urldecode(chop(join("=", array_slice($marray, 2))));
       }else if($marray[0] == "C"){
-        $_COOKIE[urldecode($marray[1])] = urldecode(chop(join(array_slice($marray, 2),"=")));
+        $_COOKIE[urldecode($marray[1])] = urldecode(chop(join("=", array_slice($marray, 2))));
       }else if($marray[0] == "F"){
         $_FILES[urldecode($marray[1])]["name"] = urldecode(chop($marray[2]));
         $_FILES[urldecode($marray[1])]["mime"] = urldecode(chop($marray[3]));
         $_FILES[urldecode($marray[1])]["tmp_name"] = urldecode(chop($marray[4]));
       }else{
-        $_POST[urldecode($marray[1])] = urldecode(chop(join(array_slice($marray, 2),"=")));
+        $_POST[urldecode($marray[1])] = urldecode(chop(join("=", array_slice($marray, 2))));
       }
     }
   }
