@@ -7,6 +7,7 @@ import danode.process : Process;
 import danode.statuscode : StatusCode;
 import danode.payload : HeaderType, Payload, PayloadType;
 
+// Class structure for common gateway interface (CGI) scripts
 class CGI : Payload {
   private:
     Process external;
