@@ -133,7 +133,7 @@ final void serverAPI(in FileSystem filesystem, in WebConfig config, in Request r
   content.put(format("S=REQUEST_METHOD=%s\n",       request.method));
   content.put(format("S=QUERY_STRING=%s\n",         request.query));
   content.put(format("S=REQUEST_URI=%s\n",          request.uripath));
-  // TODO: Add content.put(format("S=SCRIPT_NAME=%s\n",  ));
+  content.put(format("S=SCRIPT_NAME=%s\n",          request.path));
   content.put(format("S=PHP_SELF=%s\n",             request.path));
   // TODO: Add content.put(format("S=REQUEST_TIME_FLOAT=%s\n",  ));
   content.put(format("S=REQUEST_TIME=%s\n",         request.starttime.toUnixTime));
