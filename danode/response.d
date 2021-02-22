@@ -22,6 +22,7 @@ struct Response {
   string            protocol = "HTTP/1.1";
   string            connection = "Keep-Alive";
   string            charset = "UTF-8";
+  Address           address;
   long              maxage = 0;
   string[string]    headers;
   Payload           payload;
@@ -90,23 +91,20 @@ char[] parseHTTPResponseHeader(ref Response response, CGI script, HeaderType typ
   if (type == HeaderType.FastCGI) {
     // FastCGI type header, create response line on Status: indicator
     string status = script.getHeader("Status", "500 Internal Server Error");
-    string[] inparts = status.split(" ");
-    if(inparts.length == 2) {
-      response.hdr.put(format("%s %s %s\n", "HTTP/1.1", inparts[0], inparts[1]));
-    } else {
-      response.hdr.put(format("%s %s\n", "HTTP/1.1", "500 Internal Server Error"));
-    }
+    response.hdr.put(format("%s %s\n", "HTTP/1.1", status));
   }
   response.hdr.put(script.fullHeader());
   info("script: status: %d, eoh: %d, content: %d", script.statuscode, script.endOfHeader(), clength);
+  response.connection = strip(script.getHeader("Connection", "Close"));
   info("connection: %s -> %s, to %s in %d bytes", strip(script.getHeader("Connection", "Close")), response.connection, type, response.hdr.data.length);
   response.cgiheader = true;
   return(response.hdr.data);
 }
 
 // create a standard response
-Response create(in Request request, in StatusCode statuscode = StatusCode.Ok, in string mimetype = UNSUPPORTED_FILE){
+Response create(in Request request, Address address, in StatusCode statuscode = StatusCode.Ok, in string mimetype = UNSUPPORTED_FILE){
   Response response = Response(request.protocol);
+  response.address = address;
   response.customheader("Server", SERVERINFO);
   response.customheader("X-Powered-By", format("%s %s.%s", name, version_major, version_minor));
   response.payload = new Empty(statuscode, mimetype);
