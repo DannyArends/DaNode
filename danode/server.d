@@ -29,13 +29,13 @@ class Server : Thread {
   public:
     this(ushort port = 80, int backlog = 100, string wwwRoot = "./www/", int verbose = NORMAL) {
       this.starttime = Clock.currTime();            // Start the timer
-      this.router = new Router(wwwRoot, verbose);   // Start the router
       this.socket = initialize(port, backlog);      // Create the HTTP socket
+      this.router = new Router(wwwRoot, this.socket.localAddress(), verbose);   // Start the router
       version(SSL) {
         this.sslsocket = initialize(443, backlog);  // Create the SSL / HTTPs socket
       }
       set = new SocketSet(1);                       // Create a server socket set
-      custom(0, "SERVER", "server created backlog: %d", backlog);
+      custom(0, "SERVER", "server '%s' created backlog: %d", this.hostname(), backlog);
       super(&run);
     }
 
@@ -99,6 +99,9 @@ class Server : Thread {
     final @property void info() {
       custom(0, "SERVER", "uptime %s\n[INFO]   # of connections: %d / %d", uptime(), nAlive(), clients.length);
     }
+    
+    // Hostanme of the server
+    final @property string hostname() { return(this.socket.hostName()); }
 
     // Number of alive connections
     final @property long nAlive() {

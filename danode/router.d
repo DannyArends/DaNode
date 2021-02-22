@@ -23,10 +23,12 @@ class Router {
     FileSystem filesystem;
     Log logger;
     WebConfig config;
+    Address address;
 
   public:
-    this(string wwwRoot = "./www/", int verbose = NORMAL){
+    this(string wwwRoot = "./www/", Address address = Address.init, int verbose = NORMAL){
       this.logger = new Log(verbose);
+      this.address = address;
       this.filesystem = new FileSystem(logger, wwwRoot);
     }
 
@@ -37,11 +39,11 @@ class Router {
     }
 
     // Parse the header of a request, or receive additional post data when the user is uploading
-    final bool parse(in DriverInterface driver, ref Request request, ref Response response, long maxtime = 4500) const {
+    final bool parse(in DriverInterface driver, ref Request request, ref Response response, long maxtime = 4500) {
       if (!driver.hasHeader()) return(false);
       if (!response.created) {
         request.initialize(driver, maxtime);
-        response = request.create();
+        response = request.create(this.address);
       } else {
         request.update(driver.body);
       }
