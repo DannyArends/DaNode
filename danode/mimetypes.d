@@ -21,7 +21,7 @@ pure string mime(string i) {
     case ".png"  : return "image/png";
     case ".tif", ".tiff" : return "image/tiff";
     case ".rgb"  : return "image/x-rgb";
-    case ".svg", ".svgz" : return "image/svg-xml";
+    case ".svg", ".svgz" : return "image/svg+xml";
     
     case ".mid", ".midi" : return "audio/midi";
     case ".mp2", ".mp3"  : return "audio/mpeg";
@@ -80,8 +80,8 @@ pure string mime(string i) {
     case ".cgi"  : return CGI_FILE ~ "perl";
     case ".d"    : return CGI_FILE ~ "rdmd";
     case ".pl"   : return CGI_FILE ~ "perl -X";
-    case ".php"  : return CGI_FILE ~ "php -n -C";
-    case ".fphp" : return CGI_FILE ~ "php-cgi -n -C";
+    case ".php"  : return CGI_FILE ~ "php -C";
+    case ".fphp" : return CGI_FILE ~ "php-cgi -C";
     case ".py"   : return CGI_FILE ~ "pyton";
     case ".r"    : return CGI_FILE ~ "Rscript --vanilla";
     case ".bf"   : return CGI_FILE ~ "bf";
