@@ -116,9 +116,9 @@ final void serverAPI(in FileSystem filesystem, in WebConfig config, in Request r
   // TODO: Add content.put(format("S=PATH=%s\n", CGI import path ));
   // TODO: Add content.put(format("S=SERVER_SIGNATURE=<address>%s</address>\n", Server Signature ));
   content.put(format("S=SERVER_SOFTWARE=%s\n",      SERVERINFO));
-  content.put(format("S=SERVER_NAME=%s\n",          "laptop.danny"));
-  content.put(format("S=SERVER_ADDR=%s\n",          "127.0.0.1"));
-  content.put(format("S=SERVER_PORT=%s\n",          request.serverport));
+  content.put(format("S=SERVER_NAME=%s\n",          response.address.toHostNameString()));
+  content.put(format("S=SERVER_ADDR=%s\n",          response.address.toAddrString()));
+  content.put(format("S=SERVER_PORT=%s\n",          response.address.toPortString()));
   content.put(format("S=REMOTE_ADDR=%s\n",          request.ip));
   content.put(format("S=DOCUMENT_ROOT=%s\n",        filesystem.localroot(request.shorthost())));
   // TODO: Add content.put(format("S=REQUEST_SCHEME=%s\n",  ));
