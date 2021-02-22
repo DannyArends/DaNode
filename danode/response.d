@@ -45,7 +45,8 @@ struct Response {
       CGI script = to!CGI(payload);
       HeaderType type = script.headerType();
       long clength = script.getHeader("Content-Length", -1); // Is the content length provided ?
-      if (type != HeaderType.None && clength > 0) {
+      if (type != HeaderType.None) {
+        custom(1, "WARN", "script '%s', parsing header (%s, %d)", script.command, type, clength);
         return(parseHTTPResponseHeader(this, script, type, clength));
       } else {
         custom(1, "WARN", "script '%s', failed to generate a valid header (%s, %d)", script.command, type, clength);
