@@ -74,7 +74,7 @@ class Process : Thread {
      // from is checked to be in-range of the err/outbuffer, if not an empty array is returned
     final @property const(char)[] output(ptrdiff_t from) const { 
       synchronized {
-        if (errbuffer.data.length == 0 && from >= 0 && from <= outbuffer.data.length) {
+        if (outbuffer.data.length > 0 && from >= 0 && from <= outbuffer.data.length) {
           return outbuffer.data[from .. $];
         }
         if (from >= 0 && from <= errbuffer.data.length) {
@@ -179,7 +179,7 @@ class Process : Thread {
 
         this.readpipe(fStdOut, outbuffer);  // Non blocking slurp of stdout
         this.readpipe(fStdErr, errbuffer);  // Non blocking slurp of stderr
-        trace("All output processed after %s msecs", time());
+        trace("All output %d & %d processed after %s msecs", outbuffer.data.length, errbuffer.data.length, time());
 
         // Close the file handles
         fStdIn.close(); fStdOut.close(); fStdErr.close();
