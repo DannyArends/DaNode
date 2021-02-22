@@ -13,6 +13,7 @@
   }
 
   function readConfig($argv){
+    $config = [];
     $idx = strpos(strrev($argv[0]),"/");
     $idx = strlen($argv[0])-strlen("/")-$idx;
     $configloc   = str_split($argv[0],$idx);
