@@ -164,7 +164,7 @@ void runRequest(Router router, string request = "GET /dmd.d HTTP/1.1\nHost: loca
 unittest {
   custom(0, "FILE", "%s", __FILE__);
 
-  auto router = new Router("./www/", NORMAL);
+  auto router = new Router("./www/", Address.init, NORMAL);
   router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\n\n");
   router.runRequest("POST /dmd.d HTTP/1.1\nHost: localhost\n\n");
 

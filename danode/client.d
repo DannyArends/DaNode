@@ -100,7 +100,7 @@ class Client : Thread, ClientInterface {
 
 unittest {
   custom(0, "FILE", "%s", __FILE__);
-  auto router = new Router("./www/", NORMAL);
+  auto router = new Router("./www/", Address.init, NORMAL);
   router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\n\n");
   router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\r\n\r\n");
   router.runRequest("GET /dmd.d HTTP/1.1\nHost: www.localhost\n\n");
