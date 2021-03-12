@@ -185,7 +185,7 @@ class Process : Thread {
         fStdIn.close(); fStdOut.close(); fStdErr.close();
 
         trace("removing process input file %s ? %s", inputfile, removeInput);
-        //if(removeInput) remove(inputfile);
+        if(removeInput) remove(inputfile);
 
         this.completed = true;
       } catch(Exception e) {

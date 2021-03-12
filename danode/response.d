@@ -16,7 +16,9 @@ import danode.filesystem : FileSystem;
 import danode.post : serverAPI;
 import danode.functions : browseDir;
 
-immutable string SERVERINFO = "DaNode/0.0.2 (Universal)";
+//version (Debug) {
+  immutable string SERVERINFO = "DaNode/0.0.3 (development)";
+//}
 
 struct Response {
   string            protocol = "HTTP/1.1";
@@ -44,15 +46,32 @@ struct Response {
     // Scripts are allowed to have their own header
     if (payload.type == PayloadType.Script) {
       CGI script = to!CGI(payload);
-      HeaderType type = script.headerType();
+      string scriptheader = script.fullHeader();
+      auto status = script.statuscode();
+      custom(0, "WARN", "script '%s', status (%s)", script.command, status);
+      connection = script.getHeader("Connection", "No Request");
       long clength = script.getHeader("Content-Length", -1); // Is the content length provided ?
-      if (type != HeaderType.None) {
-        custom(1, "WARN", "script '%s', parsing header (%s, %d)", script.command, type, clength);
-        return(parseHTTPResponseHeader(this, script, type, clength));
-      } else {
-        custom(1, "WARN", "script '%s', failed to generate a valid header (%s, %d)", script.command, type, clength);
-        connection = "Close";
+      foreach (line; scriptheader.split("\n")) { 
+        auto v = line.split(": ");
+        if(v.length == 2) this.headers[v[0]] = chomp(v[1]);
       }
+      if (status.code != 500) {
+        hdr.put(format("%s %d %s\r\n", protocol, payload.statuscode, payload.statuscode.reason));
+        hdr.put(scriptheader);
+        //if(clength == -1) connection = "Close";
+        return(hdr.data); // The script can communicate
+      }
+      if (connection != "No Request" && clength > -1) {
+        custom(0, "KEEP", "script '%s' in keepalive mode connection '%s' (%s, %d)", script.command, connection, script.headerType(), clength);
+        hdr.put(scriptheader);
+        return(hdr.data); // The script can communicate
+      }
+      if (connection != "Close") {
+        custom(0, "WARN", "script '%s', failed (%s, %d)\n%s", script.command, script.headerType(), clength, scriptheader);
+      }else{
+        custom(1, "INFO", "script '%s', header generation (%s, %d)", script.command, script.headerType(), clength);
+      }
+      connection = "Close";
     }
     // Construct the header for all other requests (and scripts that failed to provide a valid one
     hdr.put(format("%s %d %s\r\n", protocol, payload.statuscode, payload.statuscode.reason));
@@ -93,6 +112,11 @@ char[] parseHTTPResponseHeader(ref Response response, CGI script, HeaderType typ
     string status = script.getHeader("Status", "500 Internal Server Error");
     response.hdr.put(format("%s %s\n", "HTTP/1.1", status));
   }
+
+ /* foreach (line; script.fullHeader().split("\n")) { 
+    auto v = line.split(": ");
+    response.headers[v[0]] = v[1];
+  } */
   response.hdr.put(script.fullHeader());
   info("script: status: %d, eoh: %d, content: %d", script.statuscode, script.endOfHeader(), clength);
   response.connection = strip(script.getHeader("Connection", "Close"));
