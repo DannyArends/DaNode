@@ -14,6 +14,7 @@ import danode.log : info, custom, trace, warning;
 
 immutable string      MPHEADER         = "multipart/form-data";                     /// Multipart header id
 immutable string      XFORMHEADER      = "application/x-www-form-urlencoded";       /// X-form header id
+immutable string      JSON             = "application/json"; /// json input
 enum PostType { Input, File };
 
 struct PostItem {
@@ -55,6 +56,8 @@ final bool parsePost (ref Request request, ref Response response, in FileSystem 
     custom(1, "MPART", "header: %s, parsing %d bytes", mpid, expectedlength);
     request.parseMultipart(filesystem, content, mpid);
     custom(1, "MPART", "# of items: %s", request.postinfo.length);
+  } else if (contenttype.indexOf(JSON) >= 0) {
+    request.postinfo["php://input"] = PostItem(PostType.File, "stdin", "php://input", content, JSON, content.length);
   } else {
     warning("unsupported POST content type: %s [%s] -> %s", contenttype, expectedlength, content);
   }
