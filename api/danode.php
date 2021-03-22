@@ -42,6 +42,7 @@
   $_CONFIG = readConfig($argv);
   $f = fopen( 'php://stdin', 'r' );
   stream_set_blocking($f, 0);
+
   while(false !== ($line = fgets($f))){
     $marray = explode('=', $line);
     if(isset($marray[0]) && isset($marray[1]) && isset($marray[2])){
@@ -50,9 +51,10 @@
       }else if($marray[0] == "C"){
         $_COOKIE[urldecode($marray[1])] = urldecode(chop(join("=", array_slice($marray, 2))));
       }else if($marray[0] == "F"){
-        $_FILES[urldecode($marray[1])]["name"] = urldecode(chop($marray[2]));
-        $_FILES[urldecode($marray[1])]["mime"] = urldecode(chop($marray[3]));
-        $_FILES[urldecode($marray[1])]["tmp_name"] = urldecode(chop($marray[4]));
+        $_FILES[urldecode($marray[1])]["name"] += Array(urldecode(chop($marray[2])) => urldecode(chop($marray[2])));
+        $_FILES[urldecode($marray[1])]["mime"][urldecode(chop($marray[2]))] = urldecode(chop($marray[3]));
+        $_FILES[urldecode($marray[1])]['error'][urldecode(chop($marray[2]))] = 0;
+        $_FILES[urldecode($marray[1])]["tmp_name"][urldecode(chop($marray[2]))] = urldecode(chop($marray[4]));
       }else{
         $_POST[urldecode($marray[1])] = urldecode(chop(join("=", array_slice($marray, 2))));
       }
