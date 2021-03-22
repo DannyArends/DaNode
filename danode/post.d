@@ -48,18 +48,20 @@ final bool parsePost (ref Request request, ref Response response, in FileSystem 
   custom(2, "POST", "content type: %s", contenttype);
 
   if (contenttype.indexOf(XFORMHEADER) >= 0) {
-    custom(1, "XFORM", "parsing %d bytes", expectedlength);
+    custom(0, "XFORM", "parsing %d bytes", expectedlength);
     request.parseXform(content);
     custom(1, "XFORM", "# of items: %s", request.postinfo.length);
   } else if (contenttype.indexOf(MPHEADER) >= 0) {
     string mpid = split(contenttype, "boundary=")[1];
-    custom(1, "MPART", "header: %s, parsing %d bytes", mpid, expectedlength);
+    custom(0, "MPART", "header: %s, parsing %d bytes", mpid, expectedlength);
     request.parseMultipart(filesystem, content, mpid);
     custom(1, "MPART", "# of items: %s", request.postinfo.length);
   } else if (contenttype.indexOf(JSON) >= 0) {
-    request.postinfo["php://input"] = PostItem(PostType.File, "stdin", "php://input", content, JSON, content.length);
+    custom(0, "JSONP", "parsing %d bytes", expectedlength);
+    //request.postinfo["php://input"] = PostItem(PostType.File, "stdin", "php://input", content, JSON, content.length);
   } else {
     warning("unsupported POST content type: %s [%s] -> %s", contenttype, expectedlength, content);
+    request.parseXform(content);
   }
   response.havepost = true;
   return(response.havepost);
@@ -75,6 +77,9 @@ final void parseXform(ref Request request, const string content) {
 
 // Parse Multipart content in the body of the request
 final void parseMultipart(ref Request request, in FileSystem filesystem, const string content, const string mpid) {
+  //writeinfile("multipart.txt", content);
+  int[string] keys;
+  bool isarraykey;
   foreach (size_t i, part; chomp(content).split(mpid)) {
     string[] elem = strip(part).split("\r\n");
     if (elem[0] != "--") {
@@ -84,15 +89,26 @@ final void parseMultipart(ref Request request, in FileSystem filesystem, const s
         request.postinfo[key] = PostItem(PostType.Input, key, "", join(elem[2 .. ($-1)]));
       } else if (mphdr.length == 3) {
         string fname = mphdr[2][10 .. ($-1)];
+        custom(0, "MPART", "found on key %s file %s", key, fname);
+        if (key.length > 2) {
+          isarraykey = (key[($-2) .. $] == "[]")? true : false;
+        }
+        keys[key] = keys.has(key)? keys[key] + 1: 0;
+        custom(0, "MPART", "found on key %s #%d file %s", key, keys[key], fname);
         if (fname != "") {
-          string localpath = request.uploadfile(filesystem, key);
+          string fkey = isarraykey? key ~ to!string(keys[key]) : key;
+          string skey = isarraykey? key[0 .. $-2] : key;
+          string localpath = request.uploadfile(filesystem, fkey);
           string mpcontent = join(elem[3 .. ($-1)], "\r\n");
-          request.postinfo[key] = PostItem(PostType.File, key, mphdr[2][10 .. ($-1)], localpath, split(elem[1],": ")[1], mpcontent.length);
+          request.postinfo[fkey] = PostItem(PostType.File, skey, mphdr[2][10 .. ($-1)], localpath, split(elem[1],": ")[1], mpcontent.length);
           writeinfile(localpath, mpcontent);
+          custom(0, "MPART", "wrote %d bytes to file %s", mpcontent.length, localpath);
         } else {
           request.postinfo[key] = PostItem(PostType.Input, key, "");
         }
       }
+    }else{
+      custom(0, "MPART", "ID element: %s", elem[0]);
     }
   }
 }
