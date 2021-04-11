@@ -66,6 +66,8 @@ pure string mime(string i) {
     case ".frag"  : return "x-shader/x-fragment";
     case ".geom"  : return "x-shader/x-geometry";
 
+    case ".ttf"  : return "font/ttf";
+    case ".woff"  : return "font/woff";
     case ".woff2"  : return "font/woff2";
 
     case ".pem-certificate-chain"  : return "application/pem-certificate-chain";
