@@ -16,9 +16,7 @@ import danode.filesystem : FileSystem;
 import danode.post : serverAPI;
 import danode.functions : browseDir;
 
-//version (Debug) {
-  immutable string SERVERINFO = "DaNode/0.0.3 (development)";
-//}
+immutable string SERVERINFO = "DaNode/0.0.3";
 
 struct Response {
   string            protocol = "HTTP/1.1";
@@ -58,7 +56,7 @@ struct Response {
       if (status.code != 500) {
         hdr.put(format("%s %d %s\r\n", protocol, payload.statuscode, payload.statuscode.reason));
         hdr.put(scriptheader);
-        //if(clength == -1) connection = "Close";
+        if(clength == -1) connection = "Close";
         return(hdr.data); // The script can communicate
       }
       if (connection != "No Request" && clength > -1) {
