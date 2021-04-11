@@ -95,8 +95,7 @@ pure string mime(string i) {
     case ".cgi"  : return CGI_FILE ~ "perl";
     case ".d"    : return CGI_FILE ~ "rdmd";
     case ".pl"   : return CGI_FILE ~ "perl -X";
-    case ".php"  : return CGI_FILE ~ "php-cgi -C";
-    case ".fphp" : return CGI_FILE ~ "php-cgi -C";
+    case ".php", ".fphp" : return CGI_FILE ~ "php-cgi -C";
     case ".py"   : return CGI_FILE ~ "pyton";
     case ".r"    : return CGI_FILE ~ "Rscript --vanilla";
     case ".bf"   : return CGI_FILE ~ "bf";
