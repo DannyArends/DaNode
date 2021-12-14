@@ -1,7 +1,7 @@
 module danode.functions;
 
 import danode.imports;
-import danode.log : error, trace, custom;
+import danode.log : error, warning, trace, custom;
 import danode.mimetypes : CGI_FILE, mime, UNSUPPORTED_FILE;
 
 immutable string timeFmt =  "%s %s %s %s:%s:%s %s";
@@ -19,8 +19,12 @@ SysTime parseHtmlDate(const string datestr) {
   auto dateregex = regex(r"([0-9]{1,2}) ([a-z]{1,3}) ([0-9]{4}) ([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2}) cet", "g");
   auto m = match(datestr.toLower(), dateregex);
   if(m.captures.length == 7){
-    ts = SysTime(DateTime(to!int(m.captures[3]), monthToIndex(m.captures[2]), to!int(m.captures[1]), // 21 Apr 2014
-                          to!int(m.captures[4]), to!int(m.captures[5]), to!int(m.captures[6])));     // 20:20:13
+    try {
+      ts = SysTime(DateTime(to!int(m.captures[3]), monthToIndex(m.captures[2]), to!int(m.captures[1]), // 21 Apr 2014
+                            to!int(m.captures[4]), to!int(m.captures[5]), to!int(m.captures[6])));     // 20:20:13
+    } catch(Exception e) {
+       warning("parseHtmlDate exception, could not parse '%s'", datestr);
+    }
   }
   return(ts);
 }

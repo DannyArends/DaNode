@@ -84,7 +84,8 @@ struct Response {
         hdr.put(format("Cache-Control: max-age=%d, public\r\n", maxage));
       }
     }
-    hdr.put(format("Content-Type: %s; charset=%s\r\n", payload.mimetype, charset)); // We just send our mime and an encoding
+    hdr.put(format("Content-Type: %s\r\n", payload.mimetype)); // We just send our mime and an encoding
+    //hdr.put(format("Content-Type: %s; charset=%s\r\n", payload.mimetype, charset)); // We just send our mime and an encoding
     hdr.put(format("Connection: %s\r\n\r\n", connection)); // Client can choose to keep-alive
     return(hdr.data);
   }
