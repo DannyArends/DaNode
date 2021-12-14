@@ -1,7 +1,7 @@
 module danode.functions;
 
 import danode.imports;
-import danode.log : error, custom;
+import danode.log : error, warning, custom;
 import danode.mimetypes : CGI_FILE, mime, UNSUPPORTED_FILE;
 
 immutable string timeFmt =  "%s %s %s %s:%s:%s %s";
