@@ -71,7 +71,7 @@ class Router {
 
       config = WebConfig(filesystem.file(localroot, "/web.config"));
       string fqdn = config.domain(request.shorthost());
-      string localpath = config.localpath(localroot, request.path);
+      string localpath = config.localpath(localroot, decodeComponent(request.path));
 
       trace("configfile at: %s%s", localroot, "/web.config");
       trace("request.host: %s, fqdn: %s", request.host, fqdn);
