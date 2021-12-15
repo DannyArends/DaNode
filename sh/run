@@ -1,5 +1,14 @@
 #!/usr/bin/env bash
 
+# Remove previous log file before starting the web server.
 rm -rf server.log
-nohup authbind danode/server -k -b 100 -v 2 > server.log 2>&1 &
 
+# Check if authbind exist in the Linux distribution
+if command -v "authbind" &> /dev/null
+then
+    # Start the web server "danode/server" in the background (&) with nohup 
+    nohup authbind danode/server -k -b 100 -v 2 > server.log 2>&1 &
+else
+    # For Linux Distributions like Debian 10 where authbind is not installed by default.
+    nohup "danode/server" -k -b 100 -v 2 > server.log 2>&1 &
+fi
