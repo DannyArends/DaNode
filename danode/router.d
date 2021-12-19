@@ -10,7 +10,7 @@ import danode.response;
 import danode.webconfig : WebConfig;
 import danode.payload : Message, FilePayload;
 import danode.mimetypes : mime;
-import danode.functions : from, has, isCGI, isFILE, isDIR, Msecs, htmltime, isAllowed, writefile;
+import danode.functions : from, has, isCGI, isFILE, isDIR, Msecs, htmltime, isAllowed;
 import danode.filesystem : FileSystem;
 import danode.post : parsePost, PostType;
 import danode.log : custom, trace, info, Log, NOTSET, NORMAL;
@@ -23,10 +23,12 @@ class Router {
     FileSystem filesystem;
     Log logger;
     WebConfig config;
+    Address address;
 
   public:
-    this(string wwwRoot = "./www/", int verbose = NORMAL){
+    this(string wwwRoot = "./www/", Address address = Address.init, int verbose = NORMAL){
       this.logger = new Log(verbose);
+      this.address = address;
       this.filesystem = new FileSystem(logger, wwwRoot);
     }
 
@@ -37,11 +39,11 @@ class Router {
     }
 
     // Parse the header of a request, or receive additional post data when the user is uploading
-    final bool parse(in DriverInterface driver, ref Request request, ref Response response, long maxtime = 4500) const {
+    final bool parse(in DriverInterface driver, ref Request request, ref Response response, long maxtime = 4500) {
       if (!driver.hasHeader()) return(false);
       if (!response.created) {
         request.initialize(driver, maxtime);
-        response = request.create();
+        response = request.create(this.address);
       } else {
         request.update(driver.body);
       }
@@ -162,7 +164,7 @@ void runRequest(Router router, string request = "GET /dmd.d HTTP/1.1\nHost: loca
 unittest {
   custom(0, "FILE", "%s", __FILE__);
 
-  auto router = new Router("./www/", NORMAL);
+  auto router = new Router("./www/", Address.init, NORMAL);
   router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\n\n");
   router.runRequest("POST /dmd.d HTTP/1.1\nHost: localhost\n\n");
 

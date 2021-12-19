@@ -40,6 +40,7 @@ www/qrcode.test/QR/gen/*
 *.zip
 
 .sass-cache
+.htaccess
 
 .dub/
 dub.selections.json
@@ -47,3 +48,17 @@ dub.selections.json
 letsEncrypt_da.nl
 www/*.nl/
 
+www/bludit.test/*.php
+www/bludit.test/LICENSE
+www/bludit.test/bl-content
+www/bludit.test/bl-kernel
+www/bludit.test/bl-languages
+www/bludit.test/bl-plugins
+www/bludit.test/bl-themes
+
+www/wordpress.test/*.php
+www/wordpress.test/*.txt
+www/wordpress.test/*.html
+www/wordpress.test/wp-admin/
+www/wordpress.test/wp-content/
+www/wordpress.test/wp-includes/

@@ -70,11 +70,11 @@ class Process : Thread {
       super(&run);
     }
 
-     // Query Output/Errors from 'from' to the end, if the errbuffer contains any output this will be served
-     // from is checked to be in-range of the err/outbuffer, if not an empty array is returned
+     // Query Output/Errors from 'from' to the end, if the outbuffer contains any output this will be served
+     // from is checked to be in-range of the outbuffer/errbuffer, if not an empty array is returned
     final @property const(char)[] output(ptrdiff_t from) const { 
       synchronized {
-        if (errbuffer.data.length == 0 && from >= 0 && from <= outbuffer.data.length) {
+        if (outbuffer.data.length > 0 && from >= 0 && from <= outbuffer.data.length) {
           return outbuffer.data[from .. $];
         }
         if (from >= 0 && from <= errbuffer.data.length) {
@@ -114,9 +114,9 @@ class Process : Thread {
       }
     }
 
-    // Length of output, if the errbuffer contains any data, the errbuffer will be used
+    // Length of output, if the outbuffer contains any data, the outbuffer will be prefered (errors are silenced)
     final @property long length() const { synchronized { 
-      if (errbuffer.data.length == 0) { return(outbuffer.data.length); }
+      if (outbuffer.data.length > 0) { return(outbuffer.data.length); }
       return errbuffer.data.length; 
     } }
 
@@ -179,7 +179,7 @@ class Process : Thread {
 
         this.readpipe(fStdOut, outbuffer);  // Non blocking slurp of stdout
         this.readpipe(fStdErr, errbuffer);  // Non blocking slurp of stderr
-        trace("All output processed after %s msecs", time());
+        trace("Output %d & %d processed after %s msecs", outbuffer.data.length, errbuffer.data.length, time());
 
         // Close the file handles
         fStdIn.close(); fStdOut.close(); fStdErr.close();

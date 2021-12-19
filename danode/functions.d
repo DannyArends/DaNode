@@ -1,7 +1,7 @@
 module danode.functions;
 
 import danode.imports;
-import danode.log : error, warning, custom;
+import danode.log : error, warning, trace, custom;
 import danode.mimetypes : CGI_FILE, mime, UNSUPPORTED_FILE;
 
 immutable string timeFmt =  "%s %s %s %s:%s:%s %s";
@@ -64,11 +64,16 @@ pure string toD(T, U)(in T x, in U digits = 6) nothrow {
   return(*p);
 }
 
-void writefile(in string localpath, in string content) {
+void writeinfile(in string localpath, in string content) {
   if (content.length > 0) { 
+    try {
     auto fp = File(localpath, "wb");
-    fp.rawWrite(content);
-    fp.close();
+         fp.rawWrite(content);
+         fp.close();
+         trace("writeinfile: %d bytes to: %s", content.length, localpath);
+    } catch(Exception e) {
+      error("writeinfile: I/O exception '%s'", e.msg);
+    }
   }
 }
 

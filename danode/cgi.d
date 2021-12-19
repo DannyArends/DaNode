@@ -7,6 +7,7 @@ import danode.process : Process;
 import danode.statuscode : StatusCode;
 import danode.payload : HeaderType, Payload, PayloadType;
 
+// Class structure for common gateway interface (CGI) scripts
 class CGI : Payload {
   private:
     Process external;
@@ -70,6 +71,7 @@ class CGI : Payload {
       if (values.length >= 3 && values[0] == "HTTP/1.0") return HeaderType.HTTP10;
       if (values.length >= 3 && values[0] == "HTTP/1.1") return HeaderType.HTTP11;
       if (getHeader("Status", "") != "") return HeaderType.FastCGI;
+      //if (getHeader("Content-Type", "") != "") return HeaderType.FastCGI;
       return HeaderType.None;
     }
 
