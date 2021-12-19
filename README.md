@@ -1,7 +1,6 @@
 DaNode - A secure and small footprint web server for D 
 ------------------------------------------------------
-master: [![Build Status](https://travis-ci.org/DannyArends/DaNode.svg?branch=master)](https://travis-ci.org/DannyArends/DaNode)
-development: [![Build Status](https://travis-ci.org/DannyArends/DaNode.svg?branch=development)](https://travis-ci.org/DannyArends/DaNode)
+master: [![D](https://github.com/DannyArends/DaNode/actions/workflows/d.yml/badge.svg?branch=master)](https://github.com/DannyArends/DaNode/actions/workflows/d.yml)
 licence: [![license](https://img.shields.io/github/license/DannyArends/DaNode.svg?style=flat)](https://github.com/DannyArends/DaNode/blob/master/LICENSE.txt)
 
 Web server written in the [D programming language](https://dlang.org/) to 
