@@ -1,7 +1,0 @@
-language: d
-sudo: false
-matrix:
-  include:
-    - d: 'dmd'
-      env: CONFIG=default
-script: dub test -c $CONFIG
