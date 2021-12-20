@@ -53,7 +53,7 @@ final bool parsePost (ref Request request, ref Response response, in FileSystem 
     custom(1, "XFORM", "# of items: %s", request.postinfo.length);
   } else if (contenttype.indexOf(MPHEADER) >= 0) {
     string mpid = split(contenttype, "boundary=")[1];
-    custom(0, "MPART", "header: %s, parsing %d bytes", mpid, expectedlength);
+    custom(1, "MPART", "header: %s, parsing %d bytes", mpid, expectedlength);
     request.parseMultipart(filesystem, content, mpid);
     custom(1, "MPART", "# of items: %s", request.postinfo.length);
   } else if (contenttype.indexOf(JSON) >= 0) {
@@ -89,12 +89,12 @@ final void parseMultipart(ref Request request, in FileSystem filesystem, const s
         request.postinfo[key] = PostItem(PostType.Input, key, "", join(elem[2 .. ($-1)]));
       } else if (mphdr.length == 3) {
         string fname = mphdr[2][10 .. ($-1)];
-        custom(0, "MPART", "found on key %s file %s", key, fname);
+        custom(1, "MPART", "found on key %s file %s", key, fname);
         if (key.length > 2) {
           isarraykey = (key[($-2) .. $] == "[]")? true : false;
         }
         keys[key] = keys.has(key)? keys[key] + 1: 0;
-        custom(0, "MPART", "found on key %s #%d file %s", key, keys[key], fname);
+        custom(1, "MPART", "found on key %s #%d file %s", key, keys[key], fname);
         if (fname != "") {
           string fkey = isarraykey? key ~ to!string(keys[key]) : key;
           string skey = isarraykey? key[0 .. $-2] : key;
@@ -102,13 +102,13 @@ final void parseMultipart(ref Request request, in FileSystem filesystem, const s
           string mpcontent = join(elem[3 .. ($-1)], "\r\n");
           request.postinfo[fkey] = PostItem(PostType.File, skey, mphdr[2][10 .. ($-1)], localpath, split(elem[1],": ")[1], mpcontent.length);
           writeinfile(localpath, mpcontent);
-          custom(0, "MPART", "wrote %d bytes to file %s", mpcontent.length, localpath);
+          custom(1, "MPART", "wrote %d bytes to file %s", mpcontent.length, localpath);
         } else {
           request.postinfo[key] = PostItem(PostType.Input, key, "");
         }
       }
     }else{
-      custom(0, "MPART", "ID element: %s", elem[0]);
+      custom(1, "MPART", "ID element: %s", elem[0]);
     }
   }
 }
