@@ -1,11 +1,11 @@
 <?php
   include 'api/danode.php';
 
-  echo "HTTP/1.1 200 OK"."\n";
-  echo "Content-Type: text/html; charset=utf-8'"."\n";
-  echo "Server: " . $_SERVER["SERVER_SOFTWARE"]."\n";
-  echo "Set-Cookie: whowants=a non CGI cookie"."\n";
-  echo "Set-Cookie: anda=just plain php one"."\n\n";
+  header('Content-Type: text/html; charset=utf-8');
+  header('Server: ' . $_SERVER["SERVER_SOFTWARE"]);
+  setcookie("whowants", "a cgi-cookie");
+  setcookie("anda", "empty");
+  header('Status: 200 OK');
 ?>
 <html>
   <head>
