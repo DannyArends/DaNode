@@ -46,7 +46,7 @@ struct Response {
       CGI script = to!CGI(payload);
       string scriptheader = script.fullHeader();
       auto status = script.statuscode();
-      custom(0, "WARN", "script '%s', status (%s)", script.command, status);
+      custom(1, "INFO", "script '%s', status (%s)", script.command, status);
       connection = script.getHeader("Connection", "No Request");
       long clength = script.getHeader("Content-Length", -1); // Is the content length provided ?
       foreach (line; scriptheader.split("\n")) { 
