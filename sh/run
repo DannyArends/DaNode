@@ -1,5 +1,28 @@
 #!/usr/bin/env bash
 
+# Remove previous log file before starting the web server.
 rm -rf server.log
-nohup authbind danode/server -k -b 100 -v 2 > server.log 2>&1 &
 
+# Start the web server "danode/server" in the background (&) with nohup 
+if command -v "authbind" 
+then
+  echo Starting DaNode Web Server with port :80 as a Root Linux User [authbind]
+  nohup authbind danode/server -k -b 100 -v 2 > server.log 2>&1 &
+else
+  # For Linux Distributions like Debian 10 where authbind is not installed by default.
+  
+  # Check if script is started as root user.
+  if [[ $(id -u) -ne 0 ]]  
+  then 
+    # Start Web Server on port :8080 for Non-root user and inform about switching to root user
+    echo Starting DaNode Web Server with port :8080 as a Regular Linux User
+    echo Please switch to root user to bind to port :80
+    echo \(Use \'sudo\' if your Linux Distribution supports it\)
+    echo \(Otherwise: use \'su root\' to switch to the root user\)
+    nohup        danode/server -k -b 100 -v 2 -p 8080 > server.log 2>&1 &
+  else 
+    # Start Web Server on port :80 for a root user
+    echo Starting DaNode Web Server with port :80 as a Root Linux User
+    nohup        danode/server -k -b 100 -v 2 -p 80 > server.log 2>&1 &
+  fi
+fi
