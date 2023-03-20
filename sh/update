@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+
+# This script:
+# * Downloads Source Code 
+# * Stops the Web Server
+# * Extracts the Source Code 
+# * Overwrites the Local Source Files
+# * Compiles the Source Files
+# * Starts the Web Server
+
+# Caution! while developing the DaNode Web Server.
+# This script downloads latest source code from the DaNode repository and overwrites all the changes.
+# Unless you have already directly merged these changes to the DaNode Repository or saved them other ways.
+# Then there is nothing to worry about. 
+
+# ./www/*/ Any folder that does not exist on DaNode repository is excluded from updates.
+# ./www/localhost is excluded from updates.
+# ./www/wordpress.test is included and gets overwritten with updates.
+# ./www/bludit.test is included and gets overwritten with updates.
+
+# Download the source code with available tools on the Linux distribution
+if command -v "wget"; then
+    wget "https://github.com/DannyArends/DaNode/tarball/master" -O "DaNode-master.tgz"
+elif command -v "curl"; then
+    curl -L "https://github.com/DannyArends/DaNode/tarball/master" -o "DaNode-master.tgz"
+elif command -v "GET"; then
+    GET "https://github.com/DannyArends/DaNode/tarball/master" > "DaNode-master.tgz"
+fi
+
+# Stop the Web Server before update.
+./sh/stop
+
+# Extract the source code archive in the current directory and overwrite all local source code files of needing a change/update.
+tar --verbose --extract --file="DaNode-master.tgz" --strip-components=1 --overwrite --exclude="www/localhost" --exclude="sh/run" --exclude=".github" 
+
+# Compile the extracted source code in the current directory.
+./sh/compile
+
+# Start the Web Server again.
+./sh/run
