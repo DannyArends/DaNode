@@ -135,7 +135,12 @@ final void serverAPI(in FileSystem filesystem, in WebConfig config, in Request r
   // TODO: Add content.put(format("S=PATH=%s\n", CGI import path ));
   // TODO: Add content.put(format("S=SERVER_SIGNATURE=<address>%s</address>\n", Server Signature ));
   content.put(format("S=SERVER_SOFTWARE=%s\n", SERVERINFO));
-  content.put(format("S=SERVER_NAME=%s\n", (response.address)? response.address.toHostNameString() : "localhost"));
+  try{
+    content.put(format("S=SERVER_NAME=%s\n", (response.address)? response.address.toHostNameString() : "localhost"));
+  }catch(Exception e){
+    warning("Exception while trying to call: toHostNameString()");
+    content.put("S=SERVER_NAME=localhost\n");
+  }
   content.put(format("S=SERVER_ADDR=%s\n", (response.address)? response.address.toAddrString() : "127.0.0.1"));
   content.put(format("S=SERVER_PORT=%s\n", (response.address)? response.address.toPortString() : "80"));
   content.put(format("S=REMOTE_ADDR=%s\n", request.ip));
