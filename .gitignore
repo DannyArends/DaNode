@@ -10,6 +10,9 @@ danode/danode-test-default.exe
 server
 server.exe
 
+www/danny.test/
+www/localhost/123 123.txt
+
 server.crt
 server.csr
 server.key
