@@ -1,14 +1,12 @@
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
+# This workflow uses actions that are not certified by GitHub. They are provided by a third-party 
+# and are governed by separate terms of service, privacy policy, and support documentation.
 name: D
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, development ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, development ]
 
 jobs:
   build:
@@ -16,8 +14,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - uses: dlang-community/setup-dlang@4c99aa991ce7d19dd3064de0a4f2f6b2f152e2d7
+    - uses: actions/checkout@v4
+    - uses: dlang-community/setup-dlang@v1
 
     - name: 'Build & Test'
       run: |
