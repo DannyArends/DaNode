@@ -46,11 +46,11 @@ struct Response {
       CGI script = to!CGI(payload);
       string scriptheader = script.fullHeader();
       auto status = script.statuscode();
-      custom(0, "DBG", "scriptheader length: %d", scriptheader.length);
+      /*custom(0, "DBG", "scriptheader length: %d", scriptheader.length);
       custom(0, "DBG", "scriptheader: [%s]", scriptheader);
       custom(0, "DBG", "status.code: %d", status.code);
       custom(0, "DBG", "headerType: %s", script.headerType());
-      custom(0, "DBG", "endOfHeader: %d", script.endOfHeader());
+      custom(0, "DBG", "endOfHeader: %d", script.endOfHeader()); */
       custom(1, "INFO", "script '%s', status (%s)", script.command, status);
       connection = script.getHeader("Connection", "No Request");
       long clength = script.getHeader("Content-Length", -1); // Is the content length provided ?
