@@ -27,6 +27,9 @@ www/financial.nl/img
 www/qrcode.test/QR/cache/*
 www/qrcode.test/QR/gen/*
 
+www/geneticsjs.org/
+www/mapctl.org/
+
 *.in
 *.err
 
@@ -37,7 +40,7 @@ www/qrcode.test/QR/gen/*
 *~
 *.pdf
 *.zip
-
+ 
 .sass-cache
 
 .dub/
