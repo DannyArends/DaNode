@@ -54,7 +54,10 @@ struct Response {
         if(v.length == 2) this.headers[v[0]] = chomp(v[1]);
       }
       if (status.code != 500) {
-        hdr.put(format("%s %d %s\r\n", protocol, payload.statuscode, payload.statuscode.reason));
+        auto htype = script.headerType();
+        if (htype == HeaderType.FastCGI || htype == HeaderType.None) {
+          hdr.put(format("%s %d %s\r\n", protocol, payload.statuscode, payload.statuscode.reason));
+        }
         hdr.put(scriptheader);
         if(clength == -1) connection = "Close";
         return(hdr.data); // The script can communicate
