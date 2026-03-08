@@ -86,11 +86,11 @@ final void parseMultipart(ref Request request, in FileSystem filesystem, const s
     string[] elem = strip(part).split("\r\n");
     if (elem[0] != "--") {
       string[] mphdr = elem[0].split("; ");
-      string key = mphdr[1][6 .. ($-1)];
+      string key = mphdr[1].length > 6 ? mphdr[1][6 .. ($-1)] : "";
       if (mphdr.length == 2) {
         request.postinfo[key] = PostItem(PostType.Input, key, "", join(elem[2 .. ($-1)]));
       } else if (mphdr.length == 3) {
-        string fname = mphdr[2][10 .. ($-1)];
+        string fname = mphdr[2].length > 10 ? mphdr[2][10 .. ($-1)] : "";
         custom(1, "MPART", "found on key %s file %s", key, fname);
         if (key.length > 2) {
           isarraykey = (key[($-2) .. $] == "[]")? true : false;
@@ -104,7 +104,7 @@ final void parseMultipart(ref Request request, in FileSystem filesystem, const s
           string mpcontent = join(elem[3 .. ($-1)], "\r\n");
           auto mimeParts = split(elem[1], ": ");
           string fileMime = mimeParts.length >= 2 ? mimeParts[1] : "application/octet-stream";
-          request.postinfo[fkey] = PostItem(PostType.File, skey, mphdr[2][10 .. ($-1)], localpath, fileMime, mpcontent.length);
+          request.postinfo[fkey] = PostItem(PostType.File, skey, fname, localpath, fileMime, mpcontent.length);
           writeinfile(localpath, mpcontent);
           custom(1, "MPART", "wrote %d bytes to file %s", mpcontent.length, localpath);
         } else {
