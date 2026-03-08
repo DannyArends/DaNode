@@ -16,7 +16,7 @@
 	{
 		"name": "ssl",
 		"targetType": "executable",
-		"versions": ["SSL"],
+		"versions": ["SSL", "OpenSSL_1_0"],
 		"lflags-windows-x86_64": ["/LIBPATH:C:/OpenSSL-Win64/lib"],
 		"libs-windows-x86_64": ["libssl", "libcrypto"],
 		"dependencies": {
