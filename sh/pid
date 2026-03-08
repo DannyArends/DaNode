@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+if pgrep -f 'danode/server' >/dev/null 2>&1
+  then
+     echo "Running"
+  else
+     echo "Down, restarting"
+     cd /home/danny/Github/DaNode/
+     nohup authbind danode/server -k -b 100 -v 2 > server.log 2>&1 &
+     date >> /home/danny/restarts.txt
+fi
+

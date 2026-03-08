@@ -12,13 +12,14 @@ pure string mime(string i) {
     case ".xml"  : return "text/xml";
     case ".css"  : return "text/css";
     
+    case ".bmp"  : return "image/bmp";
     case ".gif"  : return "image/gif";
     case ".ico"  : return "image/x-icon";
     case ".jpg", ".jpeg" : return "image/jpeg";
     case ".png"  : return "image/png";
     case ".tif", ".tiff" : return "image/tiff";
     case ".rgb"  : return "image/x-rgb";
-    case ".svg", ".svgz" : return "image/svg-xml";
+    case ".svg", ".svgz" : return "image/svg+xml";
     
     case ".mid", ".midi" : return "audio/midi";
     case ".mp2", ".mp3"  : return "audio/mpeg";
@@ -39,6 +40,7 @@ pure string mime(string i) {
     case ".z"    : return "application/x-compress";
     case ".zip"  : return "application/x-zip-compressed";
 
+    case ".bib", ".bibtex"  : return "application/x-bibtex";
     case ".doc", ".dot"  : return "application/msword";
     case ".docx" : return "applications/vnd.openxmlformats-officedocument.wordprocessingml.document";
     case ".dotx" : return "applications/vnd.openxmlformats-officedocument.wordprocessingml.template";
@@ -56,6 +58,8 @@ pure string mime(string i) {
     case ".frag"  : return "x-shader/x-fragment";
     case ".geom"  : return "x-shader/x-geometry";
 
+    case ".ttf"  : return "font/ttf";
+    case ".woff"  : return "font/woff";
     case ".woff2"  : return "font/woff2";
 
     case ".scss" : return CGI_FILE ~ "sass -t compact"; //nested (default), compact, compressed, or expanded

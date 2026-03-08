@@ -52,12 +52,18 @@ version(SSL) {
 
   // Create a new SSL context pointer using a certificate, chain and privateKey file
   SSL_CTX* createCTX(string certFile, string keyFile, string chainFile) {
-    SSL_CTX* ctx = SSL_CTX_new(SSLv23_server_method());
+    SSL_CTX* ctx = SSL_CTX_new(TLSv1_2_server_method());
     sslAssert(!(ctx is null));
+    SSL_CTX_clear_options(ctx, SSL_OP_LEGACY_SERVER_CONNECT);
+    //"ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384"); //
+    //ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256
+    SSL_CTX_set_cipher_list(ctx, "HIGH:!ADH:!LOW:!EXP:!MD5:!RC4:!AES128:!CAMELLIA:!AES256-GCM-SHA384:@STRENGTH");
     sslAssert(SSL_CTX_use_certificate_file(ctx, cast(const char*) toStringz(certFile), SSL_FILETYPE_PEM) > 0);
     if (exists(chainFile) && isFile(chainFile)) {
       if(cverbose >= INFO) writefln("[INFO]   loading certificate chain from file: %s", chainFile);
       sslAssert(SSL_CTX_use_certificate_chain_file(ctx, cast(const char*) toStringz(chainFile)) > 0);
+    }else{
+      if(cverbose >= INFO) writefln("[INFO]   chain not loaded: %s", chainFile);
     }
     sslAssert(SSL_CTX_use_PrivateKey_file(ctx, cast(const char*) toStringz(keyFile), SSL_FILETYPE_PEM) > 0);
     sslAssert(SSL_CTX_check_private_key(ctx) > 0);
@@ -150,8 +156,11 @@ version(SSL) {
       if (d.name.endsWith(".crt")) {
         string hostname = baseName(d.name, ".crt");
         if (hostname.length < 255) {
-          string chainFile = baseName(d.name, ".crt") ~ ".chain";
-          if(cverbose >= INFO) writefln("[INFO]   loading certificate from file: %s", d.name);
+          string chainFile = ".ssl/" ~ baseName(d.name, ".crt") ~ ".chain";
+          if(cverbose >= INFO){
+            writefln("[INFO]   loading certificate from file: %s", d.name);
+            writefln("[INFO]   loading chain from file: %s", chainFile);
+          }
           contexts = cast(SSLcontext*) realloc(contexts, (ncontext+1) * SSLcontext.sizeof);
           contexts[ncontext] = loadContext(d.name, hostname, keyFile, chainFile);
           if(cverbose >= INFO) writefln("[HTTPS]  stored certificate: %s in context: %d", to!string(contexts[ncontext].hostname.ptr), ncontext);
