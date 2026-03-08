@@ -53,14 +53,14 @@ struct Response {
         auto v = line.split(": ");
         if(v.length == 2) this.headers[v[0]] = chomp(v[1]);
       }
-      if (status.code != 500) {
+      if (status.code != 500 && scriptheader.length > 0) {
         auto htype = script.headerType();
         if (htype == HeaderType.FastCGI || htype == HeaderType.None) {
           hdr.put(format("%s %d %s\r\n", protocol, payload.statuscode, payload.statuscode.reason));
         }
         hdr.put(scriptheader);
         if(clength == -1) connection = "Close";
-        return(hdr.data); // The script can communicate
+        return(hdr.data);
       }
       if (connection != "No Request" && clength > -1) {
         custom(0, "KEEP", "script '%s' in keepalive mode connection '%s' (%s, %d)", script.command, connection, script.headerType(), clength);

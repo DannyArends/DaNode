@@ -109,8 +109,7 @@ class CGI : Payload {
     // Stream of message bytes, skips the script generated header since the webserver 
     // parses the header and generates it's own
     const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 1024) {
-      if (from + endOfHeader > from)
-        from += bodyStart;
+      if (endOfHeader > 0) from += bodyStart;
       return(external.output(from)[0 .. to!ptrdiff_t(min(from+maxsize, $))]);
     }
 
