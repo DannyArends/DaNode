@@ -73,7 +73,7 @@ final bool parsePost (ref Request request, ref Response response, in FileSystem 
 final void parseXform(ref Request request, const string content) {
   foreach (s; content.split("&")) {
     string[] elem = strip(s).split("=");
-    request.postinfo[ elem[0] ] = PostItem( PostType.Input, elem[0], "", elem[1] );
+    request.postinfo[elem[0]] = PostItem(PostType.Input, elem[0], "", (elem.length > 1)? elem[1] : "" );
   }
 }
 
