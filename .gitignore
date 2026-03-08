@@ -5,8 +5,8 @@ www/rotationz.test
 www/grassland.test
 www/localhost/ddoc
 server
-server.exe
-server.pdb
+*.exe
+*.pdb
 
 www/danny.test/
 www/localhost/123 123.txt
