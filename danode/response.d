@@ -64,6 +64,7 @@ struct Response {
           hdr.put(format("%s %d %s\r\n", protocol, payload.statuscode, payload.statuscode.reason));
         }
         hdr.put(scriptheader);
+        if (!to!string(hdr.data).endsWith("\r\n\r\n")) hdr.put("\r\n");
         if(clength == -1) connection = "Close";
         return(hdr.data);
       }
