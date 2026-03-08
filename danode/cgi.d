@@ -95,14 +95,14 @@ class CGI : Payload {
         string[] values = firstHeaderLine().split(" "); // Normal HTTP header: "Version Code Reason"
         if(values.length >= 3) status = values[1];
       }
-      if (status == "")
-        return((external.status == 0)? StatusCode.Ok : StatusCode.ISE);
+      if (status == "") { return((external.status == 0)? StatusCode.Ok : StatusCode.ISE); }
       StatusCode s = StatusCode.ISE;
       try {
-        s = to!StatusCode(to!int(status));
-      } catch (Exception e){
-        error("unable to get statuscode from script");
-      }
+        int code = to!int(status);
+        foreach (immutable v; EnumMembers!StatusCode) {
+          if (v.code == code) return v;
+        }
+      } catch (Exception e){ error("unable to get statuscode from script"); }
       return(s);
     }
 
