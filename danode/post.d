@@ -153,7 +153,7 @@ final void serverAPI(in FileSystem filesystem, in WebConfig config, in Request r
   content.put(format("S=REMOTE_PORT=%s\n", request.port));
   // TODO: Add content.put(format("S=REDIRECT_URL=%s\n",  ));
   content.put(format("S=GATEWAY_INTERFACE=%s\n", "CGI/1.1"));
-  content.put(format("S=SERVER_PROTOCOL=%s\n", request.protocol));
+  content.put(format("S=SERVER_PROTOCOL=%s\n", cast(string)request.protocol));
   content.put(format("S=REQUEST_METHOD=%s\n", request.method));
   content.put(format("S=QUERY_STRING=%s\n", request.query));
   content.put(format("S=REQUEST_URI=%s\n", request.uripath));
