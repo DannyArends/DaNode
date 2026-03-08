@@ -52,7 +52,9 @@ final bool parsePost (ref Request request, ref Response response, in FileSystem 
     request.parseXform(content);
     custom(1, "XFORM", "# of items: %s", request.postinfo.length);
   } else if (contenttype.indexOf(MPHEADER) >= 0) {
-    string mpid = split(contenttype, "boundary=")[1];
+    auto parts = split(contenttype, "boundary=");
+    if (parts.length < 2) return response.havepost = true;
+    string mpid = parts[1];
     custom(1, "MPART", "header: %s, parsing %d bytes", mpid, expectedlength);
     request.parseMultipart(filesystem, content, mpid);
     custom(1, "MPART", "# of items: %s", request.postinfo.length);
@@ -71,7 +73,7 @@ final bool parsePost (ref Request request, ref Response response, in FileSystem 
 final void parseXform(ref Request request, const string content) {
   foreach (s; content.split("&")) {
     string[] elem = strip(s).split("=");
-    request.postinfo[ elem[0] ] = PostItem( PostType.Input, elem[0], "", elem[1] );
+    request.postinfo[elem[0]] = PostItem(PostType.Input, elem[0], "", (elem.length > 1)? elem[1] : "" );
   }
 }
 
@@ -84,11 +86,11 @@ final void parseMultipart(ref Request request, in FileSystem filesystem, const s
     string[] elem = strip(part).split("\r\n");
     if (elem[0] != "--") {
       string[] mphdr = elem[0].split("; ");
-      string key = mphdr[1][6 .. ($-1)];
+      string key = mphdr[1].length > 6 ? mphdr[1][6 .. ($-1)] : "";
       if (mphdr.length == 2) {
         request.postinfo[key] = PostItem(PostType.Input, key, "", join(elem[2 .. ($-1)]));
       } else if (mphdr.length == 3) {
-        string fname = mphdr[2][10 .. ($-1)];
+        string fname = mphdr[2].length > 10 ? mphdr[2][10 .. ($-1)] : "";
         custom(1, "MPART", "found on key %s file %s", key, fname);
         if (key.length > 2) {
           isarraykey = (key[($-2) .. $] == "[]")? true : false;
@@ -100,7 +102,9 @@ final void parseMultipart(ref Request request, in FileSystem filesystem, const s
           string skey = isarraykey? key[0 .. $-2] : key;
           string localpath = request.uploadfile(filesystem, fkey);
           string mpcontent = join(elem[3 .. ($-1)], "\r\n");
-          request.postinfo[fkey] = PostItem(PostType.File, skey, mphdr[2][10 .. ($-1)], localpath, split(elem[1],": ")[1], mpcontent.length);
+          auto mimeParts = split(elem[1], ": ");
+          string fileMime = mimeParts.length >= 2 ? mimeParts[1] : "application/octet-stream";
+          request.postinfo[fkey] = PostItem(PostType.File, skey, fname, localpath, fileMime, mpcontent.length);
           writeinfile(localpath, mpcontent);
           custom(1, "MPART", "wrote %d bytes to file %s", mpcontent.length, localpath);
         } else {

@@ -115,7 +115,8 @@ class Server : Thread {
       Appender!(Client[]) persistent;
       while(running) {
         try {
-          persistent.clear();
+          Client[] previous = clients;                            // Slice reference
+          persistent.clear();                                     // Clear the Appender
           if ((select = set.sISelect(socket)) > 0) {
             custom(3, "SERVER", "accepting HTTP request");
             Client client = this.accept(socket);
@@ -128,7 +129,10 @@ class Server : Thread {
               if(client !is null) persistent.put(client);
             }
           }
-          foreach(Client client; clients){ if(client.running){ persistent.put(client); } }        // Add the backlog of persistent clients
+          foreach (Client client; previous) {   // Foreach through the Slice reference
+            if(client.running) persistent.put(client);          // Add the backlog of persistent clients
+            else if(!client.isRunning) client.join();           // join finished threads
+          }
           clients = persistent.data;
         } catch(Exception e) {
           error("Unspecified top level server error: %s", e.msg);

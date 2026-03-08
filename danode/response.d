@@ -105,7 +105,8 @@ struct Response {
   @property final const(char)[] bytes(in ptrdiff_t maxsize = 1024) {                       // Stream of bytes (header + stream of bytes)
     ptrdiff_t hsize = header.length;
     if(index <= hsize) {  // We haven't completed the header yet
-      return(header[index .. hsize] ~ payload.bytes(0, maxsize-hsize));
+      ptrdiff_t remaining = maxsize - hsize;
+      return(header[index .. hsize] ~ payload.bytes(0, remaining > 0 ? remaining : 0));
     }
     return(payload.bytes(index-hsize));                                                    // Header completed, just stream bytes from the payload
   }
