@@ -2,7 +2,7 @@ module danode.cgi;
 
 import danode.imports;
 import danode.functions : bodystart, endofheader, fullheader;
-import danode.log : error;
+import danode.log;
 import danode.process : Process;
 import danode.statuscode : StatusCode;
 import danode.payload : HeaderType, Payload, PayloadType;
