@@ -131,7 +131,10 @@ class Process : Thread {
           buffer.put(cast(char) ch);
         }
       } catch (Exception e) {
-        warning("exception during readpipe command: %s", e.msg);
+        warning("Exception during readpipe command: %s", e);
+        file.close();
+      } catch(Error e) {
+        warning("Error during readpipe command: %s", e);
         file.close();
       }
     }
