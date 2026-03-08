@@ -1,13 +1,32 @@
-DaNode a small webserver written in the D programming language
---------------------------------------------------------------
-master: [![Build Status](https://travis-ci.org/DannyArends/DaNode.svg?branch=master)](https://travis-ci.org/DannyArends/DaNode)
-development: [![Build Status](https://travis-ci.org/DannyArends/DaNode.svg?branch=development)](https://travis-ci.org/DannyArends/DaNode)
+DaNode - A secure and small footprint web server for D 
+------------------------------------------------------
+master: [![D](https://github.com/DannyArends/DaNode/actions/workflows/d.yml/badge.svg?branch=master)](https://github.com/DannyArends/DaNode/actions/workflows/d.yml)
+licence: [![license](https://img.shields.io/github/license/DannyArends/DaNode.svg?style=flat)](https://github.com/DannyArends/DaNode/blob/master/LICENSE.txt)
 
-Small web server written in the [D programming language](https://dlang.org/), main features:
-- Support all programming languages that generate output on stdout
-- HTTPs support (using e.g. Let's encrypt)
-- Small footprint: code, cpu and memory
-- API support for PHP, Python, D, R, or add your own
+Web server written in the [D programming language](https://dlang.org/) to 
+host server side web applications (written in any programming language) on multiple domains. 
+It provides encrypted HTTP content over SSL using 
+[Server Name Identification](https://en.wikipedia.org/wiki/Server_Name_Indication), 
+and has been battle tested in production for over 5 years hosting several of my 
+web domains, such as my own [personal website](https://www.dannyarends.nl/).
+
+Written because I was looking for a quick way of sharing 
+[Rscript](https://www.r-project.org/about.html) output with other researchers at 
+different universities. Once working I wanted to use other programming languages as 
+well and added generic support for other languages. Use any language to 
+write your SSL encrypted homepage, why not
+[brainfuck](https://en.wikipedia.org/wiki/Brainfuck), however 
+[Ada](https://en.wikipedia.org/wiki/Ada), 
+[R](https://www.r-project.org) or 
+[PHP](https://en.wikipedia.org/wiki/PHP) are also fine.
+
+The web servers main features / aims summarized:
+- Support server side web applications written in any programming language
+- SSL/HTTPs support by [openSSL](https://www.openssl.org/) and [Deimos bindings](https://github.com/D-Programming-Deimos/openssl)
+- [Server Name Identification](https://en.wikipedia.org/wiki/Server_Name_Indication) by using multiple free [Let's encrypt](https://letsencrypt.org/) certificates
+- Small footprint: Code, CPU and RAM
+- API support for PHP, Python, D, R, or add your own in: [api/](api/)
+- [Example](www/localhost/) web applications, including [PHP](www/localhost/php.php), [Perl](www/localhost/perl.pl), [D](www/localhost/keepalive.d), [R](www/localhost/rscript.r), [brainfuck](www/localhost/test.bf) and [Ada](www/localhost/test.ada).
 
 ##### Get DaNode
 
@@ -30,7 +49,7 @@ Start the web server at a specific port (e.g. 8080)
 
     ./danode/server -p 8080
 
-Confirm that the web server is running by going to: http://127.0.0.1:8080/
+Confirm that the web server is running by going to: http://localhost:8080/
 
 ##### Enable HTTPs support
 
@@ -143,5 +162,6 @@ Or be a maintainer, and adopt (the documentation of) a function.
 
 ##### License
 
-DaNode is written by Danny Arends and is released under the GNU GENERAL PUBLIC LICENSE Version 3 (GPLv3). See [LICENSE.txt](LICENSE.txt).
+DaNode is written by Danny Arends and is released under the GNU GENERAL PUBLIC 
+LICENSE Version 3 (GPLv3). See [LICENSE.txt](LICENSE.txt).
 

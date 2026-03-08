@@ -8,5 +8,5 @@ if [ "$UI1" == "ssl" ]; then
     CFLAGS="--config=ssl"
 fi
 
-dub build --force --build=release $CFLAGS
+dub build --build=release $CFLAGS
 

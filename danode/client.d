@@ -1,14 +1,13 @@
 module danode.client;
 
 import danode.imports;
-import danode.functions : Msecs;
-import danode.router : Router;
-import danode.httpstatus : StatusCode;
-import danode.interfaces : DriverInterface, ClientInterface;
-import danode.response : Response;
+import danode.router : Router, runRequest;
+import danode.statuscode : StatusCode;
+import danode.interfaces : DriverInterface, ClientInterface, StringDriver;
+import danode.response : Response, setTimedOut;
 import danode.request : Request;
 import danode.payload : Message;
-import danode.log : NORMAL, INFO, DEBUG;
+import danode.log : custom, info, trace, warning, NOTSET, NORMAL;
 
 class Client : Thread, ClientInterface {
   private:
@@ -18,19 +17,20 @@ class Client : Thread, ClientInterface {
   public:
     bool                terminated;          /// Is the client / connection terminated
 
-    this(Router router, DriverInterface driver, long maxtime = 5000){ // writefln("[INFO]   client constructor");
-      this.driver           = driver;
-      this.router           = router;
-      this.maxtime          = maxtime;
-      super(&run);
+    this(Router router, DriverInterface driver, long maxtime = 5000) {
+      custom(3, "CLIENT", "client constructor");
+      this.router = router;
+      this.driver = driver;
+      this.maxtime = maxtime;
+      super(&run); // initialize the thread
     }
 
    final void run() {
-      if (router.verbose >= DEBUG) writefln("[DEBUG]  new connection established %s:%d", ip(), port() );
+      trace("new connection established %s:%d", ip(), port() );
       try {
         if (driver.openConnection() == false) {
-          writefln("[WARN]   new connection aborted: unable to open connection");
-          terminated = true;
+          warning("new connection aborted: unable to open connection");
+          stop();
         }
         scope (exit) {
           if (driver.isAlive()) driver.closeConnection();
@@ -38,71 +38,103 @@ class Client : Thread, ClientInterface {
         Request request;
         Response response;
         while (running) {
-          if (driver.receive(driver.socket) > 0) {                      // We've received new data
-            if (!response.ready) {                                      // If we're not ready to respond yet
+          if (driver.receive(driver.socket) > 0) {     // We've received new data
+            if (!response.ready) {                            // If we're not ready to respond yet
               // Parse the data and try to create a response (Could fail multiple times)
-              router.route(ip(), port(), request, response, to!string(driver.inbuffer.data), driver.isSecure());
+              router.route(driver, request, response, maxtime);
             }
-            if (response.ready && !response.completed) {                        // We know what to respond, but haven't send all of it yet
-              driver.send(response, driver.socket);                             // Send the response, hit multiple times, send what you can and return
+            if (response.ready && !response.completed) {      // We know what to respond, but haven't send all of it yet
+              driver.send(response, driver.socket);           // Send the response, hit multiple times, send what you can and return
             }
-            if (response.ready && response.completed) {                         // We've completed the request, response cycle
-              router.logrequest(this, request, response);                       // Log the response to the request
-              request.clearUploadFiles();                                       // Remove any upload files left over
-              request.destroy();                                                // Clear the request structure
-              driver.inbuffer.destroy();                                        // Clear the input buffer
+            if (response.ready && response.completed) {       // We've completed the request, response cycle
+              router.logRequest(this, request, response);     // Log the response to the request
+              request.clearUploadFiles();                     // Remove any upload files left over
+              request.destroy();                              // Clear the request structure
+              driver.inbuffer.destroy();                      // Clear the input buffer
               driver.requests++;
-              if(!response.keepalive) stop();                                   // No keep alive, then stop this client
-              response.destroy();                                               // Clear the response structure
+              if(!response.keepalive) stop();                 // No keep alive, then stop this client
+              response.destroy();                             // Clear the response structure
             }
-          } else {
-            Thread.sleep(dur!"msecs"(1));
           }
-          if(lastmodified >= maxtime) terminated = true;
-          // writefln("[INFO]   connection %s:%s (%s msecs) %s", ip, port, Msecs(driver.starttime), to!string(driver.inbuffer.data));
-          Thread.yield();
+          if (lastmodified >= maxtime) { // Client are not allowed to be silent for more than maxtime
+            custom(2, "CLIENT", "inactivity: %s > %s", lastmodified, maxtime);
+            if (!response.ready && request !is Request.init) { // We have an unhandled request
+              driver.setTimedOut(response);
+              router.logRequest(this, request, response);     // Log the response to the request
+            }
+            stop();
+          }
+          custom(3, "CLIENT", "connection %s:%s (%s msecs) %s", ip, port, starttime, to!string(driver.inbuffer.data));
+          Thread.sleep(dur!"msecs"(2));
         }
       } catch(Exception e) { 
-        writefln("[WARN]   unknown client exception: %s", e.msg);
-        terminated = true;
+        warning("unknown client exception: %s", e);
+        stop();
       }
-      if (router.verbose >= INFO) {
-        writefln("[INFO]   connection %s:%s (%s) closed after %d requests %s (%s msecs)", ip, port, (driver.isSecure() ? "⚐" : "⚑"), 
-                                                                                          driver.requests, driver.senddata, Msecs(driver.starttime));
-      }
+      custom(1, "CLIENT", "connection %s:%s (%s) closed after %d requests %s (%s msecs)", ip, port, (driver.isSecure() ? "SSL" : "HTTP"), 
+                                                                                          driver.requests, driver.senddata, starttime);
       driver.destroy();                                               // Clear the response structure
     }
 
-    final @property bool running() {
+    // Is the client still running, if the socket was gone it's not otherwise check the terminated flag
+    final @property bool running() const {
       if (driver.socket is null) return(false);
       return(!terminated && driver.socket.isAlive());
     }
 
-    final @property long starttime(){
-      return(Msecs(driver.starttime));
-    }
-
-    final @property long lastmodified(){
-      return(Msecs(driver.modtime));
-    }
-
-    final @property void stop(){
-      if (router.verbose >= DEBUG) writefln("[DEBUG]  connection %s:%s stop called", ip, port);
+    // Stop the client by setting the terminated flag
+    final @property void stop() {
+      trace("connection %s:%s stop called", ip, port);
       terminated = true; 
     }
 
-    final @property long port() const { 
-      if (driver.address !is null) {
-        return(to!long(driver.address.toPortString())); 
-      } 
-      return(-1); 
-    }
+    // Start time of the client in mseconds (stored in the connection driver)
+    final @property long starttime() const { return(driver.starttime); }
+    // When was the client last modified in mseconds (stored in the connection driver)
+    final @property long lastmodified() const { return(driver.lastmodified); }
+    // Port of the client
+    final @property long port() const { return(driver.port()); } 
+    // ip address of the client
+    final @property string ip() const { return(driver.ip()); } 
+}
 
-    final @property string ip() const {
-      if (driver.address !is null) {
-        return(driver.address.toAddrString()); 
-      }
-      return("0.0.0.0"); 
-    }
+unittest {
+  custom(0, "FILE", "%s", __FILE__);
+  auto router = new Router("./www/", Address.init, NORMAL);
+  router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\r\n\r\n");
+  router.runRequest("GET /dmd.d HTTP/1.1\nHost: www.localhost\n\n");
+  router.runRequest("GET /dmd.d HTTP/1.1\nHost: www.localhost\r\n\r\n");
+  router.runRequest("GET /dmd.d HTTP/1.1\nHost: notfound\n\n");
+  router.runRequest("GET /dmd.d HTTP/1.1\nHost: notfound\r\n\r\n");
+
+  router.runRequest("GET /dmd.d\nHost: localhost\n\n");
+  router.runRequest("GET /dmd.d\nHost: notfound\n\n");
+
+  router.runRequest("GET\nHost: localhost\n\n");
+  router.runRequest("GET\nHost: notfound\n\n");
+
+  router.runRequest("GET /php.php HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("GET /php.php HTTP/1.1\nHost: localhost\r\n\r\n");
+
+  router.runRequest("GET /php-cgi.fphp HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("GET /php-cgi.fphp HTTP/1.1\nHost: localhost\r\n\r\n");
+
+  router.runRequest("GET /phpinfo.fphp HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("GET /phpinfo.fphp HTTP/1.1\nHost: localhost\r\n\r\n");
+
+  router.runRequest("GET /dmd.d HTTP/1.2\nHost: localhost\n\n");
+  router.runRequest("GET /keepalive.d HTTP/1.1\nHost: localhost\nConnection: keep-alive\n\n");
+
+  // Test all available RequestMethods, and an invalid one
+  router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("HEAD /dmd.d HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("POST /dmd.d HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("PUT /dmd.d HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("DELETE /dmd.d HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("CONNECT /dmd.d HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("OPTIONS * HTTP/1.1\n\n");
+  router.runRequest("TRACE /dmd.d HTTP/1.1\nHost: localhost\n\n");
+  router.runRequest("NO /dmd.d HTTP/1.1\nHost: localhost\n\n");
 }
 

@@ -29,13 +29,13 @@ class Server : Thread {
   public:
     this(ushort port = 80, int backlog = 100, string wwwRoot = "./www/", int verbose = NORMAL) {
       this.starttime = Clock.currTime();            // Start the timer
-      this.router = new Router(wwwRoot, verbose);   // Start the router
       this.socket = initialize(port, backlog);      // Create the HTTP socket
+      this.router = new Router(wwwRoot, this.socket.localAddress(), verbose);   // Start the router
       version(SSL) {
         this.sslsocket = initialize(443, backlog);  // Create the SSL / HTTPs socket
       }
       set = new SocketSet(1);                       // Create a server socket set
-      writefln("[SERVER] server created backlog: %d", backlog);
+      custom(0, "SERVER", "server '%s' created backlog: %d", this.hostname(), backlog);
       super(&run);
     }
 
@@ -48,10 +48,9 @@ class Server : Thread {
         socket.blocking = false;
         socket.bind(new InternetAddress(port));
         socket.listen(backlog);
-        writefln("[INFO]   socket listening on port %s", port);
+        custom(0, "SERVER", "socket listening on port %s", port);
       } catch(Exception e) {
-        writefln("[ERROR]  unable to bind socket on port %s\n%s", port, e.msg);
-        exit(-1);
+        abort(format("unable to bind socket on port %s\n%s", port, e.msg), -1);
       }
       return socket;
     }
@@ -61,9 +60,9 @@ class Server : Thread {
       if (set.isSet(socket)) {
         try {
           DriverInterface driver = null;
-          if(!secure) driver = new HTTP(socket.accept(), false, verbose);
+          if(!secure) driver = new HTTP(socket.accept(), false);
           version(SSL) {
-            if(secure) driver = new HTTPS(socket.accept(), false, verbose);
+            if(secure) driver = new HTTPS(socket.accept(), false);
           }
           if(driver is null) return(null);
           Client client = new Client(router, driver);
@@ -71,10 +70,10 @@ class Server : Thread {
           //Thread.sleep(dur!"msecs"(1));
           return(client);
         } catch(Exception e) {
-          writefln("[ERROR]  unable to accept connection: %s", e.msg);
+          error("unable to accept connection: %s", e.msg);
         }
       } else {
-        writefln("[ERROR]  socket is not in the socketset");
+        error("socket is not in the socketset");
       }
       return(null);
     }
@@ -98,8 +97,11 @@ class Server : Thread {
 
      // Print some server information
     final @property void info() {
-      writefln("[INFO]   uptime %s\n[INFO]   # of connections: %d / %d", uptime(), nAlive(), clients.length);
+      custom(0, "SERVER", "uptime %s\n[INFO]   # of connections: %d / %d", uptime(), nAlive(), clients.length);
     }
+    
+    // Hostanme of the server
+    final @property string hostname() { return(this.socket.hostName()); }
 
     // Number of alive connections
     final @property long nAlive() {
@@ -114,12 +116,14 @@ class Server : Thread {
       while(running) {
         try {
           persistent.clear();
-          if ((select = set.sISelect(socket)) > 0) {           // writefln("Accepting HTTP request");
+          if ((select = set.sISelect(socket)) > 0) {
+            custom(3, "SERVER", "accepting HTTP request");
             Client client = this.accept(socket);
             if(client !is null) persistent.put(client);
           }
           version (SSL) {
-            if ((select = set.sISelect(sslsocket)) > 0) {      // writefln("Accepting HTTPs request");
+            if ((select = set.sISelect(sslsocket)) > 0) {
+              custom(3, "SERVER", "accepting HTTPs request");
               Client client = this.accept(sslsocket, true);
               if(client !is null) persistent.put(client);
             }
@@ -127,10 +131,10 @@ class Server : Thread {
           foreach(Client client; clients){ if(client.running){ persistent.put(client); } }        // Add the backlog of persistent clients
           clients = persistent.data;
         } catch(Exception e) {
-          writefln("[SERVER] ERROR: %s", e.msg);
+          error("Unspecified top level server error: %s", e.msg);
         }
       }
-      writefln("[INFO]  Server socket closed, running: %s", running);
+      custom(0, "SERVER", "Server socket closed, running: %s", running);
       socket.close();
       version (SSL) {
         sslsocket.closeSSL();
@@ -169,7 +173,7 @@ void main(string[] args) {
       signal(SIGPIPE, &handle_signal);
     }
     version (Windows) {
-      writeln("[WARN]   -k has been set to true, we cannot handle keyboard input under windows at the moment");
+      warning("-k has been set to true, we cannot handle keyboard input under windows at the moment");
       keyoff = true;
     }
 
@@ -185,17 +189,17 @@ void main(string[] args) {
       stdout.flush();
       Thread.sleep(dur!"msecs"(250));
     }
-    writefln("[INFO]   Server shutting down: %d", server.running);
+    info("server shutting down: %d", server.running);
     server.info();
   }
 }
 
 unittest {
-  writefln("[FILE]   %s", __FILE__);
+  custom(0, "FILE", "%s", __FILE__);
   version(SSL) {
-    writefln("[TEST]   SSL support");
+    custom(0, "TEST", "SSL support");
   }else{
-    writefln("[TEST]   No SSL support");
+    custom(0, "TEST", "No SSL support");
   }
 }
 
