@@ -81,7 +81,8 @@ class CGI : Payload {
     // Get the first line of the header
     @property final string firstHeaderLine() const {
       string outputSoFar = to!string(external.output(0));
-      return(outputSoFar[0 .. outputSoFar.indexOf("\n")]);
+      ptrdiff_t i = outputSoFar.indexOf("\n");
+      return(i > 0 ? outputSoFar[0 .. i] : outputSoFar);
     }
 
     // Return the status code provided by the external script
