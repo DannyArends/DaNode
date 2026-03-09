@@ -149,11 +149,9 @@ struct Request {
   final @property string    useragent() const { return(headers.from("User-Agent", "Unknown")); }
   final string              shorthost() const { return( (host.indexOf("www.") >= 0)? host[4 .. $] : host ); }
   final string              command(string localpath) const { return(format("%s %s%s", localpath.interpreter(), localpath, params())); }
-  final @property string    params() const { 
+  final @property string    params() const {
       Appender!string str; 
-      foreach(k; get.byKey()){ 
-          str.put(format(" %s", shellEscape(k ~ "=" ~ get[k]))); 
-      } 
+      foreach(k; get.byKey()){ str.put(format(" %s", shellEscape(k ~ "=" ~ get[k]))); }
       return(str.data); 
   }
 
