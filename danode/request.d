@@ -3,7 +3,7 @@ module danode.request;
 import danode.imports;
 import danode.filesystem : FileSystem;
 import danode.interfaces : ClientInterface, DriverInterface;
-import danode.functions : interpreter, from, parseHtmlDate;
+import danode.functions : interpreter, from, parseHtmlDate, shellEscape;
 import danode.webconfig : WebConfig;
 import danode.http : HTTP;
 import danode.post : PostItem, PostType;
@@ -145,11 +145,17 @@ struct Request {
   final @property SysTime   ifModified() const { return(parseHtmlDate(headers.from("If-Modified-Since"))); }
   final @property bool      acceptsEncoding(string encoding = "deflate") const { return(headers.from("Accept-Encoding").canFind(encoding)); }
   final @property bool      track() const { return(  headers.from("DNT","0") == "0"); }
-  final @property string    params() const { Appender!string str; foreach(k; get.byKey()){ str.put(format(" \"%s=%s\"", k, get[k])); } return(str.data); }
   final @property string    cookies() const { return(headers.from("Cookie")); }
   final @property string    useragent() const { return(headers.from("User-Agent", "Unknown")); }
   final string              shorthost() const { return( (host.indexOf("www.") >= 0)? host[4 .. $] : host ); }
   final string              command(string localpath) const { return(format("%s %s%s", localpath.interpreter(), localpath, params())); }
+  final @property string    params() const { 
+      Appender!string str; 
+      foreach(k; get.byKey()){ 
+          str.put(format(" %s", shellEscape(k ~ "=" ~ get[k]))); 
+      } 
+      return(str.data); 
+  }
 
   // Canonical redirect of the Request for a directory to the index page specified in the WebConfig
   final void redirectdir(in WebConfig config) {

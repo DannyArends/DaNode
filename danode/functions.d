@@ -29,6 +29,8 @@ SysTime parseHtmlDate(const string datestr) {
   return(ts);
 }
 
+pure string shellEscape(string s) { return "'" ~ s.replace("'", "'\\''") ~ "'"; }
+
 // Month to index of the year
 pure int monthToIndex(in string m) {
   for (int x = 1; x < 12; ++x) {
