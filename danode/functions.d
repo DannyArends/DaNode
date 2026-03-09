@@ -31,6 +31,13 @@ SysTime parseHtmlDate(const string datestr) {
 
 pure string shellEscape(string s) { return "'" ~ s.replace("'", "'\\''") ~ "'"; }
 
+// Returns null if path escapes root
+pure string safePath(in string root, in string path) {
+  string absPath = absolutePath(buildNormalizedPath(root, path));
+  if (absPath.startsWith(absolutePath(root))) return absPath;
+  return null;
+}
+
 // Month to index of the year
 pure int monthToIndex(in string m) {
   for (int x = 1; x < 12; ++x) {

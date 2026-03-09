@@ -12,7 +12,7 @@ public import std.compiler : name, version_major, version_minor;
 public import std.conv : to;
 public import std.datetime : dur, msecs;
 public import std.getopt : getopt;
-public import std.path : baseName, extension;
+public import std.path : baseName, extension, absolutePath, buildNormalizedPath;
 public import std.process : pipe, spawnShell, executeShell, tryWait, wait, kill;
 public import std.file : dirEntries, exists, remove, isFile, isDir, timeLastModified, getSize;
 public import std.format : format, formatValue;

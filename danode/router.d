@@ -10,7 +10,7 @@ import danode.response;
 import danode.webconfig : WebConfig;
 import danode.payload : Message, FilePayload;
 import danode.mimetypes : mime;
-import danode.functions : from, has, isCGI, isFILE, isDIR, Msecs, htmltime, isAllowed;
+import danode.functions : from, has, isCGI, isFILE, isDIR, Msecs, htmltime, isAllowed, safePath;
 import danode.filesystem : FileSystem;
 import danode.post : parsePost, PostType;
 import danode.log : custom, trace, info, Log, NOTSET, NORMAL;
@@ -73,7 +73,8 @@ class Router {
 
       config = WebConfig(filesystem.file(localroot, "/web.config"));
       string fqdn = config.domain(request.shorthost());
-      string localpath = config.localpath(localroot, decodeComponent(request.path));
+      string localpath = safePath(localroot, decodeComponent(request.path));
+      if (localpath is null) return response.serveForbidden(request);
 
       trace("configfile at: %s%s", localroot, "/web.config");
       trace("request.host: %s, fqdn: %s", request.host, fqdn);
