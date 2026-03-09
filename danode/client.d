@@ -43,7 +43,7 @@ class Client : Thread, ClientInterface {
           if (driver.receive(driver.socket) > 0) {     // We've received new data
             if (driver.inbuffer.data.length > MAX_REQUEST_SIZE) {
               custom(2, "CLIENT", "request too large from %s:%s", ip, port);
-              response.setTimedOut(driver);
+              driver.setTimedOut(response);
               stop(); continue;
             }
             if (!response.ready) {                            // If we're not ready to respond yet
