@@ -36,9 +36,11 @@ pure string htmlEscape(string s) {
 
 // Returns null if path escapes root
 string safePath(in string root, in string path) {
-  string absPath = absolutePath(buildNormalizedPath(root, path));
-  trace("safepath root: %s, path: %s", absolutePath(root), absPath);
-  if (absPath.startsWith(absolutePath(root))) return absPath;
+  string absRoot = absolutePath(root);
+  string relPath = path.startsWith("/") ? path[1 .. $] : path;
+  string absPath = absolutePath(buildNormalizedPath(root, relPath));
+  trace("safepath root: %s, path: %s", absRoot, absPath);
+  if (absPath.startsWith(absRoot)) return absPath;
   return null;
 }
 
