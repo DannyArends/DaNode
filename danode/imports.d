@@ -6,6 +6,7 @@ public import core.stdc.stdio : fileno, printf;
 
 // Public imported function from std
 public import std.algorithm : mean, canFind, min;
+public import core.atomic : atomicLoad, atomicStore;
 public import std.array : appender, join;
 public import std.compiler : name, version_major, version_minor;
 public import std.conv : to;

@@ -14,9 +14,9 @@ class Client : Thread, ClientInterface {
     Router              router;              /// Router class from server
     DriverInterface     driver;              /// Driver
     long                maxtime;             /// Maximum quiet time before we cut the connection
-  public:
-    bool                terminated;          /// Is the client / connection terminated
+    shared bool         terminated;          /// Is the client / connection terminated
 
+  public:
     this(Router router, DriverInterface driver, long maxtime = 5000) {
       custom(3, "CLIENT", "client constructor");
       this.router = router;
@@ -82,13 +82,13 @@ class Client : Thread, ClientInterface {
     // Is the client still running, if the socket was gone it's not otherwise check the terminated flag
     final @property bool running() const {
       if (driver.socket is null) return(false);
-      return(!terminated && driver.socket.isAlive());
+      return(!atomicLoad(terminated) && driver.socket.isAlive());
     }
 
     // Stop the client by setting the terminated flag
     final @property void stop() {
       trace("connection %s:%s stop called", ip, port);
-      terminated = true; 
+      atomicStore(terminated, true);
     }
 
     // Start time of the client in mseconds (stored in the connection driver)
