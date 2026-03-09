@@ -30,6 +30,9 @@ SysTime parseHtmlDate(const string datestr) {
 }
 
 pure string shellEscape(string s) { return "'" ~ s.replace("'", "'\\''") ~ "'"; }
+pure string htmlEscape(string s) {
+  return(s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&#39;"));
+}
 
 // Returns null if path escapes root
 pure string safePath(in string root, in string path) {
@@ -158,9 +161,10 @@ pure string interpreter(in string path) {
 // Browse the content of a directory, generate a rudimentairy HTML file
 string browseDir(in string root, in string localpath) {
   Appender!(string) content;
-  content.put(format("Content of: %s<br>\n", localpath));
+  content.put(format("Content of: %s<br>\n", htmlEscape(localpath)));
   foreach (DirEntry d; dirEntries(localpath, SpanMode.shallow)) {
-    content.put(format("<a href='%s'>%s</a><br>", d.name[root.length .. $], d.name[root.length .. $]));
+      string name = htmlEscape(d.name[root.length .. $]);
+      content.put(format("<a href='%s'>%s</a><br>", name, name));
   }
   return(format("<html><head><title>200 - Allowed directory</title></head><body>%s</body></html>", content.data));
 }
