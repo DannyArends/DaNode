@@ -12,17 +12,16 @@ version(SSL) {
   import danode.server : Server;
   import danode.response : Response;
 
-  version(OpenSSL_1_0) {
-
-  }else{
+  static if (OPENSSL_VERSION_NUMBER < 0x10100000L) {
+      // OpenSSL 1.0.x - real functions exist, nothing to shim
+  } else {
     //--- Add shims for OpenSSL 1.1, from: https://github.com/CyberShadow/ae
     alias SSLv3_server_method = TLSv1_server_method;
-    void SSL_load_error_strings() {}
     struct OPENSSL_INIT_SETTINGS;
     extern(C) void OPENSSL_init_ssl(ulong opts, const OPENSSL_INIT_SETTINGS *settings) nothrow;
     void SSL_library_init() { OPENSSL_init_ssl(0, null); }
     void OpenSSL_add_all_algorithms() { SSL_library_init(); }
-    // --- //
+    void SSL_load_error_strings() {}
   }
 
   // SSL context structure, stored relation between hostname 
@@ -72,8 +71,6 @@ version(SSL) {
 
     sslAssert(!(ctx is null));
     SSL_CTX_clear_options(ctx, SSL_OP_LEGACY_SERVER_CONNECT);
-    //"ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384"); //
-    //ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256
     SSL_CTX_set_cipher_list(ctx, "HIGH:!ADH:!LOW:!EXP:!MD5:!RC4:!AES128:!CAMELLIA:!AES256-GCM-SHA384:@STRENGTH");
     sslAssert(SSL_CTX_use_certificate_file(ctx, cast(const char*) toStringz(certFile), SSL_FILETYPE_PEM) > 0);
     if (exists(chainFile) && isFile(chainFile)) {
