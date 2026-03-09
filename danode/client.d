@@ -9,6 +9,8 @@ import danode.request : Request;
 import danode.payload : Message;
 import danode.log : custom, info, trace, warning, NOTSET, NORMAL;
 
+immutable size_t MAX_REQUEST_SIZE = 1024 * 1024 * 10; // 10MB upload limit
+
 class Client : Thread, ClientInterface {
   private:
     Router              router;              /// Router class from server
@@ -39,6 +41,11 @@ class Client : Thread, ClientInterface {
         Response response;
         while (running) {
           if (driver.receive(driver.socket) > 0) {     // We've received new data
+            if (driver.inbuffer.data.length > MAX_REQUEST_SIZE) {
+              custom(2, "CLIENT", "request too large from %s:%s", ip, port);
+              response.setTimedOut(driver);
+              stop(); continue;
+            }
             if (!response.ready) {                            // If we're not ready to respond yet
               // Parse the data and try to create a response (Could fail multiple times)
               router.route(driver, request, response, maxtime);
@@ -62,7 +69,7 @@ class Client : Thread, ClientInterface {
               driver.setTimedOut(response);
               router.logRequest(this, request, response);     // Log the response to the request
             }
-            stop();
+            stop(); continue;
           }
           custom(3, "CLIENT", "connection %s:%s (%s msecs) %s", ip, port, starttime, to!string(driver.inbuffer.data));
           Thread.sleep(dur!"msecs"(2));
