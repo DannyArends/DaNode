@@ -33,7 +33,7 @@ class FileSystem {
   public:
     this(Log logger, string root = "./www/", size_t maxsize = 1024 * 512){
       this.logger   = logger;
-      this.root     = root;
+      this.root     = root.endsWith("/") ? root : root ~ "/";     // Normalized root (always ends with /)
       this.maxsize  = maxsize;
       scan();
     }
@@ -72,7 +72,7 @@ class FileSystem {
       return(domain);
     } }
 
-    /* Get the localroot of the domain (TODO: Is there a bug, did I require that this.root should always end in a '/' ?) */
+    /* Get the localroot of the domain */
     final string localroot(string hostname) const { return(format("%s%s", this.root, hostname)); }
 
     /* Get the FilePayload at path from the localroot, with update check on buffers */
