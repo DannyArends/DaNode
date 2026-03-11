@@ -20,7 +20,7 @@ immutable string SERVERINFO = "DaNode/0.0.3";
 
 struct Response {
   string            protocol = "HTTP/1.1";
-  string            connection = "Keep-Alive";
+  string            connection = "Close";
   string            charset = "UTF-8";
   Address           address;
   long              maxage = 0;
@@ -146,7 +146,7 @@ Response create(in Request request, Address address, in StatusCode statuscode = 
   response.customheader("Server", SERVERINFO);
   response.customheader("X-Powered-By", format("%s %s.%s", name, version_major, version_minor));
   response.payload = new Empty(statuscode, mimetype);
-  if (request.keepalive) response.connection = "Keep-Alive";
+  response.connection = request.keepalive ? "Keep-Alive" : "Close";
   response.created = true;
   return(response);
 }
@@ -198,22 +198,46 @@ void serveCGI(ref Response response, in Request request, in WebConfig config, in
   }
 }
 
-// serve a static file from the disc, send encrypted when requested and available
+// Serve a static file from the disc, send encrypted when requested and available
 void serveStaticFile(ref Response response, in Request request, FileSystem fs) {
   trace("serving a static file");
   string localroot = fs.localroot(request.shorthost());
   FilePayload reqFile = fs.file(localroot, request.path);
-  if (request.acceptsEncoding("deflate") && reqFile.hasEncodedVersion) {
+  if (request.acceptsEncoding("deflate") && reqFile.hasEncodedVersion && !request.hasRange) {
     info("will serve %s with deflate encoding", request.path);
     reqFile.deflate = true;
     response.customheader("Content-Encoding","deflate");
   }
   response.payload = reqFile;
+
+  if (request.hasRange) { response.serveRangeFile(request, reqFile); return; }
+
+  response.customheader("Accept-Ranges", "bytes");
   if (request.ifModified >= response.payload.mtime()) {                                        // Non modified static content
     trace("static file has not changed, sending notmodified");
     response.notmodified(request, response.payload.mimetype);
   }
 
+  response.ready = true;
+}
+
+// Serve a File Range from a static file on disc
+void serveRangeFile(ref Response response, in Request request, FilePayload reqFile) {
+  long[2] r = request.range();
+  long total = reqFile.fileSize();
+  long start = r[0];
+  long end = r[1] < 0 ? total - 1 : r[1];
+  if (start >= total || end >= total || start > end) {
+    response.payload = new Message(StatusCode.RangeNotSatisfiable, "");
+    response.customheader("Content-Range", format("bytes */%d", total));
+  } else {
+    response.customheader("Content-Range", format("bytes %d-%d/%d", start, end, total));
+    response.customheader("Accept-Ranges", "bytes");
+    reqFile.rangeStart = start;
+    reqFile.rangeEnd = end;
+    reqFile.isRange = true;
+    response.payload = reqFile;
+  }
   response.ready = true;
 }
 

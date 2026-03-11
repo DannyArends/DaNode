@@ -59,6 +59,9 @@ class Message : Payload {
 class FilePayload : Payload {
   public:
     bool      deflate = false; // Is a deflate version of the file available ?
+    bool      isRange = false;
+    long      rangeStart = 0;
+    long      rangeEnd = -1;
   private:
     string    path; // Path of the file
     SysTime   btime; // Time buffered
@@ -138,9 +141,13 @@ class FilePayload : Payload {
     /* Mimetype of the file  */
     final @property string mimetype() const { return mime(path); }
     /* Status code for file is StatusCode.Ok ? */
-    final @property StatusCode statuscode() const { return(realfile ? StatusCode.Ok : StatusCode.NotFound); }
+    final @property StatusCode statuscode() const { 
+      if (!realfile) return StatusCode.NotFound;
+      return isRange ? StatusCode.PartialContent : StatusCode.Ok; 
+    }
     /* Get the number of bytes that the client response has, based on encoding */
     final @property ptrdiff_t length() const {
+      if (isRange) return to!ptrdiff_t(rangeEnd - rangeStart + 1);
       if(hasEncodedVersion && deflate) return(encbuf.length);
       return(fileSize());
     }
@@ -175,13 +182,16 @@ class FilePayload : Payload {
       if (!realfile) { return []; }
       trace("file provided is a real file");
       if (needsupdate) { buffer(); }
+      ptrdiff_t offset = isRange? to!ptrdiff_t(rangeStart) + from : from;
+      ptrdiff_t limit = isRange? to!ptrdiff_t(rangeEnd - rangeStart + 1) : -1;
+      ptrdiff_t sz = (limit > 0)? to!ptrdiff_t(min(maxsize, max(0, limit - from))) : maxsize;
       if (!buffered) {
-        return(asStream(from, maxsize));
+        return(asStream(offset, sz));
       } else {
         if(hasEncodedVersion && deflate) {
-          if(from < encbuf.length) return( encbuf[from .. to!ptrdiff_t(min(from+maxsize, $))] );
+          if(offset < encbuf.length) return( encbuf[offset .. to!ptrdiff_t(min(offset+sz, $))] );
         } else {
-          if(from < buf.length) return( buf[from .. to!ptrdiff_t(min(from+maxsize, $))] );
+          if(offset < buf.length) return( buf[offset .. to!ptrdiff_t(min(offset+sz, $))] );
         }
       }
       return([]);

@@ -94,6 +94,18 @@ struct Request {
   // New input was obtained and / or the driver has been changed, update the driver
   final void update(string body) { this.body = body; }
 
+  // Parse Range header: "bytes=start-end" or "bytes=start-"
+  final @property long[2] range() const {
+    string r = headers.from("Range");
+    if (r.length == 0 || !r.startsWith("bytes=")) return [-1, -1];
+    string[] parts = r[6 .. $].split("-");
+    long start = parts[0].length > 0 ? to!long(parts[0]) : 0;
+    long end = (parts.length > 1 && parts[1].length > 0) ? to!long(parts[1]) : -1;
+    return [start, end];
+  }
+
+  final @property bool hasRange() const { return headers.from("Range").startsWith("bytes="); }
+
   // The Host header requested in the request
   final @property string host() const { 
     ptrdiff_t i = headers.from("Host").indexOf(":");
