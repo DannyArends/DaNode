@@ -34,8 +34,9 @@ class Client : Thread, ClientInterface {
         Request request;
         Response response;
         scope (exit) {
-          if (driver.isAlive()) driver.closeConnection();
-          request.clearUploadFiles();
+          if (driver.isAlive()) driver.closeConnection();   // Close connection
+          request.clearUploadFiles();                       // Clean uploaded files
+          response.kill();                                  // kill any running CGI process
         }
         while (running) {
           if (driver.receive(driver.socket) > 0) {     // We've received new data
