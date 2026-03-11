@@ -20,7 +20,7 @@ immutable string SERVERINFO = "DaNode/0.0.3";
 
 struct Response {
   string            protocol = "HTTP/1.1";
-  string            connection = "Keep-Alive";
+  string            connection = "Close";
   string            charset = "UTF-8";
   Address           address;
   long              maxage = 0;
