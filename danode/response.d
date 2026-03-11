@@ -146,7 +146,7 @@ Response create(in Request request, Address address, in StatusCode statuscode = 
   response.customheader("Server", SERVERINFO);
   response.customheader("X-Powered-By", format("%s %s.%s", name, version_major, version_minor));
   response.payload = new Empty(statuscode, mimetype);
-  if (request.keepalive) response.connection = "Keep-Alive";
+  response.connection = request.keepalive ? "Keep-Alive" : "Close";
   response.created = true;
   return(response);
 }
