@@ -12,6 +12,8 @@ import danode.filesystem : FileSystem;
 import danode.functions : from, has, isCGI, isFILE, isDIR, writeinfile;
 import danode.log : info, custom, trace, warning;
 
+immutable long MAX_UPLOAD_SIZE = 1024 * 1024 * 100; // 100MB
+
 immutable string      MPHEADER         = "multipart/form-data";                     /// Multipart header id
 immutable string      XFORMHEADER      = "application/x-www-form-urlencoded";       /// X-form header id
 immutable string      JSON             = "application/json"; /// json input
@@ -40,6 +42,12 @@ final bool parsePost (ref Request request, ref Response response, in FileSystem 
     custom(2, "POST", "Content-Length was not specified or 0: real length: %s", content.length);
     response.havepost = true;
     return(true); // When we don't receive any post data it is meaningless to scan for any content
+  } else if (expectedlength > MAX_UPLOAD_SIZE) {
+    warning("Upload too large: %d bytes from %s", expectedlength, request.ip);
+    response.payload = new Message(StatusCode.PayloadTooLarge, "413 - Payload Too Large\n");
+    response.ready = true;
+    response.havepost = true;
+    return(true);
   }
   custom(2, "POST", "received %s of %s", content.length, expectedlength);
   if(content.length < expectedlength) return(false);

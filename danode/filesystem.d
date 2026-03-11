@@ -20,9 +20,7 @@ struct Domain {
   @property long size() const { long sum = 0; foreach(ref f; files.byKey){ sum += files[f].length(); } return sum; }
 }
 
-/* File system class that manages the underlying domains
-   Note: Should this really be thread synchronized access ?
- */
+/* File system class that manages the underlying domains */
 class FileSystem {
   private:
     string         root;
