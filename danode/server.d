@@ -14,6 +14,8 @@ version(SSL) {
   import danode.https : HTTPS;
 }
 
+immutable int MAX_CLIENTS = 1000;
+
 class Server : Thread {
   private:
     Socket            socket;           // The server socket
@@ -118,13 +120,13 @@ class Server : Thread {
         try {
           Client[] previous = clients;                            // Slice reference
           persistent.clear();                                     // Clear the Appender
-          if ((select = set.sISelect(socket)) > 0) {
+          if ((select = set.sISelect(socket)) > 0 && nAlive() < MAX_CLIENTS) {
             custom(3, "SERVER", "accepting HTTP request");
             Client client = this.accept(socket);
             if(client !is null) persistent.put(client);
           }
           version (SSL) {
-            if ((select = set.sISelect(sslsocket)) > 0) {
+            if ((select = set.sISelect(sslsocket)) > 0 && nAlive() < MAX_CLIENTS) {
               custom(3, "SERVER", "accepting HTTPs request");
               Client client = this.accept(sslsocket, true);
               if(client !is null) persistent.put(client);
