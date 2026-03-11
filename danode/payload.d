@@ -149,7 +149,7 @@ class FilePayload : Payload {
 
     /* Send the file from the underlying raw byte source stream using fseek, fp are closed */
     final char[] asStream(ptrdiff_t from, ptrdiff_t maxsize = 1024) {
-      if(buf is null) buf = new char[](maxsize);
+      char[] tmpbuf = new char[](maxsize);
       char[] slice = [];
       if (cverbose >= DEBUG && from == 0) write("[STREAM] .");
       if (from >= fileSize()) {
@@ -161,7 +161,7 @@ class FilePayload : Payload {
         fp.open(path, "rb");
         if(fp.isOpen()) {
           fp.seek(from);
-          slice = fp.rawRead!char(buf);
+          slice = fp.rawRead!char(tmpbuf);
           fp.close();
           if (cverbose >= DEBUG) write(".");
           if (cverbose >= DEBUG && (from + slice.length) >= fileSize()) write("\n");
