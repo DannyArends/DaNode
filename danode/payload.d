@@ -182,9 +182,9 @@ class FilePayload : Payload {
       if (!realfile) { return []; }
       trace("file provided is a real file");
       if (needsupdate) { buffer(); }
-      ptrdiff_t offset = isRange ? to!ptrdiff_t(rangeStart) + from : from;
-      ptrdiff_t limit = isRange ? to!ptrdiff_t(rangeEnd - rangeStart + 1) : -1;
-      ptrdiff_t sz = limit > 0 ? to!ptrdiff_t(min(maxsize, limit - from)) : maxsize;
+      ptrdiff_t offset = isRange? to!ptrdiff_t(rangeStart) + from : from;
+      ptrdiff_t limit = isRange? to!ptrdiff_t(rangeEnd - rangeStart + 1) : -1;
+      ptrdiff_t sz = (limit > 0)? to!ptrdiff_t(min(maxsize, max(0, limit - from))) : maxsize;
       if (!buffered) {
         return(asStream(offset, sz));
       } else {

@@ -203,7 +203,7 @@ void serveStaticFile(ref Response response, in Request request, FileSystem fs) {
   trace("serving a static file");
   string localroot = fs.localroot(request.shorthost());
   FilePayload reqFile = fs.file(localroot, request.path);
-  if (request.acceptsEncoding("deflate") && reqFile.hasEncodedVersion) {
+  if (request.acceptsEncoding("deflate") && reqFile.hasEncodedVersion && !request.hasRange) {
     info("will serve %s with deflate encoding", request.path);
     reqFile.deflate = true;
     response.customheader("Content-Encoding","deflate");
@@ -212,6 +212,7 @@ void serveStaticFile(ref Response response, in Request request, FileSystem fs) {
 
   if (request.hasRange) { response.serveRangeFile(request, reqFile); return; }
 
+  response.customheader("Accept-Ranges", "bytes");
   if (request.ifModified >= response.payload.mtime()) {                                        // Non modified static content
     trace("static file has not changed, sending notmodified");
     response.notmodified(request, response.payload.mimetype);
@@ -220,24 +221,24 @@ void serveStaticFile(ref Response response, in Request request, FileSystem fs) {
   response.ready = true;
 }
 
-  void serveRangeFile(ref Response response, in Request request, FilePayload reqFile) {
-    long[2] r = request.range();
-    long total = reqFile.fileSize();
-    long start = r[0];
-    long end = r[1] < 0 ? total - 1 : r[1];
-    if (start >= total || end >= total || start > end) {
-      response.payload = new Message(StatusCode.RangeNotSatisfiable, "");
-      response.customheader("Content-Range", format("bytes */%d", total));
-    } else {
-      response.customheader("Content-Range", format("bytes %d-%d/%d", start, end, total));
-      response.customheader("Accept-Ranges", "bytes");
-      reqFile.rangeStart = start;
-      reqFile.rangeEnd = end;
-      reqFile.isRange = true;
-      response.payload = reqFile;
-    }
-    response.ready = true;
+void serveRangeFile(ref Response response, in Request request, FilePayload reqFile) {
+  long[2] r = request.range();
+  long total = reqFile.fileSize();
+  long start = r[0];
+  long end = r[1] < 0 ? total - 1 : r[1];
+  if (start >= total || end >= total || start > end) {
+    response.payload = new Message(StatusCode.RangeNotSatisfiable, "");
+    response.customheader("Content-Range", format("bytes */%d", total));
+  } else {
+    response.customheader("Content-Range", format("bytes %d-%d/%d", start, end, total));
+    response.customheader("Accept-Ranges", "bytes");
+    reqFile.rangeStart = start;
+    reqFile.rangeEnd = end;
+    reqFile.isRange = true;
+    response.payload = reqFile;
   }
+  response.ready = true;
+}
 
 // serve a directory browsing request, via a message
 void serveDirectory(ref Response response, ref Request request, in WebConfig config, in FileSystem fs) {
