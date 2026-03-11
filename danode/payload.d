@@ -153,7 +153,7 @@ class FilePayload : Payload {
     }
 
     /* Send the file from the underlying raw byte source stream using fseek, fp are closed */
-    final char[] asStream(ptrdiff_t from, ptrdiff_t maxsize = 1024) {
+    final char[] asStream(ptrdiff_t from, ptrdiff_t maxsize = 65536) {
       char[] tmpbuf = new char[](maxsize);
       char[] slice = [];
       if (cverbose >= DEBUG && from == 0) write("[STREAM] .");
@@ -178,13 +178,14 @@ class FilePayload : Payload {
     }
 
     /* Get bytes in a lockfree manner from the correct underlying buffer */
-    final char[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 1024){ synchronized {
+    final const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 65536){ synchronized {
       if (!realfile) { return []; }
       trace("file provided is a real file");
       if (needsupdate) { buffer(); }
       ptrdiff_t offset = isRange? to!ptrdiff_t(rangeStart) + from : from;
       ptrdiff_t limit = isRange? to!ptrdiff_t(rangeEnd - rangeStart + 1) : -1;
       ptrdiff_t sz = (limit > 0)? to!ptrdiff_t(min(maxsize, max(0, limit - from))) : maxsize;
+      trace("range: start=%d end=%d from=%d offset=%d sz=%d limit=%d", rangeStart, rangeEnd, from, offset, sz, limit);
       if (!buffered) {
         return(asStream(offset, sz));
       } else {
