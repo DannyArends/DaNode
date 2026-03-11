@@ -137,7 +137,7 @@ class Server : Thread {
             else if(!client.isRunning) client.join();           // join finished threads
           }
           clients = persistent.data;
-          if (Msecs(lastScan) > 86_400_000) {  // every 60 seconds
+          if (Msecs(lastScan) > 86_400_000) {   // Scan for deleted file every day
             router.scan(); lastScan = Clock.currTime();
           }
         } catch(Exception e) {
