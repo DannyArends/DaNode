@@ -130,10 +130,7 @@ version(SSL) {
   // loads an SSL context for hostname from the .crt file at path;
   SSLcontext loadContext(string path, string hostname, string keyFile, string chainFile) {
     SSLcontext ctx;
-    size_t certNameEnd = (path.length - 4);
-    for(size_t x = 0; x < hostname.length; x++) {
-      ctx.hostname[x] = hostname[x];
-    }
+    for(size_t x = 0; x < hostname.length; x++) { ctx.hostname[x] = hostname[x]; }
     ctx.hostname[hostname.length] = '\0';
     ctx.context = createCTX(path, keyFile, chainFile);
     custom(1, "HTTPS", "context created for certificate: %s", to!string(ctx.hostname.ptr));
