@@ -91,9 +91,7 @@ class Router {
       } else {  
         // No SSL, just check if the client requested the 'wrong' fully qualified 
         // domain (domain.com or www.domain.com), and redirect them
-        if (request.host != fqdn) {
-          return response.redirect(request, fqdn, false);
-        }
+        if (request.host != fqdn) { return response.redirect(request, fqdn, false); }
       }
 
       if (localpath.exists()) {
@@ -120,11 +118,14 @@ class Router {
         return response.serveForbidden(request);
       }
       trace("redirect: %s %d", config.redirect, finalrewrite);
-      if(config.redirect && !finalrewrite)  // Route this request as canonical request the index page
+      if(config.redirect && !finalrewrite) { // Route this request as canonical request the index page
         return this.redirectCanonical(request, response);
-
+      }
       return response.notFound();  // Request is not hosted on this server
     }
+
+    // Expose scan() by forwarding to filesystem.scan()
+    final void scan() { filesystem.scan(); }
 
     // Redirect a directory browsing request to the index script
     void redirectDirectory(ref Request request, ref Response response){

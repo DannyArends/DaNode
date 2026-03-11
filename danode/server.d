@@ -113,6 +113,7 @@ class Server : Thread {
     final void run() {
       int select;
       Appender!(Client[]) persistent;
+      SysTime lastScan = Clock.currTime();
       while(running) {
         try {
           Client[] previous = clients;                            // Slice reference
@@ -134,6 +135,9 @@ class Server : Thread {
             else if(!client.isRunning) client.join();           // join finished threads
           }
           clients = persistent.data;
+          if (Msecs(lastScan) > 86_400_000) {  // every 60 seconds
+            router.scan(); lastScan = Clock.currTime();
+          }
         } catch(Exception e) {
           error("Unspecified top level server error: %s", e.msg);
         }
