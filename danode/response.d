@@ -99,6 +99,11 @@ struct Response {
     return(hdr.data);
   }
 
+  // Propagate shutdown through the chain to kill Process
+  final void kill() {
+    if (payload && payload.type == PayloadType.Script) { to!CGI(payload).notifyovertime(); }
+  }
+
   @property final StatusCode statuscode() const { return payload.statuscode; }
   @property final bool keepalive() const { return( toLower(connection) == "keep-alive"); }
   @property final long length() { return header.length + payload.length; }

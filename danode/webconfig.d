@@ -73,7 +73,7 @@ struct WebConfig {
 
     foreach (d; allowdirs) {
       trace("%s in allowdirs: %s %s", npath, d, npath.indexOf(d));
-      if(indexOf(strip(d), strip(npath)) == 0) return(true);
+      if(indexOf(strip(npath), strip(d)) == 0) return(true);
     }
     return(false);
   }

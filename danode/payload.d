@@ -125,8 +125,7 @@ class FilePayload : Payload {
     final @property bool hasEncodedVersion() const { return(encbuf !is null); }
     /* Is the file defined as static in mimetypes.d ? */
     final @property bool isStaticFile() { return(!path.isCGI()); }
-    /* Time the file was last modified ? 
-       TODO: Is there a BUG here related to encbuf update ? */
+    /* Time the file was last modified ? */
     final @property SysTime mtime() const { if(!realfile){ return btime; } return path.timeLastModified(); }
     /* Files are always assumed ready to be handled (unlike Common Gate Way threads)  */
     final @property long ready() { return(true); }
@@ -138,9 +137,8 @@ class FilePayload : Payload {
     final @property long buffersize() const { return cast(long)(buf.length); }
     /* Mimetype of the file  */
     final @property string mimetype() const { return mime(path); }
-    /* Status code for file is StatusCode.Ok ? 
-       TODO: Shouldn't this be based on realfile ? */
-    final @property StatusCode statuscode() const { return StatusCode.Ok; }
+    /* Status code for file is StatusCode.Ok ? */
+    final @property StatusCode statuscode() const { return(realfile ? StatusCode.Ok : StatusCode.NotFound); }
     /* Get the number of bytes that the client response has, based on encoding */
     final @property ptrdiff_t length() const {
       if(hasEncodedVersion && deflate) return(encbuf.length);
@@ -149,7 +147,7 @@ class FilePayload : Payload {
 
     /* Send the file from the underlying raw byte source stream using fseek, fp are closed */
     final char[] asStream(ptrdiff_t from, ptrdiff_t maxsize = 1024) {
-      if(buf is null) buf = new char[](maxsize);
+      char[] tmpbuf = new char[](maxsize);
       char[] slice = [];
       if (cverbose >= DEBUG && from == 0) write("[STREAM] .");
       if (from >= fileSize()) {
@@ -161,7 +159,7 @@ class FilePayload : Payload {
         fp.open(path, "rb");
         if(fp.isOpen()) {
           fp.seek(from);
-          slice = fp.rawRead!char(buf);
+          slice = fp.rawRead!char(tmpbuf);
           fp.close();
           if (cverbose >= DEBUG) write(".");
           if (cverbose >= DEBUG && (from + slice.length) >= fileSize()) write("\n");

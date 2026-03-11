@@ -13,15 +13,15 @@ shared static this(){
 }
 
 // Try to convert a HTML date in a string into a SysTime
-// Structure that we expect: "21 Apr 2014 20:20:13 CET"
+// Structure that we expect: "21 Apr 2014 20:20:13 GMT"
 SysTime parseHtmlDate(const string datestr) {
   SysTime ts =  SysTime(DateTime(-7, 1, 1, 1, 0, 0));
-  auto dateregex = regex(r"([0-9]{1,2}) ([a-z]{1,3}) ([0-9]{4}) ([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2}) cet", "g");
+  auto dateregex = regex(r"([0-9]{1,2}) ([a-z]{1,3}) ([0-9]{4}) ([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2}) [a-z]{3}", "g");
   auto m = match(datestr.toLower(), dateregex);
   if(m.captures.length == 7){
     try {
-      ts = SysTime(DateTime(to!int(m.captures[3]), monthToIndex(m.captures[2]), to!int(m.captures[1]), // 21 Apr 2014
-                            to!int(m.captures[4]), to!int(m.captures[5]), to!int(m.captures[6])));     // 20:20:13
+      ts = SysTime(DateTime(to!int(m.captures[3]), monthToIndex(m.captures[2]), to!int(m.captures[1]),      // 21 Apr 2014
+                            to!int(m.captures[4]), to!int(m.captures[5]), to!int(m.captures[6])), UTC());   // 20:20:13
     } catch(Exception e) {
        warning("parseHtmlDate exception, could not parse '%s'", datestr);
     }
@@ -38,7 +38,7 @@ pure string htmlEscape(string s) {
 string safePath(in string root, in string path) {
   if (path.canFind("..")) return null;
   if (path.canFind("\0")) return null;
-  return(root ~ "/" ~ (path.startsWith("/") ? path[1 .. $] : path));
+  return(root ~ (path.startsWith("/") ? path : "/" ~ path));
 }
 
 // Month to index of the year
@@ -90,7 +90,9 @@ void writeinfile(in string localpath, in string content) {
 }
 
 string htmltime(in SysTime d = Clock.currTime()) {
-  return format(timeFmt, d.day(), months[d.month()], d.year(), d.hour(), toD(d.minute(),2), toD(d.second(),2), "CET");
+  auto utc = d.toUTC();
+  return format(timeFmt, utc.day(), months[utc.month()], utc.year(),
+                utc.hour(), toD(utc.minute(),2), toD(utc.second(),2), "GMT");
 }
 
 bool isFILE(in string path) {

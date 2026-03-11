@@ -74,6 +74,7 @@ class Router {
       config = WebConfig(filesystem.file(localroot, "/web.config"));
       string fqdn = config.domain(request.shorthost());
       string localpath = safePath(localroot, decodeComponent(request.path));
+      trace("safePath result: '%s', isFILE: %s, isAllowed: %s, isCGI: %s", localpath, localpath.isFILE(), localpath.isAllowed(), localpath.isCGI());
       if (localpath is null) return response.serveForbidden(request);
 
       trace("configfile at: %s%s", localroot, "/web.config");
@@ -91,12 +92,11 @@ class Router {
       } else {  
         // No SSL, just check if the client requested the 'wrong' fully qualified 
         // domain (domain.com or www.domain.com), and redirect them
-        if (request.host != fqdn) {
-          return response.redirect(request, fqdn, false);
-        }
+        if (request.host != fqdn) { return response.redirect(request, fqdn, false); }
       }
 
       if (localpath.exists()) {
+        trace("allowcgi: %s", config.allowcgi);
         trace("localpath %s exists", localpath);
         // A path that can be responded to has been detected, it is an existing resource
         if (localpath.isCGI() && config.allowcgi) {
@@ -120,11 +120,14 @@ class Router {
         return response.serveForbidden(request);
       }
       trace("redirect: %s %d", config.redirect, finalrewrite);
-      if(config.redirect && !finalrewrite)  // Route this request as canonical request the index page
+      if(config.redirect && !finalrewrite) { // Route this request as canonical request the index page
         return this.redirectCanonical(request, response);
-
+      }
       return response.notFound();  // Request is not hosted on this server
     }
+
+    // Expose scan() by forwarding to filesystem.scan()
+    final void scan() { filesystem.scan(); }
 
     // Redirect a directory browsing request to the index script
     void redirectDirectory(ref Request request, ref Response response){

@@ -14,6 +14,8 @@ version(SSL) {
   import danode.https : HTTPS;
 }
 
+immutable int MAX_CLIENTS = 1000;
+
 class Server : Thread {
   private:
     Socket            socket;           // The server socket
@@ -113,17 +115,18 @@ class Server : Thread {
     final void run() {
       int select;
       Appender!(Client[]) persistent;
+      SysTime lastScan = Clock.currTime();
       while(running) {
         try {
           Client[] previous = clients;                            // Slice reference
           persistent.clear();                                     // Clear the Appender
-          if ((select = set.sISelect(socket)) > 0) {
+          if ((select = set.sISelect(socket)) > 0 && nAlive() < MAX_CLIENTS) {
             custom(3, "SERVER", "accepting HTTP request");
             Client client = this.accept(socket);
             if(client !is null) persistent.put(client);
           }
           version (SSL) {
-            if ((select = set.sISelect(sslsocket)) > 0) {
+            if ((select = set.sISelect(sslsocket)) > 0 && nAlive() < MAX_CLIENTS) {
               custom(3, "SERVER", "accepting HTTPs request");
               Client client = this.accept(sslsocket, true);
               if(client !is null) persistent.put(client);
@@ -134,6 +137,9 @@ class Server : Thread {
             else if(!client.isRunning) client.join();           // join finished threads
           }
           clients = persistent.data;
+          if (Msecs(lastScan) > 86_400_000) {   // Scan for deleted file every day
+            router.scan(); lastScan = Clock.currTime();
+          }
         } catch(Exception e) {
           error("Unspecified top level server error: %s", e.msg);
         }

@@ -20,9 +20,7 @@ struct Domain {
   @property long size() const { long sum = 0; foreach(ref f; files.byKey){ sum += files[f].length(); } return sum; }
 }
 
-/* File system class that manages the underlying domains
-   Note: Should this really be thread synchronized access ?
- */
+/* File system class that manages the underlying domains */
 class FileSystem {
   private:
     string         root;
@@ -33,7 +31,7 @@ class FileSystem {
   public:
     this(Log logger, string root = "./www/", size_t maxsize = 1024 * 512){
       this.logger   = logger;
-      this.root     = root;
+      this.root     = root.endsWith("/") ? root : root ~ "/";     // Normalized root (always ends with /)
       this.maxsize  = maxsize;
       scan();
     }
@@ -43,6 +41,8 @@ class FileSystem {
       foreach (DirEntry d; dirEntries(root, SpanMode.shallow)){ if(d.isDir()){
         domains[d.name] = scan(d.name);
       } }
+      // Remove domains that no longer exist on disk
+      foreach (k; domains.keys) { if (!exists(k)) domains.remove(k); }
     } }
 
     /* Scan a single folder */
@@ -51,6 +51,7 @@ class FileSystem {
       foreach (DirEntry f; dirEntries(dname, SpanMode.depth)) {
         if (f.isFile()) {
           string shortname = replace(f.name[dname.length .. $], "\\", "/");
+          if (shortname.endsWith(".in") || shortname.endsWith(".up")) continue;
           custom(1, "SCAN", "file: %s -> %s", f.name, shortname);
           if (!domain.files.has(shortname)) {
             domain.files[shortname] = new FilePayload(f.name, maxsize);
@@ -62,12 +63,15 @@ class FileSystem {
           }
         }
       }
+      // Remove files that no longer exist on disk
+      foreach (k; domain.files.keys) { if (!exists(dname ~ k)) { domain.files.remove(k); } }
+
       custom(1, "SCAN", "domain: %s, files %s|%s", dname, domain.buffered, domain.entries);
       custom(1, "SCAN", "%s = size: %.2f/%.2f kB", dname, domain.buffersize / 1024.0, domain.size / 1024.0);
       return(domain);
     } }
 
-    /* Get the localroot of the domain (TODO: Is there a bug, did I require that this.root should always end in a '/' ?) */
+    /* Get the localroot of the domain */
     final string localroot(string hostname) const { return(format("%s%s", this.root, hostname)); }
 
     /* Get the FilePayload at path from the localroot, with update check on buffers */

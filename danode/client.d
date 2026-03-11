@@ -30,15 +30,14 @@ class Client : Thread, ClientInterface {
    final void run() {
       trace("new connection established %s:%d", ip(), port() );
       try {
-        if (driver.openConnection() == false) {
-          warning("new connection aborted: unable to open connection");
-          stop();
-        }
-        scope (exit) {
-          if (driver.isAlive()) driver.closeConnection();
-        }
+        if (driver.openConnection() == false) { warning("new connection aborted: unable to open connection"); stop(); }
         Request request;
         Response response;
+        scope (exit) {
+          if (driver.isAlive()) driver.closeConnection();   // Close connection
+          request.clearUploadFiles();                       // Clean uploaded files
+          response.kill();                                  // kill any running CGI process
+        }
         while (running) {
           if (driver.receive(driver.socket) > 0) {     // We've received new data
             if (driver.inbuffer.data.length > MAX_REQUEST_SIZE) {
@@ -55,7 +54,7 @@ class Client : Thread, ClientInterface {
             }
             if (response.ready && response.completed) {       // We've completed the request, response cycle
               router.logRequest(this, request, response);     // Log the response to the request
-              request.clearUploadFiles();                     // Remove any upload files left over
+              request.clearUploadFiles();                     // Clean uploaded files
               request.destroy();                              // Clear the request structure
               driver.inbuffer.destroy();                      // Clear the input buffer
               driver.requests++;
