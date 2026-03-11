@@ -7,7 +7,7 @@ version(Posix) {
   import core.sys.posix.fcntl : fcntl, F_SETFL, O_NONBLOCK;
 }
 
-immutable size_t MAX_CGI_OUTPUT = 1024 * 1024 * 10; // 10MB upload limit
+immutable size_t MAX_CGI_OUTPUT = 1024 * 1024 * 10; // 10MB script output limit
 
 struct WaitResult {
   bool terminated; /// Is the process terminated
