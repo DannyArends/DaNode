@@ -51,6 +51,7 @@ class FileSystem {
       foreach (DirEntry f; dirEntries(dname, SpanMode.depth)) {
         if (f.isFile()) {
           string shortname = replace(f.name[dname.length .. $], "\\", "/");
+          if (shortname.endsWith(".in") || shortname.endsWith(".up")) continue;
           custom(1, "SCAN", "file: %s -> %s", f.name, shortname);
           if (!domain.files.has(shortname)) {
             domain.files[shortname] = new FilePayload(f.name, maxsize);
