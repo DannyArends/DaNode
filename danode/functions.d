@@ -90,7 +90,9 @@ void writeinfile(in string localpath, in string content) {
 }
 
 string htmltime(in SysTime d = Clock.currTime()) {
-  return format(timeFmt, d.day(), months[d.month()], d.year(), d.hour(), toD(d.minute(),2), toD(d.second(),2), "CET");
+  auto utc = d.toUTC();
+  return format(timeFmt, utc.day(), months[utc.month()], utc.year(),
+                utc.hour(), toD(utc.minute(),2), toD(utc.second(),2), "GMT");
 }
 
 bool isFILE(in string path) {
