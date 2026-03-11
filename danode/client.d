@@ -50,7 +50,7 @@ class Client : Thread, ClientInterface {
               router.route(driver, request, response, maxtime);
             }
             if (response.ready && !response.completed) {      // We know what to respond, but haven't send all of it yet
-              driver.send(response, driver.socket);           // Send the response, hit multiple times, send what you can and return
+              driver.send(response, driver.socket, 65536);           // Send the response, hit multiple times, send what you can and return
             }
             if (response.ready && response.completed) {       // We've completed the request, response cycle
               router.logRequest(this, request, response);     // Log the response to the request
