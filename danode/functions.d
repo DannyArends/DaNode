@@ -38,7 +38,7 @@ pure string htmlEscape(string s) {
 string safePath(in string root, in string path) {
   if (path.canFind("..")) return null;
   if (path.canFind("\0")) return null;
-  return(root ~ "/" ~ (path.startsWith("/") ? path[1 .. $] : path));
+  return(root ~ (path.startsWith("/") ? path : "/" ~ path));
 }
 
 // Month to index of the year

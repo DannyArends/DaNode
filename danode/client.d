@@ -53,6 +53,7 @@ class Client : Thread, ClientInterface {
             }
             if (response.ready && response.completed) {       // We've completed the request, response cycle
               router.logRequest(this, request, response);     // Log the response to the request
+              request.clearUploadFiles();                     // Clean uploaded files
               request.destroy();                              // Clear the request structure
               driver.inbuffer.destroy();                      // Clear the input buffer
               driver.requests++;

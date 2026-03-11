@@ -65,7 +65,7 @@ class FileSystem {
         }
       }
       // Remove files that no longer exist on disk
-      foreach (k; domain.files.keys) { if (!exists(k)) { domain.files.remove(k); } }
+      foreach (k; domain.files.keys) { if (!exists(dname ~ k)) { domain.files.remove(k); } }
 
       custom(1, "SCAN", "domain: %s, files %s|%s", dname, domain.buffered, domain.entries);
       custom(1, "SCAN", "%s = size: %.2f/%.2f kB", dname, domain.buffersize / 1024.0, domain.size / 1024.0);

@@ -74,6 +74,7 @@ class Router {
       config = WebConfig(filesystem.file(localroot, "/web.config"));
       string fqdn = config.domain(request.shorthost());
       string localpath = safePath(localroot, decodeComponent(request.path));
+      trace("safePath result: '%s', isFILE: %s, isAllowed: %s, isCGI: %s", localpath, localpath.isFILE(), localpath.isAllowed(), localpath.isCGI());
       if (localpath is null) return response.serveForbidden(request);
 
       trace("configfile at: %s%s", localroot, "/web.config");
@@ -95,6 +96,7 @@ class Router {
       }
 
       if (localpath.exists()) {
+        trace("allowcgi: %s", config.allowcgi);
         trace("localpath %s exists", localpath);
         // A path that can be responded to has been detected, it is an existing resource
         if (localpath.isCGI() && config.allowcgi) {
