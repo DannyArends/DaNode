@@ -198,7 +198,7 @@ void serveCGI(ref Response response, in Request request, in WebConfig config, in
   }
 }
 
-// serve a static file from the disc, send encrypted when requested and available
+// Serve a static file from the disc, send encrypted when requested and available
 void serveStaticFile(ref Response response, in Request request, FileSystem fs) {
   trace("serving a static file");
   string localroot = fs.localroot(request.shorthost());
@@ -221,6 +221,7 @@ void serveStaticFile(ref Response response, in Request request, FileSystem fs) {
   response.ready = true;
 }
 
+// Serve a File Range from a static file on disc
 void serveRangeFile(ref Response response, in Request request, FilePayload reqFile) {
   long[2] r = request.range();
   long total = reqFile.fileSize();
