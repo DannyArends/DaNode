@@ -17,7 +17,7 @@ public import std.process : pipe, spawnShell, executeShell, tryWait, wait, kill;
 public import std.file : dirEntries, exists, remove, isFile, isDir, timeLastModified, getSize;
 public import std.format : format, formatValue;
 public import std.regex : regex, match;
-public import std.stdio : fgetc, fflush, ftell, stderr, stdin, stdout, writef, writefln, write, writeln;
+public import std.stdio : fread, fflush, ftell, stderr, stdin, stdout, writef, writefln, write, writeln;
 public import std.string : chomp, endsWith, empty, format, indexOf, join, replace, split, startsWith, strip, toLower, toStringz;
 public import std.uuid : md5UUID;
 public import std.uri : decodeComponent;

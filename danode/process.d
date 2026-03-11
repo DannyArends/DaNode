@@ -7,6 +7,8 @@ version(Posix) {
   import core.sys.posix.fcntl : fcntl, F_SETFL, O_NONBLOCK;
 }
 
+immutable size_t MAX_CGI_OUTPUT = 1024 * 1024 * 10; // 10MB upload limit
+
 struct WaitResult {
   bool terminated; /// Is the process terminated
   int status; /// Exit status when terminated
@@ -121,27 +123,27 @@ class Process : Thread {
     } }
 
     // Read a character from a filestream and append it to buffer
-    // TODO: Use another function an read more bytes at the same time
-    void readpipe (ref File file, ref Appender!(char[]) buffer) {
+    void readpipe(ref File file, ref Appender!(char[]) buffer) {
       try {
-        int ch;
+        char[4096] tmp;
         auto fp = file.getFP();
-        while ((ch = fgetc(fp)) != EOF && lastmodified < maxtime) { 
-          modified = Clock.currTime(); 
-          buffer.put(cast(char) ch);
+        ptrdiff_t n;
+        while (lastmodified < maxtime && buffer.data.length < MAX_CGI_OUTPUT) {
+          n = fread(tmp.ptr, 1, tmp.sizeof, fp);
+          if (n > 0) {
+            modified = Clock.currTime();
+            buffer.put(tmp[0 .. n]);
+          } else {
+            break;
+          }
         }
-      } catch (Exception e) {
-        warning("Exception during readpipe command: %s", e);
-        file.close();
-      } catch(Error e) {
-        warning("Error during readpipe command: %s", e);
-        file.close();
+      } catch (Exception e) { warning("Exception during readpipe command: %s", e); file.close();
+      } catch(Error e) { warning("Error during readpipe command: %s", e); file.close();
       }
     }
-    
+
     @property void notifyovertime() { maxtime = -1; }
 
-    
     // Execute the process
     // check the input path, and create a pipe:StdIn to the input file
     // create 2 pipes for the external process stdout & stderr
