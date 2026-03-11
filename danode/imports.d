@@ -28,7 +28,7 @@ public import core.thread : Thread;
 
 // Public imported structures and enums from std
 public import std.array : Appender;
-public import std.datetime : Clock, DateTime, Duration, SysTime;
+public import std.datetime : Clock, DateTime, Duration, SysTime, UTC;
 public import std.format : FormatSpec;
 public import std.file : DirEntry, SpanMode;
 public import std.process : Pid, Config, Pipe;
