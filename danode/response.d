@@ -200,9 +200,9 @@ void serveStaticFile(ref Response response, in Request request, FileSystem fs) {
   }
   response.payload = reqFile;
 
-  if (request.hasRange) { response.serveRangeFile(request, reqFile); return; }
+  //if (request.hasRange) { response.serveRangeFile(request, reqFile); return; }
 
-  if (!reqFile.deflate) response.customheader("Accept-Ranges", "bytes");
+  //if (!reqFile.deflate) response.customheader("Accept-Ranges", "bytes");
   if (request.ifModified >= response.payload.mtime()) {                                        // Non modified static content
     trace("static file has not changed, sending notmodified");
     response.notmodified(request, response.payload.mimetype);
