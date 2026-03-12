@@ -113,7 +113,7 @@ class Log {
       if (cverbose >= NOTSET) {
         string uri;
         try { uri = decodeComponent(rq.uri); } catch (Exception e) { uri = rq.uri; }
-        string s = format("[%d]    %s %s:%s %s%s %s %s", rs.statuscode, htmltime(), cl.ip, cl.port, rq.shorthost, uri, Msecs(rq.starttime), rs.payload.length);
+        string s = format("[%d]    %s %s:%s %s%s %s %s", rs.statuscode, htmltime(), cl.ip, cl.port, rq.shorthost, uri, Msecs(rq.starttime), rs.isRange ? (rs.rangeEnd - rs.rangeStart + 1) : rs.payload.length);
         RequestLogFp.writeln(s);
         custom(-1, "REQ", s);
         RequestLogFp.flush();

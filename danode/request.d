@@ -86,6 +86,7 @@ struct Request {
       warning("parseHeader exception: %s", e.msg);
       return(false);
     }
+    trace("headers received: %s", this.headers);
     trace("parseHeader %s %s %s, nParams: %d", this.method, this.uri, this.protocol, this.headers.length);
     return(true);
   }

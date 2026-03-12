@@ -180,8 +180,10 @@ string browseDir(in string root, in string localpath) {
   Appender!(string) content;
   content.put(format("Content of: %s<br>\n", htmlEscape(localpath)));
   foreach (DirEntry d; dirEntries(localpath, SpanMode.shallow)) {
-      string name = htmlEscape(d.name[root.length .. $]);
-      content.put(format("<a href='%s'>%s</a><br>", name, name));
+    string name = d.name[root.length .. $].replace("\\", "/");
+    if (name.endsWith(".in") || name.endsWith(".up")) continue;
+    string escaped = htmlEscape(name);
+    content.put(format("<a href='%s'>%s</a><br>", escaped, escaped));
   }
   return(format("<html><head><title>200 - Allowed directory</title></head><body>%s</body></html>", content.data));
 }
