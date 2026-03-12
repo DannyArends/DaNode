@@ -75,7 +75,7 @@ struct Request {
   // Parse the HTML request header (method, uri, protocol) as well as the supplemental headers
   final bool parseHeader(const string header) {
     try {
-      foreach (i, line; header.split("\n")) {
+      foreach (i, line; header.replace("\r\n", "\n").split("\n")) {
         if (i == 0) {
           this.parseRequestLine(line);
         } else { // next lines: header-param: attribute 
