@@ -202,7 +202,7 @@ class Process : Thread {
 
 unittest {
   custom(0, "FILE", "%s", __FILE__);
-  auto p = new Process("rdmd www/localhost/dmd.d", "test/dmd.in", false);
+  auto p = new Process(["rdmd", "www/localhost/dmd.d"], "test/dmd.in", false);
   p.start();
   while(!p.finished){ Thread.sleep(msecs(5)); }
   custom(0, "TEST", "status of output: %s", p.status());
