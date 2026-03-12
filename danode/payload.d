@@ -19,7 +19,7 @@ interface Payload {
     @property SysTime             mtime();
     @property string              mimetype() const;
 
-    const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 65536, bool isRange = false, long rangeStart = 0, long rangeEnd = -1);
+    const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 4096, bool isRange = false, long rangeStart = 0, long rangeEnd = -1);
 }
 
 /* Implementation of the Payload interface, by using an empty string message */
@@ -50,7 +50,7 @@ class Message : Payload {
     final @property SysTime mtime() { return Clock.currTime(); }
     final @property string mimetype() const { return mime; }
     final @property StatusCode statuscode() const { return status; }
-    char[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 65536, bool isRange = false, long rangeStart = 0, long rangeEnd = -1) {
+    char[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 4096, bool isRange = false, long rangeStart = 0, long rangeEnd = -1) {
       return( message[from .. to!ptrdiff_t(min(from+maxsize, $))].dup );
     }
 }
@@ -149,7 +149,7 @@ class FilePayload : Payload {
     }
 
     /* Send the file from the underlying raw byte source stream using fseek, fp are closed */
-    final char[] asStream(ptrdiff_t from, ptrdiff_t maxsize = 65536) {
+    final char[] asStream(ptrdiff_t from, ptrdiff_t maxsize = 4096) {
       //custom(1, "STREAM", "asStream: from=%d sz=%d fileSize=%d", from, maxsize, fileSize());
       char[] tmpbuf = new char[](maxsize);
       char[] slice = [];
@@ -175,7 +175,7 @@ class FilePayload : Payload {
     }
 
     /* Get bytes in a lockfree manner from the correct underlying buffer */
-    final const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 65536, bool isRange = false, long rangeStart = 0, long rangeEnd = -1) { synchronized {
+    final const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 4096, bool isRange = false, long rangeStart = 0, long rangeEnd = -1) { synchronized {
       if (!realfile) { return []; }
       if (needsupdate) { buffer(); }
       ptrdiff_t offset = isRange ? to!ptrdiff_t(rangeStart) + from : from;

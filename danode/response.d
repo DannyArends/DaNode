@@ -118,7 +118,7 @@ struct Response {
     return header.length + payload.length;
   }
   // Stream of bytes (header + stream of bytes)
-  @property final const(char)[] bytes(in ptrdiff_t maxsize = 65536) {
+  @property final const(char)[] bytes(in ptrdiff_t maxsize = 4096) {
     ptrdiff_t hsize = header.length;
     if(index <= hsize) {  // We haven't completed the header yet
       ptrdiff_t remaining = maxsize - hsize;

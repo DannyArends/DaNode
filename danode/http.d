@@ -51,7 +51,7 @@ class HTTP : DriverInterface {
       // Wait until socket is writable before sending
       SocketSet writeSet = new SocketSet();
       writeSet.add(socket);
-      if (Socket.select(null, writeSet, null, dur!"msecs"(100)) <= 0) return;
+      if (Socket.select(null, writeSet, null, dur!"msecs"(0)) <= 0) return;
       ptrdiff_t send = socket.send(response.bytes(maxsize));
       custom(1, "HTTP", "send result=%d index=%d length=%d", send, response.index, response.length);
       if (send > 0) {
