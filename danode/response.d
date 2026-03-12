@@ -36,7 +36,7 @@ struct Response {
 
   final void customheader(string key, string value) nothrow { headers[key] = value; }
 
-  // Generate a HTML header for the response
+  // Generate a HTTP header for the response
   @property final char[] header() {
     if (hdr.data) {
       return(hdr.data); // Header was constructed
@@ -117,26 +117,6 @@ struct Response {
   }
 
   @property final bool ready(bool r = false){ if(r){ routed = r; } return(routed && payload.ready()); }
-}
-
-// parse a HTTPresponse header from an external script
-char[] parseHTTPResponseHeader(ref Response response, CGI script, HeaderType type, long clength) {
-  if (type == HeaderType.FastCGI) {
-    // FastCGI type header, create response line on Status: indicator
-    string status = script.getHeader("Status", "500 Internal Server Error");
-    response.hdr.put(format("%s %s\n", "HTTP/1.1", status));
-  }
-
- /* foreach (line; script.fullHeader().split("\n")) { 
-    auto v = line.split(": ");
-    response.headers[v[0]] = v[1];
-  } */
-  response.hdr.put(script.fullHeader());
-  info("script: status: %d, eoh: %d, content: %d", script.statuscode, script.endOfHeader(), clength);
-  response.connection = strip(script.getHeader("Connection", "Close"));
-  info("connection: %s -> %s, to %s in %d bytes", strip(script.getHeader("Connection", "Close")), response.connection, type, response.hdr.data.length);
-  response.cgiheader = true;
-  return(response.hdr.data);
 }
 
 // create a standard response

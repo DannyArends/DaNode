@@ -38,8 +38,7 @@ version(SSL) {
 
   extern (C)
   {
-    __gshared int             ncontext;         // How many contexts are available
-    __gshared SSLcontext*     contexts;         // SSL / HTTPs contexts (allocated globally from C)
+    __gshared SSLcontext[]    contexts;         // SSL / HTTPs contexts (allocated globally from C)
 
     // C callback function to switch SSL contexts after hostname lookup
     static void switchContext(SSL* ssl, int *ad, void *arg) {
@@ -50,7 +49,7 @@ version(SSL) {
         return;
       }
       string s;
-      for(int x = 0; x < ncontext; x++) {
+      for(int x = 0; x < contexts.length; x++) {
         s = to!string(contexts[x].hostname.ptr);
         custom(1, "HTTPS", "context: %s %s", hostname, s);
         if(hostname.endsWith(s)) {
@@ -88,7 +87,7 @@ version(SSL) {
   bool hasCertificate(string hostname) {
     custom(1, "HTTPS", "'%s' certificate?", hostname);
     string s;
-    for(size_t x = 0; x < ncontext; x++) {
+    for(size_t x = 0; x < contexts.length; x++) {
       s = to!string(contexts[x].hostname.ptr);
       if(hostname.endsWith(s)) {
         custom(1, "HTTPS", "'%s' certificate found", hostname);
@@ -139,29 +138,17 @@ version(SSL) {
   }
 
   // loads all crt files in the certDir, using keyfile: server.key
-  SSLcontext* initSSL(Server server, string certDir = ".ssl/", string keyFile = ".ssl/server.key", VERSION v = SSL23) {
+  void initSSL(Server server, string certDir = ".ssl/", string keyFile = ".ssl/server.key", VERSION v = SSL23) {
     custom(0, "HTTPS", "loading Deimos.openSSL, certDir: %s, keyFile: %s, SSL:%s", certDir, keyFile, v);
     SSL_library_init();
     OpenSSL_add_all_algorithms();
     SSL_load_error_strings();
-    contexts = cast(SSLcontext*) malloc(0 * SSLcontext.sizeof);
     custom(0, "HTTPS", "certificate folder: %d", exists(certDir));
-    if (!exists(certDir)) {
-      warning("SSL certificate folder '%s' not found", certDir);
-      return contexts;
-    }
-    if (!isDir(certDir)) {
-      warning("SSL certificate folder '%s' not a folder", certDir);
-      return contexts;
-    }
-    if (!exists(keyFile)) {
-      warning("SSL private key file: '%s' not found", certDir);
-      return contexts;
-    }
-    if (!isFile(keyFile)) {
-      warning("SSL private key file: '%s' not a file", certDir);
-      return contexts;
-    }
+
+    if (!exists(certDir)) { warning("SSL certificate folder '%s' not found", certDir); return; }
+    if (!isDir(certDir)) { warning("SSL certificate folder '%s' not a folder", certDir); return; }
+    if (!exists(keyFile)) { warning("SSL private key file: '%s' not found", certDir); return; }
+    if (!isFile(keyFile)) { warning("SSL private key file: '%s' not a file", certDir); return; }
 
     foreach (DirEntry d; dirEntries(certDir, SpanMode.shallow)) {
       if (d.name.endsWith(".crt")) {
@@ -172,34 +159,25 @@ version(SSL) {
             writefln("[INFO]   loading certificate from file: %s", d.name);
             writefln("[INFO]   loading chain from file: %s", chainFile);
           }
-          contexts = cast(SSLcontext*) realloc(contexts, (ncontext+1) * SSLcontext.sizeof);
-          contexts[ncontext] = loadContext(d.name, hostname, keyFile, chainFile);
-          custom(1, "HTTPS", "stored certificate: %s in context: %d", to!string(contexts[ncontext].hostname.ptr), ncontext);
-          ncontext++;
+          contexts ~= loadContext(d.name, hostname, keyFile, chainFile);
+          custom(1, "HTTPS", "stored certificate: %s in context: %d", to!string(contexts[$-1].hostname.ptr), contexts.length-1);
         }
       }
     }
-    custom(0, "HTTPS", "loaded %s SSL certificates", ncontext);
-    return contexts;
+    custom(0, "HTTPS", "loaded %s SSL certificates", contexts.length);
   }
 
   // Close the server SSL socket, and clean up the different contexts
   void closeSSL(Socket socket) {
     custom(1, "HTTPS", "closing server SSL socket");
     socket.close();
-    custom(1, "HTTPS", "cleaning up %d HTTPS contexts", ncontext);
-    for(int x = 0; x < ncontext; x++) {
-      // Free the different SSL contexts
-      SSL_CTX_free(contexts[x].context);
-    }
-    free(contexts);
+    custom(1, "HTTPS", "cleaning up %d HTTPS contexts", contexts.length);
+    foreach (ref ctx; contexts) { SSL_CTX_free(ctx.context); }
+    contexts = null;
   }
 
   void sslAssert(bool ret) { 
-    if (!ret) {
-      ERR_print_errors_fp(stderr.getFP());
-      throw new Exception("SSL_ERROR");
-    }
+    if (!ret) { ERR_print_errors_fp(stderr.getFP()); throw new Exception("SSL_ERROR"); }
   }
 
   unittest {

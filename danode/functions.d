@@ -29,7 +29,6 @@ SysTime parseHtmlDate(const string datestr) {
   return(ts);
 }
 
-pure string shellEscape(string s) { return "'" ~ s.replace("'", "'\\''") ~ "'"; }
 pure string htmlEscape(string s) {
   return(s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&#39;"));
 }
@@ -38,12 +37,20 @@ pure string htmlEscape(string s) {
 string safePath(in string root, in string path) {
   if (path.canFind("..")) return null;
   if (path.canFind("\0")) return null;
-  return(root ~ (path.startsWith("/") ? path : "/" ~ path));
+  string full = root ~ (path.startsWith("/") ? path : "/" ~ path);
+  try {
+    if (exists(full)) {
+      string absroot  = buildNormalizedPath(absolutePath(root));
+      string resolved = buildNormalizedPath(absolutePath(full));
+      if (resolved != absroot && !resolved.startsWith(absroot ~ "/")) return null;
+    }
+  } catch (Exception e) { return null; }
+  return full;
 }
 
 // Month to index of the year
 pure int monthToIndex(in string m) {
-  for (int x = 1; x < 12; ++x) {
+  for (int x = 1; x <= 12; ++x) {
     if(m.toLower() == months[x].toLower()) return x;
   }
   return -1;
@@ -63,6 +70,20 @@ pure string toD(T, U)(in T x, in U digits = 6) nothrow {
   return((key in buffer) !is null);
 }
 
+string[string] parseQueryString(const string query, const string defVal = "") {
+  string[string] params;
+  foreach (param; query.split("&")) {
+    try {
+      string s     = strip(param);
+      ptrdiff_t i  = s.indexOf("=");
+      string key   = decodeComponent(i > 0 ? s[0 .. i]   : s);
+      string value = decodeComponent(i > 0 ? s[i+1 .. $] : defVal);
+      if (key.length > 0) params[key] = value;
+    } catch (Exception e) { warning("parseQueryString: failed to decode '%s'", param); }
+  }
+  return params;
+}
+
 @nogc pure bool has(T)(in T[] buffer, in T key) nothrow {
   foreach(T i; buffer) { 
     if(i == key) return(true);
@@ -79,10 +100,10 @@ pure string toD(T, U)(in T x, in U digits = 6) nothrow {
 void writeinfile(in string localpath, in string content) {
   if (content.length > 0) { 
     try {
-    auto fp = File(localpath, "wb");
-         fp.rawWrite(content);
-         fp.close();
-         trace("writeinfile: %d bytes to: %s", content.length, localpath);
+      auto fp = File(localpath, "wb");
+      fp.rawWrite(content);
+      fp.close();
+      trace("writeinfile: %d bytes to: %s", content.length, localpath);
     } catch(Exception e) {
       error("writeinfile: I/O exception '%s'", e.msg);
     }
@@ -98,27 +119,21 @@ string htmltime(in SysTime d = Clock.currTime()) {
 bool isFILE(in string path) {
   try {
     if (exists(path) && isFile(path)) return true;
-  } catch(Exception e) {
-    error("isFILE: I/O exception '%s'", e.msg);
-  }
+  } catch(Exception e) { error("isFILE: I/O exception '%s'", e.msg); }
   return false;
 }
 
 bool isDIR(in string path) {
   try {
     if (exists(path) && isDir(path)) return true;
-  } catch(Exception e) {
-    error("isDIR: I/O exception '%s'", e.msg);
-  }
+  } catch(Exception e) { error("isDIR: I/O exception '%s'", e.msg); }
   return false;
 }
 
 bool isCGI(in string path) {
   try {
     if (exists(path) && isFile(path) && mime(path).indexOf(CGI_FILE) >= 0) return true;
-  } catch(Exception e) {
-    error("isCGI: I/O exception '%s'", e.msg);
-  }
+  } catch(Exception e) { error("isCGI: I/O exception '%s'", e.msg); }
   return false;
 }
 
@@ -127,7 +142,7 @@ pure bool isAllowed(in string path) {
   return true;
 }
 
-// Where does the HTML request header end ?
+// Where does the HTTP request header end ?
 pure ptrdiff_t endofheader(T)(const(T) buffer) {
   auto str = to!string(buffer);
   ptrdiff_t idx = str.indexOf("\r\n\r\n");
@@ -135,7 +150,7 @@ pure ptrdiff_t endofheader(T)(const(T) buffer) {
   return(idx);
 }
 
-// Where does the HTML request body start ?
+// Where does the HTTP request body start ?
 pure ptrdiff_t bodystart(T)(const(T) buffer) {
   auto str = to!string(buffer);
   ptrdiff_t idx = str.indexOf("\r\n\r\n");
@@ -145,7 +160,7 @@ pure ptrdiff_t bodystart(T)(const(T) buffer) {
   return(-1);
 }
 
-// get the HTML header contained in the buffer
+// get the HTTP header contained in the buffer
 pure string fullheader(T)(const(T) buffer) {
   auto i = bodystart(buffer);
   if (i > 0 && i <= buffer.length)

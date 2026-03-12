@@ -16,8 +16,8 @@ class CGI : Payload {
     string command;
     string path;
 
-    this(string command, string path, bool removeInput = true, long maxtime = 4500){
-      this.command = command;
+    this(string[] command, string path, bool removeInput = true, long maxtime = 4500){
+      this.command = command.join(" ");
       this.path = path;
       external = new Process(command, path, removeInput, maxtime); 
       external.start();
@@ -29,7 +29,7 @@ class CGI : Payload {
     // Is the payload ready ?
     final @property long ready() { return(external.finished); }
 
-    // length of the message portion of the output (generated HTML headers are detected and substracted)
+    // length of the message portion of the output (generated HTTP headers are detected and substracted)
     final @property ptrdiff_t length() const {
       if (!external.running) {
         ptrdiff_t msglength = to!ptrdiff_t(external.length);

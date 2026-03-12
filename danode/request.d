@@ -3,7 +3,7 @@ module danode.request;
 import danode.imports;
 import danode.filesystem : FileSystem;
 import danode.interfaces : ClientInterface, DriverInterface;
-import danode.functions : interpreter, from, parseHtmlDate, shellEscape;
+import danode.functions : interpreter, from, parseHtmlDate, parseQueryString;
 import danode.webconfig : WebConfig;
 import danode.http : HTTP;
 import danode.post : PostItem, PostType;
@@ -31,10 +31,9 @@ pure HTTPVersion parseHTTPVersion(const string line) {
 // Parse the Request-Line: "method uri protocol"
 pure bool parseRequestLine(ref Request request, const string line) {
   auto parts = line.split(" ");
-  if (parts.length < 3)
-    throw new Exception(format("malformed Request-Line: '%s'", line));
-
+  if (parts.length < 3) { throw new Exception(format("malformed Request-Line: '%s'", line)); }
   request.method = to!RequestMethod(strip(parts[0]));
+  // uri and url start identical; url may be rewritten during routing, uri is preserved as-is
   request.uri = request.url = strip(join(parts[1 .. ($-1)], " "));
   request.protocol = parseHTTPVersion(strip(parts[($-1)]));
   return(true);
@@ -43,13 +42,13 @@ pure bool parseRequestLine(ref Request request, const string line) {
 struct Request {
   string ip; /// IP location of the client
   long port; /// Port at which the client is connected
-  string body; /// the body of the HTMLrequest
+  string body; /// the body of the HTTP request
   bool isSecure; /// was a secure request made
   bool isValid; /// Is the header valid ?
   UUID id; /// md5UUID for this request
   RequestMethod method; /// requested HTTP method
-  string uri = "/"; /// uri requested
-  string url = "/"; /// url requested
+  string uri = "/"; /// raw URI from the request line, never modified after parsing
+  string url = "/"; /// working path used for routing, may be rewritten by canonical/directory redirects
   string page; /// page is used when performing a canonical redirect
   string dir; /// dir is used in directory redirection
   HTTPVersion protocol; /// protocol requested
@@ -72,10 +71,10 @@ struct Request {
     trace("request header: %s", driver.header);
   }
 
-  // Parse the HTML request header (method, uri, protocol) as well as the supplemental headers
+  // Parse the HTTP request header (method, uri, protocol) as well as the supplemental headers
   final bool parseHeader(const string header) {
     try {
-      foreach (i, line; header.split("\n")) {
+      foreach (i, line; header.replace("\r\n", "\n").split("\n")) {
         if (i == 0) {
           this.parseRequestLine(line);
         } else { // next lines: header-param: attribute 
@@ -115,7 +114,7 @@ struct Request {
     return(headers.from("Host")); 
   }
 
-  // The Post from the Host header in the request
+  // The Port from the Host header in the request
   final @property ushort serverport() const {
     ptrdiff_t i = headers.from("Host").indexOf(":");
     if (i > 0) { 
@@ -135,11 +134,7 @@ struct Request {
   }
 
   // Get parameters as associative array
-  final string[string] get() const {
-    string[string] params;
-    foreach(param; query[1 .. $].split("&")){ string[] elems = param.split("="); if(elems.length == 1){ elems ~= "TRUE"; } params[elems[0]] = elems[1]; }
-    return params;
-  }
+  final string[string] get() const { return parseQueryString(query[1 .. $], "TRUE"); }
 
   // List of filenames uploaded by the user
   final @property string[]  postfiles() const { 
@@ -150,21 +145,26 @@ struct Request {
     return(files);
   }
 
-  final @property string    path() const { ptrdiff_t i = url.indexOf("?"); if(i > 0){ return(url[0 .. i]); }else{ return(url); } }
-  final @property string    query() const { ptrdiff_t i = uri.indexOf("?"); if(i > 0){ return(uri[i .. $]); }else{ return("?"); } }
-  final @property string    uripath() const { ptrdiff_t i = uri.indexOf("?"); if(i > 0){ return(uri[0 .. i]); }else{ return(uri); } }
-  final @property bool      keepalive() const { return( toLower(headers.from("Connection")) == "keep-alive"); }
-  final @property SysTime   ifModified() const { return(parseHtmlDate(headers.from("If-Modified-Since"))); }
-  final @property bool      acceptsEncoding(string encoding = "deflate") const { return(headers.from("Accept-Encoding").canFind(encoding)); }
-  final @property bool      track() const { return(  headers.from("DNT","0") == "0"); }
-  final @property string    cookies() const { return(headers.from("Cookie")); }
-  final @property string    useragent() const { return(headers.from("User-Agent", "Unknown")); }
-  final string              shorthost() const { return( (host.indexOf("www.") >= 0)? host[4 .. $] : host ); }
-  final string              command(string localpath) const { return(format("%s %s%s", localpath.interpreter(), localpath, params())); }
-  final @property string    params() const {
-      Appender!string str; 
-      foreach(k; get.byKey()){ str.put(format(" %s", shellEscape(k ~ "=" ~ get[k]))); }
-      return(str.data); 
+  // decoded path component of url (post-rewrite)
+  final @property string path() const { ptrdiff_t i = url.indexOf("?"); if(i > 0){ return(url[0 .. i]); }else{ return(url); } }
+
+  // query string component of uri (pre-rewrite)
+  final @property string query() const { ptrdiff_t i = uri.indexOf("?"); if(i > 0){ return(uri[i .. $]); }else{ return("?"); } }
+
+  // path component of uri (pre-rewrite, used for canonical redirects)
+  final @property string uripath() const { ptrdiff_t i = uri.indexOf("?"); if(i > 0){ return(uri[0 .. i]); }else{ return(uri); } }
+  final @property bool keepalive() const { return( toLower(headers.from("Connection")) == "keep-alive"); }
+  final @property SysTime ifModified() const { return(parseHtmlDate(headers.from("If-Modified-Since"))); }
+  final @property bool acceptsEncoding(string encoding = "deflate") const { return(headers.from("Accept-Encoding").canFind(encoding)); }
+  final @property bool track() const { return(  headers.from("DNT","0") == "0"); }
+  final @property string cookies() const { return(headers.from("Cookie")); }
+  final @property string useragent() const { return(headers.from("User-Agent", "Unknown")); }
+  final string shorthost() const { return( (host.indexOf("www.") >= 0)? host[4 .. $] : host ); }
+  final string[] command(string localpath) const {
+    string interp  = localpath.interpreter();
+    string[] args  = interp.length > 0 ? interp.split(" ") ~ localpath : [localpath];
+    foreach(k; get.byKey()) { args ~= k ~ "=" ~ get[k]; }
+    return args;
   }
 
   // Canonical redirect of the Request for a directory to the index page specified in the WebConfig

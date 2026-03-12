@@ -69,10 +69,10 @@ abstract class DriverInterface {
       return(to!string(inbuffer.data[bodyStart() .. $]));
     }
 
-    // Where does the HTML request header end ?
+    // Where does the HTTP request header end ?
     final @property ptrdiff_t endOfHeader() const { return(endofheader(inbuffer.data)); }
 
-    // Where does the HTML request body begin ?
+    // Where does the HTTP request body begin ?
     final @property ptrdiff_t bodyStart() const { return(bodystart(inbuffer.data)); }
 
     // Do we have a header separator ? "\r\n\r\n" or "\n\n"

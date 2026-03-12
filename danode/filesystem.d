@@ -31,7 +31,7 @@ class FileSystem {
   public:
     this(Log logger, string root = "./www/", size_t maxsize = 1024 * 512){
       this.logger   = logger;
-      this.root     = root.endsWith("/") ? root : root ~ "/";     // Normalized root (always ends with /)
+      this.root = buildNormalizedPath(absolutePath(root)) ~ "/";
       this.maxsize  = maxsize;
       scan();
     }
@@ -76,7 +76,10 @@ class FileSystem {
 
     /* Get the FilePayload at path from the localroot, with update check on buffers */
     final FilePayload file(string localroot, string path){ synchronized {
-      // New file created after last scan ? -> Scan the whole folder for changes
+      if (!(localroot in domains)) {
+        warning("file(): unknown domain '%s'", localroot);
+        return new FilePayload("", maxsize);
+      }
       if (!domains[localroot].files.has(path) && exists(format("%s%s", localroot, path))) {
         custom(1, "SCAN", "New file %s, rescanning index: %s", path, localroot);
         domains[localroot] = scan(localroot);

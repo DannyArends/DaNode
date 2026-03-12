@@ -2,6 +2,7 @@ module danode.post;
 
 import danode.imports;
 import danode.cgi : CGI;
+import danode.client : MAX_REQUEST_SIZE;
 import danode.statuscode : StatusCode;
 import danode.request : Request;
 import danode.response : SERVERINFO, Response, redirect, create, notmodified;
@@ -9,10 +10,8 @@ import danode.webconfig : WebConfig;
 import danode.payload : Message;
 import danode.mimetypes : mime;
 import danode.filesystem : FileSystem;
-import danode.functions : from, has, isCGI, isFILE, isDIR, writeinfile;
+import danode.functions : from, has, isCGI, isFILE, isDIR, writeinfile, parseQueryString;
 import danode.log : info, custom, trace, warning;
-
-immutable long MAX_UPLOAD_SIZE = 1024 * 1024 * 100; // 100MB
 
 immutable string      MPHEADER         = "multipart/form-data";                     /// Multipart header id
 immutable string      XFORMHEADER      = "application/x-www-form-urlencoded";       /// X-form header id
@@ -42,7 +41,7 @@ final bool parsePost (ref Request request, ref Response response, in FileSystem 
     custom(2, "POST", "Content-Length was not specified or 0: real length: %s", content.length);
     response.havepost = true;
     return(true); // When we don't receive any post data it is meaningless to scan for any content
-  } else if (expectedlength > MAX_UPLOAD_SIZE) {
+  } else if (expectedlength > MAX_REQUEST_SIZE) {
     warning("Upload too large: %d bytes from %s", expectedlength, request.ip);
     response.payload = new Message(StatusCode.PayloadTooLarge, "413 - Payload Too Large\n");
     response.ready = true;
@@ -79,48 +78,58 @@ final bool parsePost (ref Request request, ref Response response, in FileSystem 
 
 // Parse X-form content in the body of the request
 final void parseXform(ref Request request, const string content) {
-  foreach (s; content.split("&")) {
-    string[] elem = strip(s).split("=");
-    request.postinfo[elem[0]] = PostItem(PostType.Input, elem[0], "", (elem.length > 1)? elem[1] : "" );
-  }
+  foreach (k, v; parseQueryString(content)) { request.postinfo[k] = PostItem(PostType.Input, k, "", v); }
+}
+
+// Extract value from: name="value" or filename="value"
+pure string extractQuoted(string s, string key) nothrow {
+  ptrdiff_t i = s.indexOf(key ~ "=\"");
+  if (i < 0) return "";
+  i += key.length + 2;
+  ptrdiff_t j = s.indexOf("\"", i);
+  return j > i ? s[i .. j] : "";
+}
+
+pure ptrdiff_t findBodyLine(in string[] lines) nothrow {
+  foreach (i, line; lines) { if (strip(line).length == 0) return i + 1; }
+  return -1;
 }
 
 // Parse Multipart content in the body of the request
 final void parseMultipart(ref Request request, in FileSystem filesystem, const string content, const string mpid) {
-  //writeinfile("multipart.txt", content);
   int[string] keys;
-  bool isarraykey;
-  foreach (size_t i, part; chomp(content).split(mpid)) {
+  foreach (part; chomp(content).split(mpid)) {
     string[] elem = strip(part).split("\r\n");
-    if (elem[0] != "--") {
-      string[] mphdr = elem[0].split("; ");
-      string key = mphdr[1].length > 6 ? mphdr[1][6 .. ($-1)] : "";
-      if (mphdr.length == 2) {
-        request.postinfo[key] = PostItem(PostType.Input, key, "", join(elem[2 .. ($-1)]));
-      } else if (mphdr.length == 3) {
-        string fname = mphdr[2].length > 10 ? mphdr[2][10 .. ($-1)] : "";
-        custom(1, "MPART", "found on key %s file %s", key, fname);
-        if (key.length > 2) {
-          isarraykey = (key[($-2) .. $] == "[]")? true : false;
-        }
-        keys[key] = keys.has(key)? keys[key] + 1: 0;
-        custom(1, "MPART", "found on key %s #%d file %s", key, keys[key], fname);
-        if (fname != "") {
-          string fkey = isarraykey? key ~ to!string(keys[key]) : key;
-          string skey = isarraykey? key[0 .. $-2] : key;
-          string localpath = request.uploadfile(filesystem, fkey);
-          string mpcontent = join(elem[3 .. ($-1)], "\r\n");
-          auto mimeParts = split(elem[1], ": ");
-          string fileMime = mimeParts.length >= 2 ? mimeParts[1] : "application/octet-stream";
-          request.postinfo[fkey] = PostItem(PostType.File, skey, fname, localpath, fileMime, mpcontent.length);
-          writeinfile(localpath, mpcontent);
-          custom(1, "MPART", "wrote %d bytes to file %s", mpcontent.length, localpath);
-        } else {
-          request.postinfo[key] = PostItem(PostType.Input, key, "");
-        }
-      }
-    }else{
-      custom(1, "MPART", "ID element: %s", elem[0]);
+    if (elem.length < 2 || elem[0] == "--") { custom(1, "MPART", "ID element: %s", elem.length > 0 ? elem[0] : ""); continue; }
+
+    string[] mphdr = elem[0].split("; ");
+    if (mphdr.length < 2) continue;
+
+    string key = extractQuoted(elem[0], "name");
+    if (key.length == 0) continue;
+
+    ptrdiff_t bodyLine = findBodyLine(elem);
+    if (bodyLine < 0 || bodyLine >= elem.length) continue;
+
+    if (mphdr.length == 2) {
+      request.postinfo[key] = PostItem(PostType.Input, key, "", join(elem[bodyLine .. ($-1)]));
+    } else if (mphdr.length >= 3) {
+      string fname = extractQuoted(elem[0], "filename");
+      custom(1, "MPART", "found on key %s file %s", key, fname);
+      bool isarraykey = key.length > 2 && key[($-2) .. $] == "[]";
+      keys[key] = keys.has(key) ? keys[key] + 1 : 0;
+      custom(1, "MPART", "found on key %s #%d file %s", key, keys[key], fname);
+      if (fname != "") {
+        string fkey      = isarraykey ? key ~ to!string(keys[key]) : key;
+        string skey      = isarraykey ? key[0 .. $-2] : key;
+        string localpath = request.uploadfile(filesystem, fkey);
+        string mpcontent = join(elem[bodyLine .. ($-1)], "\r\n");
+        auto mimeParts   = split(elem[bodyLine-1], ": ");
+        string fileMime  = mimeParts.length >= 2 ? mimeParts[1] : "application/octet-stream";
+        request.postinfo[fkey] = PostItem(PostType.File, skey, fname, localpath, fileMime, mpcontent.length);
+        writeinfile(localpath, mpcontent);
+        custom(1, "MPART", "wrote %d bytes to file %s", mpcontent.length, localpath);
+      } else { request.postinfo[key] = PostItem(PostType.Input, key, ""); }
     }
   }
 }
