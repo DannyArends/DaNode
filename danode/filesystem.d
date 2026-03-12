@@ -76,7 +76,10 @@ class FileSystem {
 
     /* Get the FilePayload at path from the localroot, with update check on buffers */
     final FilePayload file(string localroot, string path){ synchronized {
-      // New file created after last scan ? -> Scan the whole folder for changes
+      if (!(localroot in domains)) {
+        warning("file(): unknown domain '%s'", localroot);
+        return new FilePayload("", maxsize);
+      }
       if (!domains[localroot].files.has(path) && exists(format("%s%s", localroot, path))) {
         custom(1, "SCAN", "New file %s, rescanning index: %s", path, localroot);
         domains[localroot] = scan(localroot);
