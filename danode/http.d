@@ -54,9 +54,9 @@ class HTTP : DriverInterface {
         if (send > 0) modtime = Clock.currTime();
         response.index += send; senddata[requests] += send;
         if(response.index >= response.length) response.completed = true;
-      }else if (send == -1) {
-        // send buffer full, back off
-        Thread.sleep(dur!"msecs"(10));
+      }else if (send == -1) { // send buffer full, back off
+        modtime = Clock.currTime();
+        Thread.sleep(dur!"msecs"(2));
       }
       if(send > 0) custom(3, "HTTP", "send %d bytes of data", send);
     } }
