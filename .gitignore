@@ -34,6 +34,8 @@ www/mapctl.org/
 
 *.in
 *.err
+*.png
+*.jpg
 *.lst
 *.log
 *.def

@@ -108,11 +108,11 @@ final void parseMultipart(ref Request request, in FileSystem filesystem, const s
     string key = extractQuoted(elem[0], "name");
     if (key.length == 0) continue;
 
-    ptrdiff_t body = findBodyLine(elem);
-    if (body < 0 || body >= elem.length) continue;
+    ptrdiff_t bodyLine = findBodyLine(elem);
+    if (bodyLine < 0 || bodyLine >= elem.length) continue;
 
     if (mphdr.length == 2) {
-      request.postinfo[key] = PostItem(PostType.Input, key, "", join(elem[body .. ($-1)]));
+      request.postinfo[key] = PostItem(PostType.Input, key, "", join(elem[bodyLine .. ($-1)]));
     } else if (mphdr.length >= 3) {
       string fname = extractQuoted(elem[0], "filename");
       custom(1, "MPART", "found on key %s file %s", key, fname);
@@ -123,8 +123,8 @@ final void parseMultipart(ref Request request, in FileSystem filesystem, const s
         string fkey      = isarraykey ? key ~ to!string(keys[key]) : key;
         string skey      = isarraykey ? key[0 .. $-2] : key;
         string localpath = request.uploadfile(filesystem, fkey);
-        string mpcontent = join(elem[body .. ($-1)], "\r\n");
-        auto mimeParts   = split(elem[body-1], ": ");
+        string mpcontent = join(elem[bodyLine .. ($-1)], "\r\n");
+        auto mimeParts   = split(elem[bodyLine-1], ": ");
         string fileMime  = mimeParts.length >= 2 ? mimeParts[1] : "application/octet-stream";
         request.postinfo[fkey] = PostItem(PostType.File, skey, fname, localpath, fileMime, mpcontent.length);
         writeinfile(localpath, mpcontent);
