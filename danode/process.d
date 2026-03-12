@@ -195,6 +195,7 @@ class Process : Thread {
         this.completed = true;
       } catch(Exception e) {
         warning("process.d, exception: '%s'", e.msg);
+        this.completed = true;  // ADD THIS
       }
     }
 }

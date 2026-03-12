@@ -161,14 +161,15 @@ struct Request {
   final @property string useragent() const { return(headers.from("User-Agent", "Unknown")); }
   final string shorthost() const { return( (host.indexOf("www.") >= 0)? host[4 .. $] : host ); }
   final string[] command(string localpath) const {
-    string[] args = [localpath.interpreter(), localpath];
+    string interp = localpath.interpreter();
+    string[] args = interp.length > 0 ? [interp, localpath] : [localpath];
     foreach(k; get.byKey()) { args ~= shellEscape(k ~ "=" ~ get[k]); }
-    return(args);
+    return args;
   }
   final @property string    params() const {
-      Appender!string str; 
-      foreach(k; get.byKey()){ str.put(format(" %s", shellEscape(k ~ "=" ~ get[k]))); }
-      return(str.data); 
+    Appender!string str; 
+    foreach(k; get.byKey()){ str.put(format(" %s", shellEscape(k ~ "=" ~ get[k]))); }
+    return(str.data); 
   }
 
   // Canonical redirect of the Request for a directory to the index page specified in the WebConfig
