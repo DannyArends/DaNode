@@ -66,16 +66,14 @@ struct WebConfig {
   // Is the directory allowed to be viewed ?
   @property bool dirAllowed(in string localroot, in string path) const {
     trace("dirAllowed: %s %s", localroot, path);
+    if (path.length <= localroot.length + 1) return true; // root dir always allowed
     string npath = path[(localroot.length + 1) .. $];
     trace("npath: %s", npath);
-    if (npath == "") // path / is always allowed
-      return(true);
-
     foreach (d; allowdirs) {
       trace("%s in allowdirs: %s %s", npath, d, npath.indexOf(d));
-      if(indexOf(strip(npath), strip(d)) == 0) return(true);
+      if (indexOf(strip(npath), strip(d)) == 0) return true;
     }
-    return(false);
+    return false;
   }
 }
 

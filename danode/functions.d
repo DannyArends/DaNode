@@ -38,11 +38,12 @@ pure string htmlEscape(string s) {
 string safePath(in string root, in string path) {
   if (path.canFind("..")) return null;
   if (path.canFind("\0")) return null;
-  string full = root ~ (path.startsWith("/") ? path[1..$] : path);
+  string full = root ~ (path.startsWith("/") ? path : "/" ~ path);
   try {
     if (exists(full)) {
+      string absroot  = buildNormalizedPath(absolutePath(root));
       string resolved = buildNormalizedPath(absolutePath(full));
-      if (!resolved.startsWith(root)) return null;
+      if (resolved != absroot && !resolved.startsWith(absroot ~ "/")) return null;
     }
   } catch (Exception e) { return null; }
   return full;
@@ -100,10 +101,10 @@ string[string] parseQueryString(const string query, const string defVal = "") {
 void writeinfile(in string localpath, in string content) {
   if (content.length > 0) { 
     try {
-    auto fp = File(localpath, "wb");
-         fp.rawWrite(content);
-         fp.close();
-         trace("writeinfile: %d bytes to: %s", content.length, localpath);
+      auto fp = File(localpath, "wb");
+      fp.rawWrite(content);
+      fp.close();
+      trace("writeinfile: %d bytes to: %s", content.length, localpath);
     } catch(Exception e) {
       error("writeinfile: I/O exception '%s'", e.msg);
     }
