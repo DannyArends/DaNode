@@ -29,7 +29,6 @@ SysTime parseHtmlDate(const string datestr) {
   return(ts);
 }
 
-pure string shellEscape(string s) { return "'" ~ s.replace("'", "'\\''") ~ "'"; }
 pure string htmlEscape(string s) {
   return(s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&#39;"));
 }

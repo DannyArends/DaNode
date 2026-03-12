@@ -3,7 +3,7 @@ module danode.request;
 import danode.imports;
 import danode.filesystem : FileSystem;
 import danode.interfaces : ClientInterface, DriverInterface;
-import danode.functions : interpreter, from, parseHtmlDate, parseQueryString, shellEscape;
+import danode.functions : interpreter, from, parseHtmlDate, parseQueryString;
 import danode.webconfig : WebConfig;
 import danode.http : HTTP;
 import danode.post : PostItem, PostType;
@@ -165,11 +165,6 @@ struct Request {
     string[] args  = interp.length > 0 ? interp.split(" ") ~ localpath : [localpath];
     foreach(k; get.byKey()) { args ~= k ~ "=" ~ get[k]; }
     return args;
-  }
-  final @property string    params() const {
-    Appender!string str; 
-    foreach(k; get.byKey()){ str.put(format(" %s", shellEscape(k ~ "=" ~ get[k]))); }
-    return(str.data); 
   }
 
   // Canonical redirect of the Request for a directory to the index page specified in the WebConfig
