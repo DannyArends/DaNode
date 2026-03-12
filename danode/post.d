@@ -10,7 +10,7 @@ import danode.webconfig : WebConfig;
 import danode.payload : Message;
 import danode.mimetypes : mime;
 import danode.filesystem : FileSystem;
-import danode.functions : from, has, isCGI, isFILE, isDIR, writeinfile;
+import danode.functions : from, has, isCGI, isFILE, isDIR, writeinfile, parseQueryString;
 import danode.log : info, custom, trace, warning;
 
 immutable string      MPHEADER         = "multipart/form-data";                     /// Multipart header id
@@ -78,10 +78,7 @@ final bool parsePost (ref Request request, ref Response response, in FileSystem 
 
 // Parse X-form content in the body of the request
 final void parseXform(ref Request request, const string content) {
-  foreach (s; content.split("&")) {
-    string[] elem = strip(s).split("=");
-    request.postinfo[elem[0]] = PostItem(PostType.Input, elem[0], "", (elem.length > 1)? elem[1] : "" );
-  }
+  foreach (k, v; parseQueryString(content)) { request.postinfo[k] = PostItem(PostType.Input, k, "", v); }
 }
 
 // Parse Multipart content in the body of the request

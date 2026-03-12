@@ -63,6 +63,20 @@ pure string toD(T, U)(in T x, in U digits = 6) nothrow {
   return((key in buffer) !is null);
 }
 
+string[string] parseQueryString(const string query, const string defVal = "") {
+  string[string] params;
+  foreach (param; query.split("&")) {
+    try {
+      string s     = strip(param);
+      ptrdiff_t i  = s.indexOf("=");
+      string key   = decodeComponent(i > 0 ? s[0 .. i]   : s);
+      string value = decodeComponent(i > 0 ? s[i+1 .. $] : defVal);
+      if (key.length > 0) params[key] = value;
+    } catch (Exception e) { warning("parseQueryString: failed to decode '%s'", param); }
+  }
+  return params;
+}
+
 @nogc pure bool has(T)(in T[] buffer, in T key) nothrow {
   foreach(T i; buffer) { 
     if(i == key) return(true);

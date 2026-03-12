@@ -3,7 +3,7 @@ module danode.request;
 import danode.imports;
 import danode.filesystem : FileSystem;
 import danode.interfaces : ClientInterface, DriverInterface;
-import danode.functions : interpreter, from, parseHtmlDate, shellEscape;
+import danode.functions : interpreter, from, parseHtmlDate, parseQueryString, shellEscape;
 import danode.webconfig : WebConfig;
 import danode.http : HTTP;
 import danode.post : PostItem, PostType;
@@ -135,11 +135,7 @@ struct Request {
   }
 
   // Get parameters as associative array
-  final string[string] get() const {
-    string[string] params;
-    foreach(param; query[1 .. $].split("&")){ string[] elems = param.split("="); if(elems.length == 1){ elems ~= "TRUE"; } params[elems[0]] = elems[1]; }
-    return params;
-  }
+  final string[string] get() const { return parseQueryString(query[1 .. $], "TRUE"); }
 
   // List of filenames uploaded by the user
   final @property string[]  postfiles() const { 
