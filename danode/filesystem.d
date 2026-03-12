@@ -31,7 +31,8 @@ class FileSystem {
   public:
     this(Log logger, string root = "./www/", size_t maxsize = 1024 * 512){
       this.logger   = logger;
-      this.root = buildNormalizedPath(absolutePath(root)) ~ "/";
+      this.root = buildNormalizedPath(absolutePath(root)).replace("\\", "/");
+      if (!this.root.endsWith("/")) this.root ~= "/";
       this.maxsize  = maxsize;
       scan();
     }
@@ -107,12 +108,12 @@ unittest {
   custom(0, "FILE", "%s", __FILE__);
   Log logger = new Log(NORMAL);
   FileSystem filesystem = new FileSystem(logger, "./www/");
-  custom(0, "TEST", "./www/localhost/dmd.d (6 bytes) = %s", filesystem.file("./www/localhost", "/dmd.d").bytes(0,6));
+  custom(0, "TEST", "./www/localhost/dmd.d (6 bytes) = %s", filesystem.file(filesystem.localroot("localhost"), "/dmd.d").bytes(0,6));
   custom(0, "TEST", "filesystem.localroot('localhost') = %s", filesystem.localroot("localhost"));
   Domain localhost = filesystem.scan("www/localhost");
   custom(0, "TEST", "localhost.buffersize() = %s", localhost.buffersize());
   custom(0, "TEST", "localhost.size() = %s", localhost.size());
-  auto file = filesystem.file(filesystem.localroot("localhost"), "localhost/dmd.d");
+  auto file = filesystem.file(filesystem.localroot("localhost"), "/dmd.d");
   custom(0, "TEST", "file.asStream(0) = %s", file.asStream(0));
   custom(0, "TEST", "file.statuscode() = %s", file.statuscode());
   custom(0, "TEST", "file.mimetype() = %s", file.mimetype());

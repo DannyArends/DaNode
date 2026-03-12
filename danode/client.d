@@ -49,20 +49,23 @@ class Client : Thread, ClientInterface {
               // Parse the data and try to create a response (Could fail multiple times)
               router.route(driver, request, response, maxtime);
             }
-            if (response.ready && !response.completed) {      // We know what to respond, but haven't send all of it yet
-              driver.send(response, driver.socket, 65536);           // Send the response, hit multiple times, send what you can and return
-            }
-            if (response.ready && response.completed) {       // We've completed the request, response cycle
-              router.logRequest(this, request, response);     // Log the response to the request
-              request.clearUploadFiles();                     // Clean uploaded files
-              request.destroy();                              // Clear the request structure
-              driver.inbuffer.destroy();                      // Clear the input buffer
-              driver.requests++;
-              if(!response.keepalive) stop();                 // No keep alive, then stop this client
-              response.destroy();                             // Clear the response structure
-            }
+          }
+          if (response.ready && !response.completed) {      // We know what to respond, but haven't send all of it yet
+            //custom(1, "CLIENT", "sending: index=%d length=%d isRange=%s", response.index, response.length, response.isRange);
+            driver.send(response, driver.socket);           // Send the response, hit multiple times, send what you can and return
+          }
+          if (response.ready && response.completed) {       // We've completed the request, response cycle
+            //custom(1, "CLIENT", "completed: index=%d length=%d", response.index, response.length);
+            router.logRequest(this, request, response);     // Log the response to the request
+            request.clearUploadFiles();                     // Clean uploaded files
+            request.destroy();                              // Clear the request structure
+            driver.inbuffer.destroy();                      // Clear the input buffer
+            driver.requests++;
+            if(!response.keepalive) stop();                 // No keep alive, then stop this client
+            response.destroy();                             // Clear the response structure
           }
           if (lastmodified >= maxtime) { // Client are not allowed to be silent for more than maxtime
+            //custom(1, "CLIENT", "timeout: index=%d length=%d completed=%s", response.index, response.length, response.completed);
             custom(2, "CLIENT", "inactivity: %s > %s", lastmodified, maxtime);
             if (!response.ready && request !is Request.init) { // We have an unhandled request
               driver.setTimedOut(response);
@@ -71,7 +74,7 @@ class Client : Thread, ClientInterface {
             stop(); continue;
           }
           custom(3, "CLIENT", "connection %s:%s (%s msecs) %s", ip, port, starttime, to!string(driver.inbuffer.data));
-          Thread.yield();
+          Thread.sleep(dur!"msecs"(2));
         }
       } catch(Exception e) { 
         warning("Unknown Client Exception: %s", e);
@@ -110,6 +113,10 @@ class Client : Thread, ClientInterface {
 unittest {
   custom(0, "FILE", "%s", __FILE__);
   auto router = new Router("./www/", Address.init, NORMAL);
+
+  router.runRequest("GET /test.pdf HTTP/1.1\nHost: localhost\nRange: bytes=0-65535\n\n");
+  router.runRequest("GET /test.pdf HTTP/1.1\nHost: localhost\nRange: bytes=32517-\n\n");
+
   router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\n\n");
   router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\r\n\r\n");
   router.runRequest("GET /dmd.d HTTP/1.1\nHost: www.localhost\n\n");

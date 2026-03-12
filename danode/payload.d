@@ -3,7 +3,7 @@ module danode.payload;
 import danode.imports;
 import danode.statuscode : StatusCode;
 import danode.mimetypes : mime, UNSUPPORTED_FILE;
-import danode.log : info, warning, trace, cverbose, DEBUG;
+import danode.log : custom, info, warning, trace, cverbose, DEBUG;
 import danode.functions : isCGI;
 
 enum PayloadType { Message, Script, File }
@@ -19,7 +19,7 @@ interface Payload {
     @property SysTime             mtime();
     @property string              mimetype() const;
 
-    const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 1024);
+    const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 4096, bool isRange = false, long rangeStart = 0, long rangeEnd = -1);
 }
 
 /* Implementation of the Payload interface, by using an empty string message */
@@ -50,7 +50,7 @@ class Message : Payload {
     final @property SysTime mtime() { return Clock.currTime(); }
     final @property string mimetype() const { return mime; }
     final @property StatusCode statuscode() const { return status; }
-    char[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 1024) { 
+    char[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 4096, bool isRange = false, long rangeStart = 0, long rangeEnd = -1) {
       return( message[from .. to!ptrdiff_t(min(from+maxsize, $))].dup );
     }
 }
@@ -59,9 +59,7 @@ class Message : Payload {
 class FilePayload : Payload {
   public:
     bool      deflate = false; // Is a deflate version of the file available ?
-    bool      isRange = false;
-    long      rangeStart = 0;
-    long      rangeEnd = -1;
+
   private:
     string    path; // Path of the file
     SysTime   btime; // Time buffered
@@ -133,7 +131,7 @@ class FilePayload : Payload {
     /* Files are always assumed ready to be handled (unlike Common Gate Way threads)  */
     final @property long ready() { return(true); }
     /* Payload type delivered to the client  */
-    final @property PayloadType type() const { return(PayloadType.Message); }
+    final @property PayloadType type() const { return(PayloadType.File); }
     /* Size of the file, -1 if it does not exist  */
     final @property ptrdiff_t fileSize() const { if(!realfile){ return -1; } return to!ptrdiff_t(path.getSize()); }
     /* Length of the buffer  */
@@ -142,18 +140,17 @@ class FilePayload : Payload {
     final @property string mimetype() const { return mime(path); }
     /* Status code for file is StatusCode.Ok ? */
     final @property StatusCode statuscode() const { 
-      if (!realfile) return StatusCode.NotFound;
-      return isRange ? StatusCode.PartialContent : StatusCode.Ok; 
+      return realfile ? StatusCode.Ok : StatusCode.NotFound; 
     }
     /* Get the number of bytes that the client response has, based on encoding */
     final @property ptrdiff_t length() const {
-      if (isRange) return to!ptrdiff_t(rangeEnd - rangeStart + 1);
       if(hasEncodedVersion && deflate) return(encbuf.length);
       return(fileSize());
     }
 
     /* Send the file from the underlying raw byte source stream using fseek, fp are closed */
-    final char[] asStream(ptrdiff_t from, ptrdiff_t maxsize = 65536) {
+    final char[] asStream(ptrdiff_t from, ptrdiff_t maxsize = 4096) {
+      //custom(1, "STREAM", "asStream: from=%d sz=%d fileSize=%d", from, maxsize, fileSize());
       char[] tmpbuf = new char[](maxsize);
       char[] slice = [];
       if (cverbose >= DEBUG && from == 0) write("[STREAM] .");
@@ -178,14 +175,13 @@ class FilePayload : Payload {
     }
 
     /* Get bytes in a lockfree manner from the correct underlying buffer */
-    final const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 65536){ synchronized {
+    final const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 4096, bool isRange = false, long rangeStart = 0, long rangeEnd = -1) { synchronized {
       if (!realfile) { return []; }
-      trace("file provided is a real file");
       if (needsupdate) { buffer(); }
-      ptrdiff_t offset = isRange? to!ptrdiff_t(rangeStart) + from : from;
-      ptrdiff_t limit = isRange? to!ptrdiff_t(rangeEnd - rangeStart + 1) : -1;
-      ptrdiff_t sz = (limit > 0)? to!ptrdiff_t(min(maxsize, max(0, limit - from))) : maxsize;
-      trace("range: start=%d end=%d from=%d offset=%d sz=%d limit=%d", rangeStart, rangeEnd, from, offset, sz, limit);
+      ptrdiff_t offset = isRange ? to!ptrdiff_t(rangeStart) + from : from;
+      ptrdiff_t limit  = isRange ? to!ptrdiff_t(rangeEnd - rangeStart + 1) : -1;
+      ptrdiff_t sz     = (limit > 0) ? to!ptrdiff_t(min(maxsize, max(0, limit - from))) : maxsize;
+      trace("bytes: isRange=%s start=%d end=%d from=%d offset=%d sz=%d", isRange, rangeStart, rangeEnd, from, offset, sz);
       if (!buffered) {
         return(asStream(offset, sz));
       } else {
@@ -198,4 +194,3 @@ class FilePayload : Payload {
       return([]);
     } }
 }
-

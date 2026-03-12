@@ -14,6 +14,7 @@ version(SSL) {
 
   class HTTPS : DriverInterface {
     private:
+      char[] pending;
       SSL* ssl = null;
 
     public:
@@ -138,15 +139,20 @@ version(SSL) {
         if(socket is null) return;
         if(!socket.isAlive()) return;
         if(ssl is null) return;
-
-        auto slice = response.bytes(maxsize);
-        ptrdiff_t send = SSL_write(ssl, cast(void*) slice, cast(int) slice.length);
-        if(send >= 0) {
-          if(send > 0) modtime = Clock.currTime();
-          response.index += send; senddata[requests] += send;
+        // SSL requires retrying with exact same buffer on WANT_WRITE
+        if (pending.length == 0) pending = response.bytes(maxsize).dup;
+        if (pending.length == 0) return;
+        ptrdiff_t send = SSL_write(ssl, cast(void*) pending.ptr, cast(int) pending.length);
+        custom(1, "HTTPS", "send result=%d index=%d length=%d", send, response.index, response.length);
+        if (send > 0) {
+          modtime = Clock.currTime();
+          response.index += send;
+          senddata[requests] += send;
           if(response.index >= response.length) response.completed = true;
+          pending = [];  // clear on success, fetch next chunk next call
         }
-        if(send > 0) custom(3, "HTTPS", "send %d bytes of data", send);
+        // on send <= 0: keep pending, retry same buffer next call
+        // modtime not updated — inactivity timeout still works for dead connections
       } }
 
       @nogc override bool isSecure() const nothrow { return(true); }
