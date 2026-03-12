@@ -19,7 +19,7 @@ interface Payload {
     @property SysTime             mtime();
     @property string              mimetype() const;
 
-    const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 1024);
+    const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 65536, bool isRange = false, long rangeStart = 0, long rangeEnd = -1);
 }
 
 /* Implementation of the Payload interface, by using an empty string message */
@@ -50,7 +50,7 @@ class Message : Payload {
     final @property SysTime mtime() { return Clock.currTime(); }
     final @property string mimetype() const { return mime; }
     final @property StatusCode statuscode() const { return status; }
-    char[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 1024) { 
+    char[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 65536, bool isRange = false, long rangeStart = 0, long rangeEnd = -1) { 
       return( message[from .. to!ptrdiff_t(min(from+maxsize, $))].dup );
     }
 }
@@ -59,9 +59,7 @@ class Message : Payload {
 class FilePayload : Payload {
   public:
     bool      deflate = false; // Is a deflate version of the file available ?
-    bool      isRange = false;
-    long      rangeStart = 0;
-    long      rangeEnd = -1;
+
   private:
     string    path; // Path of the file
     SysTime   btime; // Time buffered
@@ -142,12 +140,10 @@ class FilePayload : Payload {
     final @property string mimetype() const { return mime(path); }
     /* Status code for file is StatusCode.Ok ? */
     final @property StatusCode statuscode() const { 
-      if (!realfile) return StatusCode.NotFound;
-      return isRange ? StatusCode.PartialContent : StatusCode.Ok; 
+      return realfile ? StatusCode.Ok : StatusCode.NotFound; 
     }
     /* Get the number of bytes that the client response has, based on encoding */
     final @property ptrdiff_t length() const {
-      if (isRange) return to!ptrdiff_t(rangeEnd - rangeStart + 1);
       if(hasEncodedVersion && deflate) return(encbuf.length);
       return(fileSize());
     }
@@ -178,14 +174,15 @@ class FilePayload : Payload {
     }
 
     /* Get bytes in a lockfree manner from the correct underlying buffer */
-    final const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 65536){ synchronized {
+    final const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 65536, 
+                              bool isRange = false, long rangeStart = 0, long rangeEnd = -1){ synchronized {
       if (!realfile) { return []; }
-      trace("file provided is a real file");
       if (needsupdate) { buffer(); }
       ptrdiff_t offset = isRange? to!ptrdiff_t(rangeStart) + from : from;
       ptrdiff_t limit = isRange? to!ptrdiff_t(rangeEnd - rangeStart + 1) : -1;
       ptrdiff_t sz = (limit > 0)? to!ptrdiff_t(min(maxsize, max(0, limit - from))) : maxsize;
-      trace("range: start=%d end=%d from=%d offset=%d sz=%d limit=%d", rangeStart, rangeEnd, from, offset, sz, limit);
+      info("bytes: isRange=%s rangeStart=%d rangeEnd=%d from=%d offset=%d sz=%d limit=%d", 
+          isRange, rangeStart, rangeEnd, from, offset, sz, limit);
       if (!buffered) {
         return(asStream(offset, sz));
       } else {
