@@ -74,7 +74,7 @@ class Client : Thread, ClientInterface {
             stop(); continue;
           }
           custom(3, "CLIENT", "connection %s:%s (%s msecs) %s", ip, port, starttime, to!string(driver.inbuffer.data));
-          Thread.yield();
+          Thread.sleep(dur!"msecs"(2));
         }
       } catch(Exception e) { 
         warning("Unknown Client Exception: %s", e);

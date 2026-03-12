@@ -35,17 +35,17 @@ pure string htmlEscape(string s) {
 
 // Returns null if path escapes root
 string safePath(in string root, in string path) {
-  if (path.canFind("..")) return null;
-  if (path.canFind("\0")) return null;
-  string full = root ~ (path.startsWith("/") ? path : "/" ~ path);
-  try {
-    if (exists(full)) {
-      string absroot  = buildNormalizedPath(absolutePath(root));
-      string resolved = buildNormalizedPath(absolutePath(full));
-      if (resolved != absroot && !resolved.startsWith(absroot ~ "/")) return null;
-    }
-  } catch (Exception e) { return null; }
-  return full;
+    if (path.canFind("..")) return null;
+    if (path.canFind("\0")) return null;
+    string full = root ~ (path.startsWith("/") ? path : "/" ~ path);
+    try {
+        if (exists(full)) {
+            string resolved = buildNormalizedPath(absolutePath(full)).replace("\\", "/");
+            string absroot  = root.endsWith("/") ? root : root ~ "/";
+            if (resolved != absroot[0..$-1] && !resolved.startsWith(absroot)) return null;
+        }
+    } catch (Exception e) { return null; }
+    return full;
 }
 
 // Month to index of the year

@@ -31,7 +31,8 @@ class FileSystem {
   public:
     this(Log logger, string root = "./www/", size_t maxsize = 1024 * 512){
       this.logger   = logger;
-      this.root = buildNormalizedPath(absolutePath(root)) ~ "/";
+      this.root = buildNormalizedPath(absolutePath(root)).replace("\\", "/");
+      if (!this.root.endsWith("/")) this.root ~= "/";
       this.maxsize  = maxsize;
       scan();
     }

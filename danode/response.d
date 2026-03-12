@@ -33,9 +33,9 @@ struct Response {
   bool              cgiheader = false;
   Appender!(char[]) hdr;
   ptrdiff_t         index = 0;
-/*  bool              isRange    = false;
+  bool              isRange    = false;
   long              rangeStart = 0;
-  long              rangeEnd   = -1;*/
+  long              rangeEnd   = -1;
 
   final void customheader(string key, string value) nothrow { headers[key] = value; }
 
@@ -90,7 +90,8 @@ struct Response {
     }
     hdr.put(format("Date: %s\r\n", htmltime()));
     if (payload.type != PayloadType.Script && payload.length >= 0) { // If we have any payload
-      hdr.put(format("Content-Length: %d\r\n", payload.length));
+      long contentLength = isRange ? (rangeEnd - rangeStart + 1) : payload.length;
+      hdr.put(format("Content-Length: %d\r\n", contentLength));
       hdr.put(format("Last-Modified: %s\r\n", htmltime(payload.mtime))); // It could be modified long ago, lets inform the client
       if (maxage > 0) { // Perhaps we can have the client cache it (when very old)
         hdr.put(format("Cache-Control: max-age=%d, public\r\n", maxage));
@@ -107,16 +108,23 @@ struct Response {
     if (payload && payload.type == PayloadType.Script) { to!CGI(payload).notifyovertime(); }
   }
 
-  @property final StatusCode statuscode() const { return payload.statuscode; }
+  @property final StatusCode statuscode() const {
+    if (isRange) return StatusCode.PartialContent;
+    return payload.statuscode;
+  }
   @property final bool keepalive() const { return( toLower(connection) == "keep-alive"); }
-  @property final long length() { return header.length + payload.length; }
-  @property final const(char)[] bytes(in ptrdiff_t maxsize = 65536) { // Stream of bytes (header + stream of bytes)
+  @property final long length() {
+    if (isRange) return header.length + (rangeEnd - rangeStart + 1);
+    return header.length + payload.length;
+  }
+  // Stream of bytes (header + stream of bytes)
+  @property final const(char)[] bytes(in ptrdiff_t maxsize = 65536) {
     ptrdiff_t hsize = header.length;
     if(index <= hsize) {  // We haven't completed the header yet
       ptrdiff_t remaining = maxsize - hsize;
-      return(header[index .. hsize] ~ payload.bytes(0, remaining > 0 ? remaining : 0));
+      return(header[index .. hsize] ~ payload.bytes(0, remaining > 0 ? remaining : 0, isRange, rangeStart, rangeEnd));
     }
-    return(payload.bytes(index-hsize, maxsize)); // Header completed, just stream bytes from the payload
+    return(payload.bytes(index-hsize, maxsize, isRange, rangeStart, rangeEnd)); // Header completed, just stream bytes from the payload
   }
 
   @property final bool ready(bool r = false){ if(r){ routed = r; } return(routed && payload.ready()); }
@@ -193,9 +201,9 @@ void serveStaticFile(ref Response response, in Request request, FileSystem fs) {
   }
   response.payload = reqFile;
 
-  //if (request.hasRange) { response.serveRangeFile(request, reqFile); return; }
+  if (request.hasRange) { response.serveRangeFile(request, reqFile); return; }
 
-  //if (!reqFile.deflate) response.customheader("Accept-Ranges", "bytes");
+  if (!reqFile.deflate) response.customheader("Accept-Ranges", "bytes");
   if (request.ifModified >= response.payload.mtime()) {                                        // Non modified static content
     trace("static file has not changed, sending notmodified");
     response.notmodified(request, response.payload.mimetype);
@@ -216,10 +224,11 @@ void serveRangeFile(ref Response response, in Request request, FilePayload reqFi
   } else {
     response.customheader("Content-Range", format("bytes %d-%d/%d", start, end, total));
     response.customheader("Accept-Ranges", "bytes");
-    //response.rangeStart = start;
-   // response.rangeEnd = end;
-   // response.isRange = true;
+    response.rangeStart = start;
+    response.rangeEnd = end;
+    response.isRange = true;
     response.payload = reqFile;
+    trace("serveRangeFile: serving %d bytes", end - start + 1);
   }
   response.ready = true;
 }
