@@ -52,7 +52,7 @@ class Client : Thread, ClientInterface {
           }
           if (response.ready && !response.completed) {      // We know what to respond, but haven't send all of it yet
             //custom(1, "CLIENT", "sending: index=%d length=%d isRange=%s", response.index, response.length, response.isRange);
-            driver.send(response, driver.socket, 65536);           // Send the response, hit multiple times, send what you can and return
+            driver.send(response, driver.socket);           // Send the response, hit multiple times, send what you can and return
           }
           if (response.ready && response.completed) {       // We've completed the request, response cycle
             //custom(1, "CLIENT", "completed: index=%d length=%d", response.index, response.length);
