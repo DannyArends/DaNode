@@ -181,7 +181,7 @@ class FilePayload : Payload {
       ptrdiff_t offset = isRange? to!ptrdiff_t(rangeStart) + from : from;
       ptrdiff_t limit = isRange? to!ptrdiff_t(rangeEnd - rangeStart + 1) : -1;
       ptrdiff_t sz = (limit > 0)? to!ptrdiff_t(min(maxsize, max(0, limit - from))) : maxsize;
-      info("bytes: isRange=%s rangeStart=%d rangeEnd=%d from=%d offset=%d sz=%d limit=%d", 
+      custom(1, "CLIENT", "bytes: isRange=%s rangeStart=%d rangeEnd=%d from=%d offset=%d sz=%d limit=%d", 
           isRange, rangeStart, rangeEnd, from, offset, sz, limit);
       if (!buffered) {
         return(asStream(offset, sz));
