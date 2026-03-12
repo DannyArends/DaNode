@@ -43,7 +43,7 @@ pure bool parseRequestLine(ref Request request, const string line) {
 struct Request {
   string ip; /// IP location of the client
   long port; /// Port at which the client is connected
-  string body; /// the body of the HTMLrequest
+  string body; /// the body of the HTTP request
   bool isSecure; /// was a secure request made
   bool isValid; /// Is the header valid ?
   UUID id; /// md5UUID for this request
@@ -72,7 +72,7 @@ struct Request {
     trace("request header: %s", driver.header);
   }
 
-  // Parse the HTML request header (method, uri, protocol) as well as the supplemental headers
+  // Parse the HTTP request header (method, uri, protocol) as well as the supplemental headers
   final bool parseHeader(const string header) {
     try {
       foreach (i, line; header.replace("\r\n", "\n").split("\n")) {
@@ -115,7 +115,7 @@ struct Request {
     return(headers.from("Host")); 
   }
 
-  // The Post from the Host header in the request
+  // The Port from the Host header in the request
   final @property ushort serverport() const {
     ptrdiff_t i = headers.from("Host").indexOf(":");
     if (i > 0) { 

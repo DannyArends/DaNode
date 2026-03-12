@@ -43,7 +43,7 @@ string safePath(in string root, in string path) {
 
 // Month to index of the year
 pure int monthToIndex(in string m) {
-  for (int x = 1; x < 12; ++x) {
+  for (int x = 1; x <= 12; ++x) {
     if(m.toLower() == months[x].toLower()) return x;
   }
   return -1;
@@ -112,27 +112,21 @@ string htmltime(in SysTime d = Clock.currTime()) {
 bool isFILE(in string path) {
   try {
     if (exists(path) && isFile(path)) return true;
-  } catch(Exception e) {
-    error("isFILE: I/O exception '%s'", e.msg);
-  }
+  } catch(Exception e) { error("isFILE: I/O exception '%s'", e.msg); }
   return false;
 }
 
 bool isDIR(in string path) {
   try {
     if (exists(path) && isDir(path)) return true;
-  } catch(Exception e) {
-    error("isDIR: I/O exception '%s'", e.msg);
-  }
+  } catch(Exception e) { error("isDIR: I/O exception '%s'", e.msg); }
   return false;
 }
 
 bool isCGI(in string path) {
   try {
     if (exists(path) && isFile(path) && mime(path).indexOf(CGI_FILE) >= 0) return true;
-  } catch(Exception e) {
-    error("isCGI: I/O exception '%s'", e.msg);
-  }
+  } catch(Exception e) { error("isCGI: I/O exception '%s'", e.msg); }
   return false;
 }
 
@@ -141,7 +135,7 @@ pure bool isAllowed(in string path) {
   return true;
 }
 
-// Where does the HTML request header end ?
+// Where does the HTTP request header end ?
 pure ptrdiff_t endofheader(T)(const(T) buffer) {
   auto str = to!string(buffer);
   ptrdiff_t idx = str.indexOf("\r\n\r\n");
@@ -149,7 +143,7 @@ pure ptrdiff_t endofheader(T)(const(T) buffer) {
   return(idx);
 }
 
-// Where does the HTML request body start ?
+// Where does the HTTP request body start ?
 pure ptrdiff_t bodystart(T)(const(T) buffer) {
   auto str = to!string(buffer);
   ptrdiff_t idx = str.indexOf("\r\n\r\n");
