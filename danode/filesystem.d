@@ -31,7 +31,7 @@ class FileSystem {
   public:
     this(Log logger, string root = "./www/", size_t maxsize = 1024 * 512){
       this.logger   = logger;
-      this.root     = root.endsWith("/") ? root : root ~ "/";     // Normalized root (always ends with /)
+      this.root = buildNormalizedPath(absolutePath(root)) ~ "/";
       this.maxsize  = maxsize;
       scan();
     }
