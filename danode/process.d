@@ -39,7 +39,7 @@ version(Posix) {
    the error buffer will be served. only if the error buffer is empty, will outbuffer be served. */
 class Process : Thread {
   private:
-    string            command;              /// Command to execute
+    string[]          command;              /// Command to execute
     string            inputfile;            /// Path of input file
     bool              completed = false;
     bool              removeInput = true;
@@ -60,7 +60,7 @@ class Process : Thread {
     Appender!(char[])  errbuffer;           /// Error appender buffer
 
   public:
-    this(string command, string inputfile, bool removeInput = true, long maxtime = 4500) {
+    this(string[] command, string inputfile, bool removeInput = true, long maxtime = 4500) {
       this.command = command;
       this.inputfile = inputfile;
       this.removeInput = removeInput;
@@ -161,7 +161,7 @@ class Process : Thread {
         fStdIn = File(inputfile, "r");
         pStdOut = pipe(); pStdErr = pipe();
         custom(1, "PROC", "command: %s < %s", command, inputfile);
-        auto cpid = spawnShell(command, fStdIn, pStdOut.writeEnd, pStdErr.writeEnd, null);
+        auto cpid = spawnProcess(command, fStdIn, pStdOut.writeEnd, pStdErr.writeEnd, null);
 
         fStdOut = pStdOut.readEnd;
         if(!nonblocking(fStdOut) && fStdOut.isOpen()) custom(2, "WARN", "unable to create nonblocking stdout pipe for command");

@@ -150,17 +150,21 @@ struct Request {
     return(files);
   }
 
-  final @property string    path() const { ptrdiff_t i = url.indexOf("?"); if(i > 0){ return(url[0 .. i]); }else{ return(url); } }
-  final @property string    query() const { ptrdiff_t i = uri.indexOf("?"); if(i > 0){ return(uri[i .. $]); }else{ return("?"); } }
-  final @property string    uripath() const { ptrdiff_t i = uri.indexOf("?"); if(i > 0){ return(uri[0 .. i]); }else{ return(uri); } }
-  final @property bool      keepalive() const { return( toLower(headers.from("Connection")) == "keep-alive"); }
-  final @property SysTime   ifModified() const { return(parseHtmlDate(headers.from("If-Modified-Since"))); }
-  final @property bool      acceptsEncoding(string encoding = "deflate") const { return(headers.from("Accept-Encoding").canFind(encoding)); }
-  final @property bool      track() const { return(  headers.from("DNT","0") == "0"); }
-  final @property string    cookies() const { return(headers.from("Cookie")); }
-  final @property string    useragent() const { return(headers.from("User-Agent", "Unknown")); }
-  final string              shorthost() const { return( (host.indexOf("www.") >= 0)? host[4 .. $] : host ); }
-  final string              command(string localpath) const { return(format("%s %s%s", localpath.interpreter(), localpath, params())); }
+  final @property string path() const { ptrdiff_t i = url.indexOf("?"); if(i > 0){ return(url[0 .. i]); }else{ return(url); } }
+  final @property string query() const { ptrdiff_t i = uri.indexOf("?"); if(i > 0){ return(uri[i .. $]); }else{ return("?"); } }
+  final @property string uripath() const { ptrdiff_t i = uri.indexOf("?"); if(i > 0){ return(uri[0 .. i]); }else{ return(uri); } }
+  final @property bool keepalive() const { return( toLower(headers.from("Connection")) == "keep-alive"); }
+  final @property SysTime ifModified() const { return(parseHtmlDate(headers.from("If-Modified-Since"))); }
+  final @property bool acceptsEncoding(string encoding = "deflate") const { return(headers.from("Accept-Encoding").canFind(encoding)); }
+  final @property bool track() const { return(  headers.from("DNT","0") == "0"); }
+  final @property string cookies() const { return(headers.from("Cookie")); }
+  final @property string useragent() const { return(headers.from("User-Agent", "Unknown")); }
+  final string shorthost() const { return( (host.indexOf("www.") >= 0)? host[4 .. $] : host ); }
+  final string[] command(string localpath) const {
+    string[] args = [localpath.interpreter(), localpath];
+    foreach(k; get.byKey()) { args ~= shellEscape(k ~ "=" ~ get[k]); }
+    return(args);
+  }
   final @property string    params() const {
       Appender!string str; 
       foreach(k; get.byKey()){ str.put(format(" %s", shellEscape(k ~ "=" ~ get[k]))); }
