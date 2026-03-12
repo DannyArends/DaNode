@@ -3,7 +3,7 @@ module danode.payload;
 import danode.imports;
 import danode.statuscode : StatusCode;
 import danode.mimetypes : mime, UNSUPPORTED_FILE;
-import danode.log : info, warning, trace, cverbose, DEBUG;
+import danode.log : custom, info, warning, trace, cverbose, DEBUG;
 import danode.functions : isCGI;
 
 enum PayloadType { Message, Script, File }
@@ -150,6 +150,7 @@ class FilePayload : Payload {
 
     /* Send the file from the underlying raw byte source stream using fseek, fp are closed */
     final char[] asStream(ptrdiff_t from, ptrdiff_t maxsize = 65536) {
+      custom(1, "STREAM", "asStream: from=%d sz=%d fileSize=%d", from, maxsize, fileSize());
       char[] tmpbuf = new char[](maxsize);
       char[] slice = [];
       if (cverbose >= DEBUG && from == 0) write("[STREAM] .");

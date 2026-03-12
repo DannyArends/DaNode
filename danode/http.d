@@ -49,6 +49,7 @@ class HTTP : DriverInterface {
       if(socket is null) return;
       if(!socket.isAlive()) return;
       ptrdiff_t send = socket.send(response.bytes(maxsize));
+      custom(1, "HTTP", "send result=%d index=%d length=%d", send, response.index, response.length);
       if (send >= 0) {
         if (send > 0) modtime = Clock.currTime();
         response.index += send; senddata[requests] += send;

@@ -51,9 +51,11 @@ class Client : Thread, ClientInterface {
             }
           }
           if (response.ready && !response.completed) {      // We know what to respond, but haven't send all of it yet
+            custom(1, "CLIENT", "sending: index=%d length=%d isRange=%s", response.index, response.length, response.isRange);
             driver.send(response, driver.socket, 65536);           // Send the response, hit multiple times, send what you can and return
           }
           if (response.ready && response.completed) {       // We've completed the request, response cycle
+            custom(1, "CLIENT", "completed: index=%d length=%d", response.index, response.length);
             router.logRequest(this, request, response);     // Log the response to the request
             request.clearUploadFiles();                     // Clean uploaded files
             request.destroy();                              // Clear the request structure
@@ -63,6 +65,7 @@ class Client : Thread, ClientInterface {
             response.destroy();                             // Clear the response structure
           }
           if (lastmodified >= maxtime) { // Client are not allowed to be silent for more than maxtime
+            custom(1, "CLIENT", "timeout: index=%d length=%d completed=%s", response.index, response.length, response.completed);
             custom(2, "CLIENT", "inactivity: %s > %s", lastmodified, maxtime);
             if (!response.ready && request !is Request.init) { // We have an unhandled request
               driver.setTimedOut(response);
