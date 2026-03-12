@@ -150,6 +150,8 @@ version(SSL) {
           response.index += send;
           senddata[requests] += send;
           if(response.index >= response.length) response.completed = true;
+        }else if (response.ready && !response.completed) {
+          modtime = Clock.currTime(); // mid-transfer SSL backpressure, not idle
         }
       } }
 
