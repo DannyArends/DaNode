@@ -9,7 +9,7 @@ import danode.request : Request;
 import danode.payload : Message;
 import danode.log : custom, info, trace, warning, NOTSET, NORMAL;
 
-immutable size_t MAX_REQUEST_SIZE = 1024 * 1024 * 10; // 10MB upload limit
+immutable size_t MAX_REQUEST_SIZE = 1024 * 1024 * 100; // 100MB upload limit
 
 class Client : Thread, ClientInterface {
   private:
