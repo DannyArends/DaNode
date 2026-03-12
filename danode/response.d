@@ -84,13 +84,14 @@ struct Response {
       connection = "Close";
     }
     // Construct the header for all other requests (and scripts that failed to provide a valid one
-    hdr.put(format("%s %d %s\r\n", protocol, payload.statuscode, payload.statuscode.reason));
+    hdr.put(format("%s %d %s\r\n", protocol, statuscode, statuscode.reason));
     foreach (key, value; headers) { 
       hdr.put(format("%s: %s\r\n", key, value));
     }
     hdr.put(format("Date: %s\r\n", htmltime()));
     if (payload.type != PayloadType.Script && payload.length >= 0) { // If we have any payload
-      hdr.put(format("Content-Length: %d\r\n", payload.length)); // We can send the expected size
+      long contentLength = isRange ? (rangeEnd - rangeStart + 1) : payload.length;
+      hdr.put(format("Content-Length: %d\r\n", contentLength));
       hdr.put(format("Last-Modified: %s\r\n", htmltime(payload.mtime))); // It could be modified long ago, lets inform the client
       if (maxage > 0) { // Perhaps we can have the client cache it (when very old)
         hdr.put(format("Cache-Control: max-age=%d, public\r\n", maxage));

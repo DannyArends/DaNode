@@ -131,7 +131,7 @@ class FilePayload : Payload {
     /* Files are always assumed ready to be handled (unlike Common Gate Way threads)  */
     final @property long ready() { return(true); }
     /* Payload type delivered to the client  */
-    final @property PayloadType type() const { return(PayloadType.Message); }
+    final @property PayloadType type() const { return(PayloadType.File); }
     /* Size of the file, -1 if it does not exist  */
     final @property ptrdiff_t fileSize() const { if(!realfile){ return -1; } return to!ptrdiff_t(path.getSize()); }
     /* Length of the buffer  */
