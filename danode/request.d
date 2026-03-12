@@ -161,9 +161,9 @@ struct Request {
   final @property string useragent() const { return(headers.from("User-Agent", "Unknown")); }
   final string shorthost() const { return( (host.indexOf("www.") >= 0)? host[4 .. $] : host ); }
   final string[] command(string localpath) const {
-    string interp = localpath.interpreter();
-    string[] args = interp.length > 0 ? [interp, localpath] : [localpath];
-    foreach(k; get.byKey()) { args ~= shellEscape(k ~ "=" ~ get[k]); }
+    string interp  = localpath.interpreter();
+    string[] args  = interp.length > 0 ? interp.split(" ") ~ localpath : [localpath];
+    foreach(k; get.byKey()) { args ~= k ~ "=" ~ get[k]; }
     return args;
   }
   final @property string    params() const {
