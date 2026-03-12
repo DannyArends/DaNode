@@ -49,8 +49,8 @@ version(SSL) {
       // Open the connection by setting the socket to non blocking I/O, and registering the origin address
       override bool openConnection() { synchronized {
         custom(1, "HTTPS", "Opening HTTPS connection");
-        if (ncontext > 0) {
-          custom(1, "HTTPS", "Number of SSL contexts: %d", ncontext);
+        if (contexts.length > 0) {
+          custom(1, "HTTPS", "Number of SSL contexts: %d", contexts.length);
           try {
             if (this.socket is null) {
               error("SSL was not given a valid socket (null)");
