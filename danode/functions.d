@@ -160,7 +160,7 @@ pure ptrdiff_t bodystart(T)(const(T) buffer) {
   return(-1);
 }
 
-// get the HTML header contained in the buffer
+// get the HTTP header contained in the buffer
 pure string fullheader(T)(const(T) buffer) {
   auto i = bodystart(buffer);
   if (i > 0 && i <= buffer.length)

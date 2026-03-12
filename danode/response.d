@@ -36,7 +36,7 @@ struct Response {
 
   final void customheader(string key, string value) nothrow { headers[key] = value; }
 
-  // Generate a HTML header for the response
+  // Generate a HTTP header for the response
   @property final char[] header() {
     if (hdr.data) {
       return(hdr.data); // Header was constructed

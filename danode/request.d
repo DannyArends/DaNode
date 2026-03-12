@@ -31,10 +31,9 @@ pure HTTPVersion parseHTTPVersion(const string line) {
 // Parse the Request-Line: "method uri protocol"
 pure bool parseRequestLine(ref Request request, const string line) {
   auto parts = line.split(" ");
-  if (parts.length < 3)
-    throw new Exception(format("malformed Request-Line: '%s'", line));
-
+  if (parts.length < 3) { throw new Exception(format("malformed Request-Line: '%s'", line)); }
   request.method = to!RequestMethod(strip(parts[0]));
+  // uri and url start identical; url may be rewritten during routing, uri is preserved as-is
   request.uri = request.url = strip(join(parts[1 .. ($-1)], " "));
   request.protocol = parseHTTPVersion(strip(parts[($-1)]));
   return(true);
@@ -48,8 +47,8 @@ struct Request {
   bool isValid; /// Is the header valid ?
   UUID id; /// md5UUID for this request
   RequestMethod method; /// requested HTTP method
-  string uri = "/"; /// uri requested
-  string url = "/"; /// url requested
+  string uri = "/"; /// raw URI from the request line, never modified after parsing
+  string url = "/"; /// working path used for routing, may be rewritten by canonical/directory redirects
   string page; /// page is used when performing a canonical redirect
   string dir; /// dir is used in directory redirection
   HTTPVersion protocol; /// protocol requested
@@ -146,8 +145,13 @@ struct Request {
     return(files);
   }
 
+  // decoded path component of url (post-rewrite)
   final @property string path() const { ptrdiff_t i = url.indexOf("?"); if(i > 0){ return(url[0 .. i]); }else{ return(url); } }
+
+  // query string component of uri (pre-rewrite)
   final @property string query() const { ptrdiff_t i = uri.indexOf("?"); if(i > 0){ return(uri[i .. $]); }else{ return("?"); } }
+
+  // path component of uri (pre-rewrite, used for canonical redirects)
   final @property string uripath() const { ptrdiff_t i = uri.indexOf("?"); if(i > 0){ return(uri[0 .. i]); }else{ return(uri); } }
   final @property bool keepalive() const { return( toLower(headers.from("Connection")) == "keep-alive"); }
   final @property SysTime ifModified() const { return(parseHtmlDate(headers.from("If-Modified-Since"))); }
