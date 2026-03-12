@@ -121,7 +121,7 @@ struct Response {
     ptrdiff_t hsize = header.length;
     if(index <= hsize) {  // We haven't completed the header yet
       ptrdiff_t remaining = maxsize - hsize;
-      return(header[index .. hsize] ~ payload.bytes(0, remaining > 0 ? remaining : 0));
+      return(header[index .. hsize] ~ payload.bytes(0, remaining > 0 ? remaining : 0, isRange, rangeStart, rangeEnd));
     }
     return(payload.bytes(index-hsize, maxsize, isRange, rangeStart, rangeEnd)); // Header completed, just stream bytes from the payload
   }
