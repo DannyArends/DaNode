@@ -19,7 +19,7 @@ interface Payload {
     @property SysTime             mtime();
     @property string              mimetype() const;
 
-    const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 65536, bool isRange = false, long rangeStart = 0, long rangeEnd = -1);
+    const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 65536);
 }
 
 /* Implementation of the Payload interface, by using an empty string message */
@@ -50,7 +50,7 @@ class Message : Payload {
     final @property SysTime mtime() { return Clock.currTime(); }
     final @property string mimetype() const { return mime; }
     final @property StatusCode statuscode() const { return status; }
-    char[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 65536, bool isRange = false, long rangeStart = 0, long rangeEnd = -1) { 
+    char[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 65536) {
       return( message[from .. to!ptrdiff_t(min(from+maxsize, $))].dup );
     }
 }
@@ -150,7 +150,7 @@ class FilePayload : Payload {
 
     /* Send the file from the underlying raw byte source stream using fseek, fp are closed */
     final char[] asStream(ptrdiff_t from, ptrdiff_t maxsize = 65536) {
-      custom(1, "STREAM", "asStream: from=%d sz=%d fileSize=%d", from, maxsize, fileSize());
+      //custom(1, "STREAM", "asStream: from=%d sz=%d fileSize=%d", from, maxsize, fileSize());
       char[] tmpbuf = new char[](maxsize);
       char[] slice = [];
       if (cverbose >= DEBUG && from == 0) write("[STREAM] .");
@@ -175,25 +175,19 @@ class FilePayload : Payload {
     }
 
     /* Get bytes in a lockfree manner from the correct underlying buffer */
-    final const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 65536, 
-                              bool isRange = false, long rangeStart = 0, long rangeEnd = -1){ synchronized {
-      if (!realfile) { return []; }
-      if (needsupdate) { buffer(); }
-      ptrdiff_t offset = isRange? to!ptrdiff_t(rangeStart) + from : from;
-      ptrdiff_t limit = isRange? to!ptrdiff_t(rangeEnd - rangeStart + 1) : -1;
-      ptrdiff_t sz = (limit > 0)? to!ptrdiff_t(min(maxsize, max(0, limit - from))) : maxsize;
-      trace("bytes: isRange=%s rangeStart=%d rangeEnd=%d from=%d offset=%d sz=%d limit=%d", 
-          isRange, rangeStart, rangeEnd, from, offset, sz, limit);
-      if (!buffered) {
-        return(asStream(offset, sz));
+  final const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 65536) { synchronized {
+    if (!realfile) { return []; }
+    if (needsupdate) { buffer(); }
+    if (!buffered) {
+        return(asStream(from, maxsize));
+    } else {
+      if(hasEncodedVersion && deflate) {
+        if(from < encbuf.length) return( encbuf[from .. to!ptrdiff_t(min(from+maxsize, $))] );
       } else {
-        if(hasEncodedVersion && deflate) {
-          if(offset < encbuf.length) return( encbuf[offset .. to!ptrdiff_t(min(offset+sz, $))] );
-        } else {
-          if(offset < buf.length) return( buf[offset .. to!ptrdiff_t(min(offset+sz, $))] );
-        }
+        if(from < buf.length) return( buf[from .. to!ptrdiff_t(min(from+maxsize, $))] );
       }
-      return([]);
-    } }
+    }
+    return([]);
+  } }
 }
 
