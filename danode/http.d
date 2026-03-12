@@ -45,20 +45,21 @@ class HTTP : DriverInterface {
     }
 
     // Send upto maxsize bytes from the response to the client
-    override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096)  { synchronized {
+    override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096) { synchronized {
       if(socket is null) return;
       if(!socket.isAlive()) return;
+      // Wait until socket is writable before sending
+      SocketSet writeSet = new SocketSet();
+      writeSet.add(socket);
+      if (Socket.select(null, writeSet, null, dur!"msecs"(100)) <= 0) return;
       ptrdiff_t send = socket.send(response.bytes(maxsize));
       custom(1, "HTTP", "send result=%d index=%d length=%d", send, response.index, response.length);
-      if (send >= 0) {
-        if (send > 0) modtime = Clock.currTime();
-        response.index += send; senddata[requests] += send;
-        if(response.index >= response.length) response.completed = true;
-      }else if (send == -1) { // send buffer full, back off
+      if (send > 0) {
         modtime = Clock.currTime();
-        Thread.sleep(dur!"msecs"(2));
+        response.index += send;
+        senddata[requests] += send;
+        if(response.index >= response.length) response.completed = true;
       }
-      if(send > 0) custom(3, "HTTP", "send %d bytes of data", send);
     } }
 
     // Close the connection, by shutting down the socket

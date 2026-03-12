@@ -138,18 +138,19 @@ version(SSL) {
         if(socket is null) return;
         if(!socket.isAlive()) return;
         if(ssl is null) return;
-
+        // Wait until socket is writable before sending
+        SocketSet writeSet = new SocketSet();
+        writeSet.add(socket);
+        if (Socket.select(null, writeSet, null, dur!"msecs"(100)) <= 0) return;
         auto slice = response.bytes(maxsize);
         ptrdiff_t send = SSL_write(ssl, cast(void*) slice, cast(int) slice.length);
-        if(send >= 0) {
-          if(send > 0) modtime = Clock.currTime();
-          response.index += send; senddata[requests] += send;
-          if(response.index >= response.length) response.completed = true;
-        }else if (send == -1) { // send buffer full, back off
+        custom(1, "HTTPS", "send result=%d index=%d length=%d", send, response.index, response.length);
+        if (send > 0) {
           modtime = Clock.currTime();
-          Thread.sleep(dur!"msecs"(2));
+          response.index += send;
+          senddata[requests] += send;
+          if(response.index >= response.length) response.completed = true;
         }
-        if(send > 0) custom(3, "HTTPS", "send %d bytes of data", send);
       } }
 
       @nogc override bool isSecure() const nothrow { return(true); }
