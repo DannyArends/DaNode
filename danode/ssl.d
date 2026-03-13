@@ -8,7 +8,6 @@ version(SSL) {
 
   import danode.imports;
   import danode.client;
-  import danode.log : cverbose, INFO;
   import danode.server : Server;
   import danode.response : Response;
 
@@ -75,9 +74,7 @@ version(SSL) {
     if (exists(chainFile) && isFile(chainFile)) {
       custom(1, "HTTPS", "loading certificate chain from file: %s", chainFile);
       sslAssert(SSL_CTX_use_certificate_chain_file(ctx, cast(const char*) toStringz(chainFile)) > 0);
-    }else{
-      if(atomicLoad(cverbose) >= INFO) writefln("[INFO]   chain not loaded: %s", chainFile);
-    }
+    } else { info("chain not loaded: %s", chainFile); }
     sslAssert(SSL_CTX_use_PrivateKey_file(ctx, cast(const char*) toStringz(keyFile), SSL_FILETYPE_PEM) > 0);
     sslAssert(SSL_CTX_check_private_key(ctx) > 0);
     return ctx;
