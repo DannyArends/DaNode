@@ -1,9 +1,22 @@
 
 getGET <- function(){
-  entval     <- strsplit(commandArgs(TRUE),"=")
-  GET        <- unlist(lapply(entval,"[[",2))
-  names(GET) <- unlist(lapply(entval,"[[",1))
+  qs <- Sys.getenv("QUERY_STRING")
+  if(qs == "") return(setNames(character(0), character(0)))
+  params <- strsplit(qs, "&")[[1]]
+  entval <- strsplit(params, "=", fixed=TRUE)
+  GET        <- sapply(entval, function(x) if(length(x) > 1) URLdecode(x[2]) else "")
+  names(GET) <- sapply(entval, function(x) x[1])
   return(GET)
+}
+
+getSERVER <- function(){
+  keys <- c('REQUEST_URI', 'SCRIPT_FILENAME', 'SCRIPT_NAME', 'REMOTE_ADDR',
+            'REMOTE_PORT', 'SERVER_PROTOCOL', 'REQUEST_METHOD', 'QUERY_STRING',
+            'HTTPS', 'HTTP_HOST', 'SERVER_SOFTWARE', 'DOCUMENT_ROOT')
+  vals <- sapply(keys, Sys.getenv)
+  httpkeys <- grep("^HTTP_", names(Sys.getenv()), value=TRUE)
+  httpvals <- sapply(httpkeys, Sys.getenv)
+  return(c(vals, httpvals))
 }
 
 POST <- NULL; pnames <- NULL;
@@ -31,6 +44,9 @@ while(length(line <- readLines(f,1)) > 0) {
 }
 names(POST) <- pnames
 names(SERVER) <- snames
+envSERVER <- getSERVER()
+envSERVER[names(SERVER)] <- SERVER
+SERVER <- envSERVER
 
 toS <- function(args){
   return(paste("['",paste(names(args),args,collapse="','",sep="':'"),"']",sep=""))

@@ -5,7 +5,6 @@ import danode.filesystem : FileSystem;
 import danode.interfaces : ClientInterface, DriverInterface;
 import danode.functions : interpreter, from, parseHtmlDate, parseQueryString;
 import danode.webconfig : WebConfig;
-import danode.http : HTTP;
 import danode.post : PostItem, PostType;
 import danode.log : custom, info, trace, warning;
 
@@ -49,8 +48,6 @@ struct Request {
   RequestMethod method; /// requested HTTP method
   string uri = "/"; /// raw URI from the request line, never modified after parsing
   string url = "/"; /// working path used for routing, may be rewritten by canonical/directory redirects
-  string page; /// page is used when performing a canonical redirect
-  string dir; /// dir is used in directory redirection
   HTTPVersion protocol; /// protocol requested
   string[string] headers; /// Associative array holding the header values
   SysTime starttime; /// start time of the Request
@@ -135,7 +132,7 @@ struct Request {
   }
 
   // Get parameters as associative array
-  final string[string] get() const { return parseQueryString(query[1 .. $], "TRUE"); }
+  final string[string] get() const { return parseQueryString(query[1 .. $]); }
 
   // List of filenames uploaded by the user
   final @property string[]  postfiles() const { 
@@ -154,26 +151,45 @@ struct Request {
 
   // path component of uri (pre-rewrite, used for canonical redirects)
   final @property string uripath() const { ptrdiff_t i = uri.indexOf("?"); if(i > 0){ return(uri[0 .. i]); }else{ return(uri); } }
-  final @property bool keepalive() const { return( toLower(headers.from("Connection")) == "keep-alive"); }
+  final @property bool keepalive() const { return(icmp(headers.from("Connection"), "keep-alive") == 0); }
   final @property SysTime ifModified() const { return(parseHtmlDate(headers.from("If-Modified-Since"))); }
   final @property bool acceptsEncoding(string encoding = "deflate") const { return(headers.from("Accept-Encoding").canFind(encoding)); }
   final @property bool track() const { return(  headers.from("DNT","0") == "0"); }
   final @property string cookies() const { return(headers.from("Cookie")); }
   final @property string useragent() const { return(headers.from("User-Agent", "Unknown")); }
-  final string shorthost() const { return( (host.indexOf("www.") >= 0)? host[4 .. $] : host ); }
+  final string shorthost() const { return host.startsWith("www.") ? host[4 .. $] : host; }
   final string[] command(string localpath) const {
-    string interp  = localpath.interpreter();
-    string[] args  = interp.length > 0 ? interp.split(" ") ~ localpath : [localpath];
-    foreach(k; get.byKey()) { args ~= k ~ "=" ~ get[k]; }
-    return args;
+    import std.path : dirName;
+    string interp = localpath.interpreter();
+    if (interp.length == 0) return [localpath];
+    string[] cmd = interp.split(" ");
+    if (cmd[0] == "php-cgi") {
+      string daroot = dirName(dirName(dirName(localpath)));
+      cmd ~= ["-d", "include_path=.:" ~ daroot];
+    }
+    return cmd ~ localpath;
+  }
+
+  final string[string] environ(string localpath) const {
+    string[string] env = environment.toAA();
+    env["REQUEST_METHOD"] = to!string(method);
+    env["QUERY_STRING"] = query.length > 1 ? query[1 .. $] : "";
+    env["REQUEST_URI"] = uripath;
+    env["SCRIPT_FILENAME"] = localpath;
+    env["SCRIPT_NAME"] = path;
+    env["SERVER_PROTOCOL"] = cast(string)protocol;
+    env["REMOTE_ADDR"] = ip;
+    env["REMOTE_PORT"] = to!string(port);
+    env["HTTP_HOST"] = host;
+    env["HTTPS"] = isSecure ? "on" : "";
+    env["REDIRECT_STATUS"] = "200";
+    foreach (k, v; headers) env["HTTP_" ~ k.toUpper().replace("-", "_")] = v;
+    return env;
   }
 
   // Canonical redirect of the Request for a directory to the index page specified in the WebConfig
   final void redirectdir(in WebConfig config) {
-    if(config.redirectdir() && config.redirect){
-      this.dir = this.path()[1..$]; // We need to redirect, so save the path to this.dir
-      this.url = config.index;
-    }
+    if(config.redirectdir() && config.redirect) { this.url = config.index; }
   }
 
   // Clear all files uploaded by the user after the Request is done

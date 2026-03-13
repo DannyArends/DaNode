@@ -1,16 +1,24 @@
 module api.danode;
-import std.stdio, std.getopt, std.conv,std.utf, std.string, std.file;
+import std.process, std.stdio, std.getopt, std.conv,std.utf, std.string, std.file;
 
-void setGET(string[] args){
-  foreach(arg;args[1..$]){
-    string[] s = arg.split("=");
-    if(s.length > 1) GET[toUTF8(s[0])] = toUTF8(s[1]);
+void setGET() {
+  string qs = environment.get("QUERY_STRING", "");
+  foreach (param; qs.split("&")) {
+    string[] s = param.split("=");
+    if (s.length > 1) GET[toUTF8(s[0])] = toUTF8(s[1]);
+    else if (s.length == 1 && s[0].length > 0) GET[toUTF8(s[0])] = "";
   }
 }
 
+void setSERVER() {
+  foreach(key; ["REQUEST_URI", "SCRIPT_FILENAME", "SCRIPT_NAME", "REMOTE_ADDR",
+                "REMOTE_PORT", "SERVER_PROTOCOL", "REQUEST_METHOD", "QUERY_STRING",
+                "HTTPS", "HTTP_HOST"]) { SERVER[key] = environment.get(key, ""); }
+  foreach(key, value; environment.toAA()) { if(key.startsWith("HTTP_")) SERVER[key] = value; }
+}
+
 void setCONFIG() {
-  string myloc = "./";
-  if(SERVER) myloc = SERVER["SCRIPT_FILENAME"];
+  string myloc = environment.get("SCRIPT_FILENAME", "./");
   string configfile = myloc[0 .. (myloc.lastIndexOf("/"))] ~ "/web.config";
   if(exists(configfile)){
     string[] configcont = to!string(std.file.read(configfile)).split("\n");
@@ -59,7 +67,9 @@ void setPOST(){
   }
 }
 
-static this(){ 
+static this() {
+  setGET();
+  setSERVER();
   setPOST();
   setCONFIG();
 }

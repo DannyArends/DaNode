@@ -4,12 +4,14 @@ import danode.imports;
 import danode.router : Router, runRequest;
 import danode.statuscode : StatusCode;
 import danode.interfaces : DriverInterface, ClientInterface, StringDriver;
-import danode.response : Response, setTimedOut;
+import danode.response : Response, setTimedOut, setPayloadTooLarge, setHeaderTooLarge;
 import danode.request : Request;
 import danode.payload : Message;
 import danode.log : custom, info, trace, warning, NOTSET, NORMAL;
 
-immutable size_t MAX_REQUEST_SIZE = 1024 * 1024 * 100; // 100MB upload limit
+immutable size_t MAX_HEADER_SIZE  = 1024 * 32;          //  32KB Header
+immutable size_t MAX_REQUEST_SIZE = 1024 * 1024 * 2;    //   2MB Body
+immutable size_t MAX_UPLOAD_SIZE  = 1024 * 1024 * 100;  // 100MB Multipart uploads
 
 class Client : Thread, ClientInterface {
   private:
@@ -40,10 +42,17 @@ class Client : Thread, ClientInterface {
         }
         while (running) {
           if (driver.receive(driver.socket) > 0) {     // We've received new data
-            if (driver.inbuffer.data.length > MAX_REQUEST_SIZE) {
-              custom(2, "CLIENT", "request too large from %s:%s", ip, port);
-              driver.setTimedOut(response);
-              stop(); continue;
+            if (!driver.hasHeader()) {
+              if (driver.inbuffer.data.length > MAX_HEADER_SIZE) {  // Check if we exceed the max header size
+                custom(2, "CLIENT", "header too large from %s:%s", ip, port);
+                driver.setHeaderTooLarge(response); stop(); continue;
+              }
+            } else {
+              size_t limit  = (driver.header.indexOf("multipart/") >= 0) ? MAX_UPLOAD_SIZE : MAX_REQUEST_SIZE;
+              if (driver.inbuffer.data.length > limit) {
+                custom(2, "CLIENT", "request too large from %s:%s", ip, port);
+                driver.setPayloadTooLarge(response); stop(); continue;
+              }
             }
             if (!response.ready) {                            // If we're not ready to respond yet
               // Parse the data and try to create a response (Could fail multiple times)

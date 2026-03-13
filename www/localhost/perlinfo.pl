@@ -1,5 +1,6 @@
 #!perl -w
 use strict;
+use lib '.';
 use api::danode;
 use HTML::Perlinfo;
 

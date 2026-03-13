@@ -8,7 +8,6 @@ version(SSL) {
 
   import danode.imports;
   import danode.client;
-  import danode.log : cverbose, INFO;
   import danode.server : Server;
   import danode.response : Response;
 
@@ -70,14 +69,12 @@ version(SSL) {
 
     sslAssert(!(ctx is null));
     SSL_CTX_clear_options(ctx, SSL_OP_LEGACY_SERVER_CONNECT);
-    SSL_CTX_set_cipher_list(ctx, "HIGH:!ADH:!LOW:!EXP:!MD5:!RC4:!AES128:!CAMELLIA:!AES256-GCM-SHA384:@STRENGTH");
+    SSL_CTX_set_cipher_list(ctx, "HIGH:!ADH:!LOW:!EXP:!MD5:!RC4:!AES128:!CAMELLIA:@STRENGTH");
     sslAssert(SSL_CTX_use_certificate_file(ctx, cast(const char*) toStringz(certFile), SSL_FILETYPE_PEM) > 0);
     if (exists(chainFile) && isFile(chainFile)) {
       custom(1, "HTTPS", "loading certificate chain from file: %s", chainFile);
       sslAssert(SSL_CTX_use_certificate_chain_file(ctx, cast(const char*) toStringz(chainFile)) > 0);
-    }else{
-      if(cverbose >= INFO) writefln("[INFO]   chain not loaded: %s", chainFile);
-    }
+    } else { info("chain not loaded: %s", chainFile); }
     sslAssert(SSL_CTX_use_PrivateKey_file(ctx, cast(const char*) toStringz(keyFile), SSL_FILETYPE_PEM) > 0);
     sslAssert(SSL_CTX_check_private_key(ctx) > 0);
     return ctx;
@@ -150,20 +147,19 @@ version(SSL) {
     if (!exists(keyFile)) { warning("SSL private key file: '%s' not found", certDir); return; }
     if (!isFile(keyFile)) { warning("SSL private key file: '%s' not a file", certDir); return; }
 
+    SSLcontext[] localContexts;
     foreach (DirEntry d; dirEntries(certDir, SpanMode.shallow)) {
       if (d.name.endsWith(".crt")) {
         string hostname = baseName(d.name, ".crt");
         if (hostname.length < 255) {
           string chainFile = ".ssl/" ~ baseName(d.name, ".crt") ~ ".chain";
-          if(cverbose >= INFO){
-            writefln("[INFO]   loading certificate from file: %s", d.name);
-            writefln("[INFO]   loading chain from file: %s", chainFile);
-          }
-          contexts ~= loadContext(d.name, hostname, keyFile, chainFile);
-          custom(1, "HTTPS", "stored certificate: %s in context: %d", to!string(contexts[$-1].hostname.ptr), contexts.length-1);
+          info("loading certificate at: '%s', chain from: '%s'", d.name, chainFile);
+          localContexts ~= loadContext(d.name, hostname, keyFile, chainFile);
+          custom(1, "HTTPS", "stored certificate: %s in context: %d", to!string(localContexts[$-1].hostname.ptr), localContexts.length-1);
         }
       }
     }
+    contexts = localContexts;  // single assignment after all certs loaded
     custom(0, "HTTPS", "loaded %s SSL certificates", contexts.length);
   }
 

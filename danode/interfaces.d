@@ -76,10 +76,7 @@ abstract class DriverInterface {
     final @property ptrdiff_t bodyStart() const { return(bodystart(inbuffer.data)); }
 
     // Do we have a header separator ? "\r\n\r\n" or "\n\n"
-    final @property bool hasHeader() const {
-      if(endOfHeader <= 0) return(false);
-      return(true);
-    }
+    final @property bool hasHeader() const { return(endOfHeader > 0); }
 }
 
 class StringDriver : DriverInterface {

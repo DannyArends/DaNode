@@ -1,19 +1,18 @@
 module danode.router;
 
 import danode.imports;
-import danode.cgi : CGI;
 import danode.client : Client;
 import danode.interfaces : ClientInterface, DriverInterface, StringDriver;
 import danode.statuscode : StatusCode;
 import danode.request : Request;
-import danode.response;
+import danode.response : Response, create, serveBadRequest, domainNotFound, serveForbidden, redirect, serveCGI, serveDirectory, notFound;
+import danode.files : serveStaticFile;
 import danode.webconfig : WebConfig;
-import danode.payload : Message, FilePayload;
-import danode.mimetypes : mime;
-import danode.functions : from, has, isCGI, isFILE, isDIR, Msecs, htmltime, isAllowed, safePath;
+import danode.functions : from, has, isCGI, isFILE, isDIR, isAllowed, safePath;
 import danode.filesystem : FileSystem;
-import danode.post : parsePost, PostType;
+import danode.post : parsePost;
 import danode.log : custom, trace, info, Log, NOTSET, NORMAL;
+
 version(SSL) {
   import danode.ssl : hasCertificate;
 }
@@ -44,86 +43,72 @@ class Router {
       if (!response.created) {
         request.initialize(driver, maxtime);
         response = request.create(this.address);
-      } else {
-        request.update(driver.body);
-      }
+      } else { request.update(driver.body); }
       return(true);
     }
 
     // Route a request based on the request header
     final void route(DriverInterface driver, ref Request request, ref Response response, long maxtime = 4500) {
-      if ( !response.routed && parse(driver, request, response, maxtime + 10)) {
-        if ( parsePost(request, response, filesystem) ) { // We have stored all the post data, and can deliver a response
-          deliver(request, response);
-        }
+      if (!response.routed && parse(driver, request, response, maxtime)) {
+        if (request.parsePost(response, filesystem)) { deliver(request, response); }
       }
     }
 
     // Deliver a response to the request
     final void deliver(ref Request request, ref Response response, bool finalrewrite = false) {
-      if (!request.isValid) return response.serveBadRequest(request);
+      if (!request.isValid) return(response.serveBadRequest(request));
 
       string localroot = filesystem.localroot(request.shorthost());
-
       trace("%s:%s %s client (%s)", request.ip, request.port, (finalrewrite? "redirecting" : "routing"), request.id);
       trace("shorthost -> localroot: %s -> %s", request.shorthost(), localroot);
-
-      if (request.shorthost() == "" || !exists(localroot)) // No domain requested, or we are not hosting it
-        return response.domainNotFound(request);
+      if (request.shorthost() == "" || !exists(localroot)) return(response.domainNotFound(request));
 
       config = WebConfig(filesystem.file(localroot, "/web.config"));
       string fqdn = config.domain(request.shorthost());
       string localpath = safePath(localroot, decodeComponent(request.path));
-      trace("safePath result: '%s', isFILE: %s, isAllowed: %s, isCGI: %s", localpath, localpath.isFILE(), localpath.isAllowed(), localpath.isCGI());
-      if (localpath is null) return response.serveForbidden(request);
+      if (localpath is null) return(response.serveForbidden(request));
+
+      bool pathExists  = localpath.exists();
+      bool pathIsCGI   = pathExists && localpath.isCGI();
+      bool pathIsFILE  = pathExists && localpath.isFILE();
+      bool pathIsDIR   = pathExists && localpath.isDIR();
+      bool pathAllowed = localpath.isAllowed();
+      trace("safePath result: '%s', isFILE: %s, isAllowed: %s, isCGI: %s", localpath, pathIsFILE, pathAllowed, pathIsCGI);
 
       trace("configfile at: %s%s", localroot, "/web.config");
       trace("request.host: %s, fqdn: %s", request.host, fqdn);
-      trace("localpath: %s, exists ? %s", localpath, localpath.exists());
+      trace("localpath: %s, exists ? %s", localpath, pathExists);
 
       version (SSL) {
-        // Check if teh security requested can be provided, by checking SSL status
-        // against a certificate availability, and/or fix the requested the wrong 
-        // shortdomain requested by the client (domain.com or www.domain.com)
-        if (request.isSecure != hasCertificate(fqdn) || request.host != fqdn) {
-          trace("SSL redirect %s != %s for %s to fqdn: %s", request.isSecure, hasCertificate(fqdn), request.host, fqdn);
-          return response.redirect(request, fqdn, hasCertificate(fqdn));
+        bool hasCert = hasCertificate(fqdn);
+        if (request.isSecure != hasCert || request.host != fqdn) {
+          trace("SSL redirect %s != %s for %s to fqdn: %s", request.isSecure, hasCert, request.host, fqdn);
+          return(response.redirect(request, fqdn, hasCert));
         }
-      } else {  
-        // No SSL, just check if the client requested the 'wrong' fully qualified 
-        // domain (domain.com or www.domain.com), and redirect them
-        if (request.host != fqdn) { return response.redirect(request, fqdn, false); }
-      }
+      } else { if (request.host != fqdn) { return(response.redirect(request, fqdn, false)); } }
 
-      if (localpath.exists()) {
-        trace("allowcgi: %s", config.allowcgi);
-        trace("localpath %s exists", localpath);
-        // A path that can be responded to has been detected, it is an existing resource
-        if (localpath.isCGI() && config.allowcgi) {
+      if (pathExists) {
+        trace("allowcgi: %s, localpath %s exists", config.allowcgi, localpath);
+        if (pathIsCGI && config.allowcgi) {
           trace("localpath %s is a CGI file", localpath);
-          return response.serveCGI(request, config, filesystem); // Serve CGI script
+          return(response.serveCGI(request, config, filesystem));
         }
-        if (localpath.isFILE() && !localpath.isCGI() && localpath.isAllowed()) {
+        if (pathIsFILE && !pathIsCGI && pathAllowed) {
           trace("localpath %s is a normal file", localpath);
-          return response.serveStaticFile(request, filesystem);
+          return(response.serveStaticFile(request, filesystem));
         }
-        if (localpath.isDIR() && config.dirAllowed(localroot, localpath)) {
+        if (pathIsDIR && config.dirAllowed(localroot, localpath)) {
           trace("localpath %s is a directory [%s,%s]", localpath, config.redirectdir(), config.index());
-          if (config.redirectdir() && !finalrewrite)  // Route this directory request to the index page
-            return this.redirectDirectory(request, response); // Redirect the directory
-
-          if (config.redirect() && exists(localpath ~ "/" ~ config.index()) && !finalrewrite)  // Route this directory request to the index page
-            return this.redirectCanonical(request, response); // Redirect the directory
-
-          return response.serveDirectory(request, config, filesystem);
+          if (config.redirectdir() && !finalrewrite) { return(redirectDirectory(request, response)); }
+          if (config.redirect() && exists(localpath ~ "/" ~ config.index()) && !finalrewrite) { return(redirectCanonical(request, response)); }
+          return(response.serveDirectory(request, config, filesystem));
         }
-        return response.serveForbidden(request);
+        return(response.serveForbidden(request));
       }
+
       trace("redirect: %s %d", config.redirect, finalrewrite);
-      if(config.redirect && !finalrewrite) { // Route this request as canonical request the index page
-        return this.redirectCanonical(request, response);
-      }
-      return response.notFound();  // Request is not hosted on this server
+      if(config.redirect && !finalrewrite) { return(this.redirectCanonical(request, response)); }
+      return(response.notFound());  // Request is not hosted on this server
     }
 
     // Expose scan() by forwarding to filesystem.scan()
@@ -139,18 +124,15 @@ class Router {
     // Perform a canonical redirect of a non-existing page to the index script
     void redirectCanonical(ref Request request, ref Response response){
       trace("redirecting non-existing page (canonical url) to the index page");
-      request.page = request.uripath(); // Save the URL path
       request.url  = format("%s?%s", config.index, request.query);
       return deliver(request, response, true);
     }
 
     // Set the verbose level by string value
     final @property int verbose(string verbose = "") {
-      string[] sp = verbose.split(" ");
-      int nval = NOTSET;
-      if(sp.length == 1) nval = to!int(sp[0]);
-      if(sp.length >= 2) nval = to!int(sp[1]);
-      return(logger.verbose(nval)); 
+      auto sp = verbose.split(" ");
+      int nval = sp.length >= 2 ? to!int(sp[1]) : sp.length == 1 ? to!int(sp[0]) : NOTSET;
+      return logger.verbose(nval);
     }
 }
 
@@ -158,7 +140,7 @@ class Router {
 void runRequest(Router router, string request = "GET /dmd.d HTTP/1.1\nHost: localhost\n\n") {
   auto driver = new StringDriver(request);
   auto client = new Client(router, driver, 250);
-  custom(0, "TEST", "%s:%s %s", client.ip(), client.port(), split(request, "\n")[0]);
+  custom(0, "TEST", "%s:%s %s", client.ip(), client.port(), request.splitLines()[0]);
   client.start();
   while (client.running()) {
     Thread.sleep(dur!"msecs"(2));

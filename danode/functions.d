@@ -4,7 +4,6 @@ import danode.imports;
 import danode.log : error, warning, trace, custom;
 import danode.mimetypes : CGI_FILE, mime, UNSUPPORTED_FILE;
 
-immutable string timeFmt =  "%s %s %s %s:%s:%s %s";
 immutable string[int] months; 
 shared static this(){
   months = [ 1 : "Jan", 2 : "Feb", 3 : "Mar", 4 : "Apr",
@@ -12,13 +11,14 @@ shared static this(){
              9 : "Sep", 10: "Oct", 11: "Nov", 12: "Dec"];
 }
 
+immutable auto htmlDateRegex = ctRegex!(r"([0-9]{1,2}) ([a-z]{1,3}) ([0-9]{4}) ([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2}) [a-z]{3}", "g");
+
 // Try to convert a HTML date in a string into a SysTime
 // Structure that we expect: "21 Apr 2014 20:20:13 GMT"
 SysTime parseHtmlDate(const string datestr) {
   SysTime ts =  SysTime(DateTime(-7, 1, 1, 1, 0, 0));
-  auto dateregex = regex(r"([0-9]{1,2}) ([a-z]{1,3}) ([0-9]{4}) ([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2}) [a-z]{3}", "g");
-  auto m = match(datestr.toLower(), dateregex);
-  if(m.captures.length == 7){
+  auto m = match(datestr.toLower(), htmlDateRegex);
+  if (m.captures.length == 7) {
     try {
       ts = SysTime(DateTime(to!int(m.captures[3]), monthToIndex(m.captures[2]), to!int(m.captures[1]),      // 21 Apr 2014
                             to!int(m.captures[4]), to!int(m.captures[5]), to!int(m.captures[6])), UTC());   // 20:20:13
@@ -35,31 +35,23 @@ pure string htmlEscape(string s) {
 
 // Returns null if path escapes root
 string safePath(in string root, in string path) {
-    if (path.canFind("..")) return null;
-    if (path.canFind("\0")) return null;
-    string full = root ~ (path.startsWith("/") ? path : "/" ~ path);
-    try {
-        if (exists(full)) {
-            string resolved = buildNormalizedPath(absolutePath(full)).replace("\\", "/");
-            string absroot  = root.endsWith("/") ? root : root ~ "/";
-            if (resolved != absroot[0..$-1] && !resolved.startsWith(absroot)) return null;
-        }
-    } catch (Exception e) { return null; }
-    return full;
+  if (path.canFind("..")) return null;
+  if (path.canFind("\0")) return null;
+  string full = root ~ (path.startsWith("/") ? path : "/" ~ path);
+  try {
+    if (exists(full)) {
+      string resolved = buildNormalizedPath(absolutePath(full)).replace("\\", "/");
+      string absroot  = root.endsWith("/") ? root : root ~ "/";
+      if (resolved != absroot[0..$-1] && !resolved.startsWith(absroot)) return null;
+    }
+  } catch (Exception e) { return null; }
+  return full;
 }
 
 // Month to index of the year
-pure int monthToIndex(in string m) {
-  for (int x = 1; x <= 12; ++x) {
-    if(m.toLower() == months[x].toLower()) return x;
-  }
+@nogc pure int monthToIndex(in string m) nothrow {
+  for (int x = 1; x <= 12; ++x) { if(icmp(m, months[x]) == 0) return x; }
   return -1;
-}
-
-pure string toD(T, U)(in T x, in U digits = 6) nothrow {
-  string s = to!string(x);
-  while (s.length < digits) { s = "0" ~ s; }
-  return s;
 }
 
 @nogc pure long Msecs(in SysTime t, in SysTime t0 = Clock.currTime()) nothrow {
@@ -70,25 +62,18 @@ pure string toD(T, U)(in T x, in U digits = 6) nothrow {
   return((key in buffer) !is null);
 }
 
-string[string] parseQueryString(const string query, const string defVal = "") {
+string[string] parseQueryString(const string query) {
   string[string] params;
   foreach (param; query.split("&")) {
     try {
       string s     = strip(param);
       ptrdiff_t i  = s.indexOf("=");
       string key   = decodeComponent(i > 0 ? s[0 .. i]   : s);
-      string value = decodeComponent(i > 0 ? s[i+1 .. $] : defVal);
+      string value = decodeComponent(i > 0 ? s[i+1 .. $] : "");
       if (key.length > 0) params[key] = value;
     } catch (Exception e) { warning("parseQueryString: failed to decode '%s'", param); }
   }
   return params;
-}
-
-@nogc pure bool has(T)(in T[] buffer, in T key) nothrow {
-  foreach(T i; buffer) { 
-    if(i == key) return(true);
-  } 
-  return false;
 }
 
 @nogc pure T from(T,K)(in T[K] buffer, in K key, T def = T.init) nothrow {
@@ -98,73 +83,63 @@ string[string] parseQueryString(const string query, const string defVal = "") {
 }
 
 void writeinfile(in string localpath, in string content) {
-  if (content.length > 0) { 
-    try {
-      auto fp = File(localpath, "wb");
-      fp.rawWrite(content);
-      fp.close();
-      trace("writeinfile: %d bytes to: %s", content.length, localpath);
-    } catch(Exception e) {
-      error("writeinfile: I/O exception '%s'", e.msg);
-    }
-  }
+  try {
+    auto fp = File(localpath, "wb");
+    fp.rawWrite(content);
+    fp.close();
+    trace("writeinfile: %d bytes to: %s", content.length, localpath);
+  } catch(Exception e) { error("writeinfile: I/O exception '%s'", e.msg); }
 }
 
 string htmltime(in SysTime d = Clock.currTime()) {
   auto utc = d.toUTC();
-  return format(timeFmt, utc.day(), months[utc.month()], utc.year(),
-                utc.hour(), toD(utc.minute(),2), toD(utc.second(),2), "GMT");
+  return format("%s %s %s %02d:%02d:%02d GMT", utc.day(), months[utc.month()], utc.year(), utc.hour(), utc.minute(), utc.second());
 }
 
 bool isFILE(in string path) {
-  try {
-    if (exists(path) && isFile(path)) return true;
-  } catch(Exception e) { error("isFILE: I/O exception '%s'", e.msg); }
+  try { return(isFile(path)); }
+  catch(Exception e) { error("isFILE: I/O exception '%s'", e.msg); }
   return false;
 }
 
 bool isDIR(in string path) {
-  try {
-    if (exists(path) && isDir(path)) return true;
-  } catch(Exception e) { error("isDIR: I/O exception '%s'", e.msg); }
+  try { return(isDir(path)); }
+  catch(Exception e) { error("isDIR: I/O exception '%s'", e.msg); }
   return false;
 }
 
 bool isCGI(in string path) {
-  try {
-    if (exists(path) && isFile(path) && mime(path).indexOf(CGI_FILE) >= 0) return true;
-  } catch(Exception e) { error("isCGI: I/O exception '%s'", e.msg); }
+  try { return(isFile(path) && mime(path).indexOf(CGI_FILE) >= 0); }
+  catch(Exception e) { error("isCGI: I/O exception '%s'", e.msg); }
   return false;
 }
 
-pure bool isAllowed(in string path) {
-  if (mime(path) == UNSUPPORTED_FILE) return false;
-  return true;
-}
+pure bool isAllowed(in string path) { return(mime(path) != UNSUPPORTED_FILE); }
 
 // Where does the HTTP request header end ?
-pure ptrdiff_t endofheader(T)(const(T) buffer) {
-  auto str = to!string(buffer);
-  ptrdiff_t idx = str.indexOf("\r\n\r\n");
-  if(idx <= 0) idx = str.indexOf("\n\n");
-  return(idx);
+@nogc pure ptrdiff_t endofheader(T)(const(T) buffer) nothrow {
+  ptrdiff_t len = buffer.length;
+  for (ptrdiff_t i = 0; i < len - 3; i++) {
+    if (buffer[i] == '\r' && buffer[i+1] == '\n' && buffer[i+2] == '\r' && buffer[i+3] == '\n') return i;
+    if (buffer[i] == '\n' && buffer[i+1] == '\n') return i;
+  }
+  return -1;
 }
 
 // Where does the HTTP request body start ?
-pure ptrdiff_t bodystart(T)(const(T) buffer) {
-  auto str = to!string(buffer);
-  ptrdiff_t idx = str.indexOf("\r\n\r\n");
-  if (idx > 0) return (idx + 4);
-  idx = str.indexOf("\n\n");
-  if (idx > 0) return (idx + 2);
-  return(-1);
+@nogc pure ptrdiff_t bodystart(T)(const(T) buffer) nothrow {
+  ptrdiff_t len = buffer.length;
+  for (ptrdiff_t i = 0; i < len - 3; i++) {
+    if (buffer[i] == '\r' && buffer[i+1] == '\n' && buffer[i+2] == '\r' && buffer[i+3] == '\n') return i + 4;
+    if (buffer[i] == '\n' && buffer[i+1] == '\n') return i + 2;
+  }
+  return -1;
 }
 
 // get the HTTP header contained in the buffer
 pure string fullheader(T)(const(T) buffer) {
   auto i = bodystart(buffer);
-  if (i > 0 && i <= buffer.length)
-    return(to!string(buffer[0 .. i]));
+  if (i > 0 && i <= buffer.length) { return(to!string(buffer[0 .. i])); }
   return [];
 }
 
@@ -198,8 +173,6 @@ int sISelect(SocketSet set, Socket socket, int timeout = 10) {
 unittest {
   custom(0, "FILE", "%s", __FILE__);
   custom(0, "TEST", "monthToIndex('Feb') = %s", monthToIndex("Feb"));
-  custom(0, "TEST", "toD(5, 4) = %s", toD(5, 4));
-  custom(0, "TEST", "toD(12, 3) = %s", toD(12, 3));
   custom(0, "TEST", "htmltime() = %s", htmltime());
   custom(0, "TEST", "isFILE('danode/functions.d') = %s", isFILE("danode/functions.d"));
   custom(0, "TEST", "isDIR('danode') = %s", isDIR("danode"));

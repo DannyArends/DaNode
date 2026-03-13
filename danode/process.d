@@ -41,6 +41,7 @@ class Process : Thread {
   private:
     string[]          command;              /// Command to execute
     string            inputfile;            /// Path of input file
+    string[string]    environ;
     bool              completed = false;
     bool              removeInput = true;
 
@@ -60,9 +61,10 @@ class Process : Thread {
     Appender!(char[])  errbuffer;           /// Error appender buffer
 
   public:
-    this(string[] command, string inputfile, bool removeInput = true, long maxtime = 4500) {
+    this(string[] command, string inputfile, string[string] environ, bool removeInput = true, long maxtime = 4500) {
       this.command = command;
       this.inputfile = inputfile;
+      this.environ = environ;
       this.removeInput = removeInput;
       this.maxtime = maxtime;
       this.starttime = Clock.currTime();
@@ -161,7 +163,8 @@ class Process : Thread {
         fStdIn = File(inputfile, "r");
         pStdOut = pipe(); pStdErr = pipe();
         custom(1, "PROC", "command: %s < %s", command, inputfile);
-        auto cpid = spawnProcess(command, fStdIn, pStdOut.writeEnd, pStdErr.writeEnd, null);
+        import std.process : Config;
+        auto cpid = spawnProcess(command, fStdIn, pStdOut.writeEnd, pStdErr.writeEnd, environ, Config.none, environ.get("PWD", "."));
 
         fStdOut = pStdOut.readEnd;
         if(!nonblocking(fStdOut) && fStdOut.isOpen()) custom(2, "WARN", "unable to create nonblocking stdout pipe for command");
@@ -185,24 +188,21 @@ class Process : Thread {
         this.readpipe(fStdOut, outbuffer);  // Non blocking slurp of stdout
         this.readpipe(fStdErr, errbuffer);  // Non blocking slurp of stderr
         trace("Output %d & %d processed after %s msecs", outbuffer.data.length, errbuffer.data.length, time());
+        if (errbuffer.data.length > 0) custom(1, "PROC", "stderr: %s", errbuffer.data);
 
         // Close the file handles
         fStdIn.close(); fStdOut.close(); fStdErr.close();
 
         trace("removing process input file %s ? %s", inputfile, removeInput);
         if(removeInput) remove(inputfile);
-
-        this.completed = true;
-      } catch(Exception e) {
-        warning("process.d, exception: '%s'", e.msg);
-        this.completed = true;  // ADD THIS
-      }
+      } catch(Exception e) { warning("process.d, exception: '%s'", e.msg); }
+      this.completed = true;
     }
 }
 
 unittest {
   custom(0, "FILE", "%s", __FILE__);
-  auto p = new Process(["rdmd", "www/localhost/dmd.d"], "test/dmd.in", false);
+  auto p = new Process(["rdmd", "www/localhost/dmd.d"], "test/dmd.in", null, false);
   p.start();
   while(!p.finished){ Thread.sleep(msecs(5)); }
   custom(0, "TEST", "status of output: %s", p.status());

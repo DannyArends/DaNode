@@ -3,13 +3,12 @@ module danode.response;
 import danode.imports;
 import danode.cgi : CGI;
 import danode.interfaces : DriverInterface, StringDriver;
-import danode.process : Process, WaitResult;
 import danode.functions : htmltime;
 import danode.statuscode : StatusCode;
 import danode.request : Request;
-import danode.router : Router;
 import danode.mimetypes : UNSUPPORTED_FILE;
-import danode.payload : Payload, FilePayload, PayloadType, HeaderType, Empty, Message;
+import danode.files : FileStream, FilePayload;
+import danode.payload : Payload, PayloadType, HeaderType, Empty, Message;
 import danode.log;
 import danode.webconfig;
 import danode.filesystem : FileSystem;
@@ -21,7 +20,6 @@ immutable string SERVERINFO = "DaNode/0.0.3";
 struct Response {
   string            protocol = "HTTP/1.1";
   string            connection = "Close";
-  string            charset = "UTF-8";
   Address           address;
   long              maxage = 0;
   string[string]    headers;
@@ -30,7 +28,6 @@ struct Response {
   bool              havepost = false;
   bool              routed = false;
   bool              completed = false;
-  bool              cgiheader = false;
   Appender!(char[]) hdr;
   ptrdiff_t         index = 0;
   bool              isRange    = false;
@@ -41,23 +38,17 @@ struct Response {
 
   // Generate a HTTP header for the response
   @property final char[] header() {
-    if (hdr.data) {
-      return(hdr.data); // Header was constructed
-    }
-    // Scripts are allowed to have their own header
+    if (hdr.data) { return(hdr.data); /* Header was constructed */ }
+
+    // Scripts are allowed to have/send their own header
     if (payload.type == PayloadType.Script) {
       CGI script = to!CGI(payload);
       string scriptheader = script.fullHeader();
       auto status = script.statuscode();
-      /*custom(0, "DBG", "scriptheader length: %d", scriptheader.length);
-      custom(0, "DBG", "scriptheader: [%s]", scriptheader);
-      custom(0, "DBG", "status.code: %d", status.code);
-      custom(0, "DBG", "headerType: %s", script.headerType());
-      custom(0, "DBG", "endOfHeader: %d", script.endOfHeader()); */
       custom(1, "INFO", "script '%s', status (%s)", script.command, status);
       connection = script.getHeader("Connection", "No Request");
       long clength = script.getHeader("Content-Length", -1); // Is the content length provided ?
-      foreach (line; scriptheader.split("\n")) { 
+      foreach (line; scriptheader.split("\n")) {
         auto v = line.split(": ");
         if(v.length == 2) this.headers[v[0]] = chomp(v[1]);
       }
@@ -67,8 +58,8 @@ struct Response {
           hdr.put(format("%s %d %s\r\n", protocol, payload.statuscode, payload.statuscode.reason));
         }
         hdr.put(scriptheader);
-        if (!to!string(hdr.data).endsWith("\r\n\r\n")) hdr.put("\r\n");
-        if(clength == -1) connection = "Close";
+        if (!hdr.data.endsWith("\r\n\r\n")) hdr.put("\r\n");
+        if (clength == -1) connection = "Close";
         return(hdr.data);
       }
       if (connection != "No Request" && clength > -1) {
@@ -77,7 +68,8 @@ struct Response {
         return(hdr.data); // The script can communicate
       }
       if (connection != "Close") {
-        custom(0, "WARN", "script '%s', failed (%s, %d)\n%s", script.command, script.headerType(), clength, scriptheader);
+        custom(1, "WARN", "script '%s', failed - headerType: %s, Content-Length: %d, connection: '%s', headerLength: %d, header: [%s]", 
+               script.command, script.headerType(), clength, connection, scriptheader.length, scriptheader);
       }else{
         custom(1, "INFO", "script '%s', header generation (%s, %d)", script.command, script.headerType(), clength);
       }
@@ -97,8 +89,7 @@ struct Response {
         hdr.put(format("Cache-Control: max-age=%d, public\r\n", maxage));
       }
     }
-    hdr.put(format("Content-Type: %s\r\n", payload.mimetype)); // We just send our mime and an encoding
-    //hdr.put(format("Content-Type: %s; charset=%s\r\n", payload.mimetype, charset)); // We just send our mime and an encoding
+    hdr.put(format("Content-Type: %s\r\n", payload.mimetype)); // We just send our mime type
     hdr.put(format("Connection: %s\r\n\r\n", connection)); // Client can choose to keep-alive
     return(hdr.data);
   }
@@ -112,7 +103,7 @@ struct Response {
     if (isRange) return StatusCode.PartialContent;
     return payload.statuscode;
   }
-  @property final bool keepalive() const { return( toLower(connection) == "keep-alive"); }
+  @property final bool keepalive() const { return(icmp(connection, "keep-alive") == 0); }
   @property final long length() {
     if (isRange) return header.length + (rangeEnd - rangeStart + 1);
     return header.length + payload.length;
@@ -160,8 +151,22 @@ void notmodified(ref Response response, in Request request, in string mimetype =
 // serve a 404 domain not found page
 void domainNotFound(ref Response response, in Request request) {
   warning("requested domain '%s', was not found", request.shorthost());
-  response.payload = new Message(StatusCode.NotFound, format("404 - No such domain is available\n"));
+  response.payload = new Message(StatusCode.NotFound, "404 - No such domain is available\n");
   response.ready = true;
+}
+
+// serve a 413 payload too large page
+void setPayloadTooLarge(ref DriverInterface driver, ref Response response) {
+  response.payload = new Message(StatusCode.PayloadTooLarge, "413 - Payload Too Large\n");
+  response.ready = true;
+  driver.send(response, driver.socket);
+}
+
+// serve a 431 request header fields too large page
+void setHeaderTooLarge(ref DriverInterface driver, ref Response response) {
+  response.payload = new Message(StatusCode.HeaderFieldsTooLarge, "431 - Request Header Fields Too Large\n");
+  response.ready = true;
+  driver.send(response, driver.socket);
 }
 
 // serve a 408 connection timed out page
@@ -170,7 +175,7 @@ void setTimedOut(ref DriverInterface driver, ref Response response) {
     CGI cgi = to!CGI(response.payload);
     cgi.notifyovertime();
   }
-  response.payload = new Message(StatusCode.TimedOut, format("408 - Connection Timed Out\n"));
+  response.payload = new Message(StatusCode.TimedOut, "408 - Connection Timed Out\n");
   response.ready = true;
   driver.send(response, driver.socket);           // Send the response, hit multiple times, send what you can and return
 }
@@ -184,53 +189,9 @@ void serveCGI(ref Response response, in Request request, in WebConfig config, in
     trace("writing server variables");
     fs.serverAPI(config, request, response);
     trace("creating CGI payload");
-    response.payload = new CGI(request.command(localpath), request.inputfile(fs), removeInput, request.maxtime-5);
+    response.payload = new CGI(request.command(localpath), request.inputfile(fs), request.environ(localpath), removeInput, request.maxtime-5);
     response.ready = true;
   }
-}
-
-// Serve a static file from the disc, send encrypted when requested and available
-void serveStaticFile(ref Response response, in Request request, FileSystem fs) {
-  trace("serving a static file");
-  string localroot = fs.localroot(request.shorthost());
-  FilePayload reqFile = fs.file(localroot, request.path);
-  if (request.acceptsEncoding("deflate") && reqFile.hasEncodedVersion && !request.hasRange) {
-    info("will serve %s with deflate encoding", request.path);
-    reqFile.deflate = true;
-    response.customheader("Content-Encoding","deflate");
-  }
-  response.payload = reqFile;
-
-  if (request.hasRange) { response.serveRangeFile(request, reqFile); return; }
-
-  if (!reqFile.deflate) response.customheader("Accept-Ranges", "bytes");
-  if (request.ifModified >= response.payload.mtime()) {                                        // Non modified static content
-    trace("static file has not changed, sending notmodified");
-    response.notmodified(request, response.payload.mimetype);
-  }
-
-  response.ready = true;
-}
-
-// Serve a File Range from a static file on disc
-void serveRangeFile(ref Response response, in Request request, FilePayload reqFile) {
-  long[2] r = request.range();
-  long total = reqFile.fileSize();
-  long start = r[0];
-  long end = r[1] < 0 ? total - 1 : r[1];
-  if (start >= total || end >= total || start > end) {
-    response.payload = new Message(StatusCode.RangeNotSatisfiable, "");
-    response.customheader("Content-Range", format("bytes */%d", total));
-  } else {
-    response.customheader("Content-Range", format("bytes %d-%d/%d", start, end, total));
-    response.customheader("Accept-Ranges", "bytes");
-    response.rangeStart = start;
-    response.rangeEnd = end;
-    response.isRange = true;
-    response.payload = reqFile;
-    trace("serveRangeFile: serving %d bytes", end - start + 1);
-  }
-  response.ready = true;
 }
 
 // serve a directory browsing request, via a message
@@ -245,21 +206,21 @@ void serveDirectory(ref Response response, ref Request request, in WebConfig con
 // serve a forbidden page
 void serveForbidden(ref Response response, in Request request) {
   trace("resource is restricted from being accessed");
-  response.payload = new Message(StatusCode.Forbidden, format("403 - Access to this resource has been restricted\n"));
+  response.payload = new Message(StatusCode.Forbidden, "403 - Access to this resource has been restricted\n");
   response.ready = true;
 }
 
 // serve a 400 bad request 
 void serveBadRequest(ref Response response, in Request request) {
   trace("Request was malformed");
-  response.payload = new Message(StatusCode.BadRequest, format("400 - Bad Request\n"));
+  response.payload = new Message(StatusCode.BadRequest, "400 - Bad Request\n");
   response.ready = true;
 }
 
 // serve a 404 not found page
 void notFound(ref Response response) {
   trace("resource not found");
-  response.payload = new Message(StatusCode.NotFound, format("404 - The requested path does not exists on disk\n"));
+  response.payload = new Message(StatusCode.NotFound, "404 - The requested path does not exists on disk\n");
   response.ready = true;
 }
 

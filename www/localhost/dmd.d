@@ -4,11 +4,10 @@ import std.string : format, indexOf, split, strip, toLower;
 import api.danode;
 
 void main(string[] args){
-  setGET(args);
   if(SERVER["REQUEST_URI"] == "/dmd.d" || SERVER["REQUEST_URI"] == "/") {
     writeln("HTTP/1.1 200 OK");
     writeln("Content-Type: text/html; charset=utf-8");
-    writeln("Connection: Keep-Alive");                        // This is wrong, (Keep-Alive MUST be specified with a Content-Length) to test if the server handles it correctly
+    writeln("Connection: Keep-Alive"); // This is wrong, (Keep-Alive MUST be specified with a Content-Length) to test if the server handles it correctly
     writefln("Server: %s", SERVER["SERVER_SOFTWARE"]);
     writefln("X-Powered-By: %s %s.%s\n", std.compiler.name, version_major, version_minor);
 

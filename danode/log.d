@@ -7,31 +7,26 @@ import danode.response : Response;
 import danode.functions;
 import danode.statuscode : StatusCode;
 
-extern(C) __gshared int cverbose;         // Verbose level of C-Code
+shared int cverbose;
 
 immutable int NOTSET = -1, NORMAL = 0, INFO = 1, TRACE = 2, DEBUG = 3;
 
 /* Verbose level control of stdout */
-void write(T)(const T fmt) { if(cverbose > 0) stdout.write(fmt); }
+void write(T)(const T fmt) { if(atomicLoad(cverbose) > 0) stdout.write(fmt); }
 
 /* Write an warning string to stdout */
-void warning(A...)(const string fmt, auto ref A args) { if(cverbose >= 0) writefln("[WARN]   " ~ fmt, args); }
+void warning(A...)(const string fmt, auto ref A args) { if(atomicLoad(cverbose) >= 0) writefln("[WARN]   " ~ fmt, args); }
 
 /* Informational level of debug to stdout */
-void info(A...)(const string fmt, auto ref A args) { if(cverbose >= 1) stdout.writefln("[INFO]   " ~ fmt, args); }
+void info(A...)(const string fmt, auto ref A args) { if(atomicLoad(cverbose) >= 1) stdout.writefln("[INFO]   " ~ fmt, args); }
 
 /* Informational level of debug to stdout */
 void custom(A...)(const int lvl, const string pre, const string fmt, auto ref A args) {
-  if(cverbose >= lvl) {
-    string sep = " ";
-    size_t i = 1;
-    while(i < (7 - pre.length)) { sep ~= " "; i++; }
-    stdout.writefln("[" ~ pre ~ "]" ~ sep ~ fmt, args);
-  }
+  if(atomicLoad(cverbose) >= lvl) { stdout.writefln("[%s]%s" ~ fmt, pre, " ".replicate(max(1, 7 - pre.length)), args); }
 }
 
 /* Trace level debug to stdout */
-void trace(A...)(const string fmt, auto ref A args) { if(cverbose >= 2) stdout.writefln("[TRACE]  " ~ fmt, args); }
+void trace(A...)(const string fmt, auto ref A args) { if(atomicLoad(cverbose) >= 2) stdout.writefln("[TRACE]  " ~ fmt, args); }
 
 /* Write an error string to stderr */
 void error(A...)(const string fmt, auto ref A args) { stderr.writefln("[ERROR]  " ~ fmt, args); }
@@ -66,7 +61,7 @@ class Log {
 
   public:
     this(int verbose = NORMAL, string requestLog = "request.log", string perfLog = "perf.log", bool overwrite = false) {
-      cverbose = verbose;
+      atomicStore(cverbose, verbose);
 
       // Initialize the request log
       if (exists(requestLog) && overwrite) {
@@ -86,10 +81,10 @@ class Log {
     // Set verbose level of the application
     @property @nogc int verbose(int verbose = NOTSET) const nothrow {
       if (verbose != NOTSET) {
-        printf("[INFO]   changing verbose level from %d to %d\n", cverbose, verbose);
-        cverbose = verbose;
+        printf("[INFO]   changing verbose level from %d to %d\n", atomicLoad(cverbose), verbose);
+        atomicStore(cverbose, verbose);
       }
-      return(cverbose); 
+      return(atomicLoad(cverbose));
     }
 
     // Update the performance statistics
@@ -102,7 +97,7 @@ class Log {
       statistics[key].timings.put(Msecs(rq.starttime));
       statistics[key].keepalives.put(rs.keepalive);
       statistics[key].ips[((rq.track)? cl.ip : "DNT")]++;
-      if (cverbose == TRACE) {
+      if (atomicLoad(cverbose) == TRACE) {
         PerformanceLogFp.writefln("%s = [%s] %s", key, rs.statuscode, statistics[key]);
         PerformanceLogFp.flush();
       }
@@ -110,14 +105,13 @@ class Log {
 
     // Log the responses to the request
     void logRequest(in ClientInterface cl, in Request rq, in Response rs) {
-      if (cverbose >= NOTSET) {
-        string uri;
-        try { uri = decodeComponent(rq.uri); } catch (Exception e) { uri = rq.uri; }
-        string s = format("[%d]    %s %s:%s %s%s %s %s", rs.statuscode, htmltime(), cl.ip, cl.port, rq.shorthost, uri, Msecs(rq.starttime), rs.isRange ? (rs.rangeEnd - rs.rangeStart + 1) : rs.payload.length);
-        RequestLogFp.writeln(s);
-        custom(-1, "REQ", s);
-        RequestLogFp.flush();
-      }
+      string uri;
+      try { uri = decodeComponent(rq.uri); } catch (Exception e) { uri = rq.uri; }
+      long bytes = rs.isRange ? (rs.rangeEnd - rs.rangeStart + 1) : rs.payload.length;
+      string s = format("[%d]    %s %s:%s %s%s %s %s", rs.statuscode, htmltime(), cl.ip, cl.port, rq.shorthost, uri, Msecs(rq.starttime), bytes);
+      RequestLogFp.writeln(s);
+      custom(-1, "REQ", s);
+      RequestLogFp.flush();
     }
 }
 

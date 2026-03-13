@@ -4,7 +4,7 @@ import danode.imports;
 import danode.cgi : CGI;
 import danode.client : MAX_REQUEST_SIZE;
 import danode.statuscode : StatusCode;
-import danode.request : Request;
+import danode.request : Request, RequestMethod;
 import danode.response : SERVERINFO, Response, redirect, create, notmodified;
 import danode.webconfig : WebConfig;
 import danode.payload : Message;
@@ -31,22 +31,17 @@ struct PostItem {
 // when the entire request body is not yet available. POST data supplied in Multipart 
 // and X-form post formats are currently supported
 final bool parsePost (ref Request request, ref Response response, in FileSystem filesystem) {
-  if (response.havepost || request.method != "POST") {
-    response.havepost = true;
-    return(true);
-  }
+  if (response.havepost || request.method != RequestMethod.POST) { return(response.havepost = true); }
+
   long expectedlength = to!long(from(request.headers, "Content-Length", "0"));
   string content = request.body;
   if (expectedlength == 0) {
     custom(2, "POST", "Content-Length was not specified or 0: real length: %s", content.length);
-    response.havepost = true;
-    return(true); // When we don't receive any post data it is meaningless to scan for any content
+    return(response.havepost = true); // When we don't receive any post data it is meaningless to scan for any content
   } else if (expectedlength > MAX_REQUEST_SIZE) {
     warning("Upload too large: %d bytes from %s", expectedlength, request.ip);
     response.payload = new Message(StatusCode.PayloadTooLarge, "413 - Payload Too Large\n");
-    response.ready = true;
-    response.havepost = true;
-    return(true);
+    return(response.ready = response.havepost = true);
   }
   custom(2, "POST", "received %s of %s", content.length, expectedlength);
   if(content.length < expectedlength) return(false);
@@ -117,7 +112,7 @@ final void parseMultipart(ref Request request, in FileSystem filesystem, const s
       string fname = extractQuoted(elem[0], "filename");
       custom(1, "MPART", "found on key %s file %s", key, fname);
       bool isarraykey = key.length > 2 && key[($-2) .. $] == "[]";
-      keys[key] = keys.has(key) ? keys[key] + 1 : 0;
+      keys[key] = keys.get(key, -1) + 1;
       custom(1, "MPART", "found on key %s #%d file %s", key, keys[key], fname);
       if (fname != "") {
         string fkey      = isarraykey ? key ~ to!string(keys[key]) : key;
@@ -140,21 +135,9 @@ final void parseMultipart(ref Request request, in FileSystem filesystem, const s
 final void serverAPI(in FileSystem filesystem, in WebConfig config, in Request request, in Response response)  {
   Appender!(string) content;
   content.put(format("S=REDIRECT_STATUS=%d\n", response.payload.statuscode));
-  content.put(format("S=HTTP_HOST=%s:%s\n", request.host, request.serverport));
-  content.put(format("S=HTTP_USER_AGENT=%s\n", request.headers.from("User-Agent")));
-  content.put(format("S=HTTP_ACCEPT=%s\n", request.headers.from("Accept")));
-  content.put(format("S=HTTP_ACCEPT_LANGUAGE=%s\n", request.headers.from("Accept-Language")));
-  content.put(format("S=HTTP_ACCEPT_ENCODING=%s\n", request.headers.from("Accept-Encoding")));
-  content.put(format("S=HTTP_REFERER=%s\n", request.headers.from("HTTP_REFERER")));
-  content.put(format("S=HTTP_CONNECTION=%s\n", (response.keepalive)? "Keep-Alive" : "Close" ));
+
   // Give HTTP_COOKIES to CGI
-  foreach (c; request.cookies.split("; ")) {
-    content.put(format("C=%s\n", chomp(c)) );
-  }
-  // TODO: Add content.put(format("S=HTTP_UPGRADE_INSECURE_REQUESTS=%s\n", SSL ));
-  // TODO: Add content.put(format("S=HTTP_CACHE_CONTROL=%s\n", Filesystem ));
-  // TODO: Add content.put(format("S=PATH=%s\n", CGI import path ));
-  // TODO: Add content.put(format("S=SERVER_SIGNATURE=<address>%s</address>\n", Server Signature ));
+  foreach (c; request.cookies.split("; ")) { content.put(format("C=%s\n", chomp(c)) ); }
   content.put(format("S=SERVER_SOFTWARE=%s\n", SERVERINFO));
   try{
     content.put(format("S=SERVER_NAME=%s\n", (response.address)? response.address.toHostNameString() : "localhost"));
@@ -164,30 +147,10 @@ final void serverAPI(in FileSystem filesystem, in WebConfig config, in Request r
   }
   content.put(format("S=SERVER_ADDR=%s\n", (response.address)? response.address.toAddrString() : "127.0.0.1"));
   content.put(format("S=SERVER_PORT=%s\n", (response.address)? response.address.toPortString() : "80"));
-  content.put(format("S=REMOTE_ADDR=%s\n", request.ip));
   content.put(format("S=DOCUMENT_ROOT=%s\n", filesystem.localroot(request.shorthost())));
-  // TODO: Add content.put(format("S=REQUEST_SCHEME=%s\n",  ));
-  // TODO: Add content.put(format("S=CONTEXT_PREFIX=%s\n",  ));
-  // TODO: Add content.put(format("S=CONTEXT_DOCUMENT_ROOT=%s\n",  ));
-  // TODO: Add content.put(format("S=SERVER_ADMIN=%s\n",  ));
-  content.put(format("S=SCRIPT_FILENAME=%s\n", config.localpath(filesystem.localroot(request.shorthost()), request.path)));
-  content.put(format("S=REMOTE_PORT=%s\n", request.port));
-  // TODO: Add content.put(format("S=REDIRECT_URL=%s\n",  ));
   content.put(format("S=GATEWAY_INTERFACE=%s\n", "CGI/1.1"));
-  content.put(format("S=SERVER_PROTOCOL=%s\n", cast(string)request.protocol));
-  content.put(format("S=REQUEST_METHOD=%s\n", request.method));
-  content.put(format("S=QUERY_STRING=%s\n", request.query));
-  content.put(format("S=REQUEST_URI=%s\n", request.uripath));
-  content.put(format("S=SCRIPT_NAME=%s\n", request.path));
   content.put(format("S=PHP_SELF=%s\n", request.path));
-  // TODO: Add content.put(format("S=REQUEST_TIME_FLOAT=%s\n",  ));
   content.put(format("S=REQUEST_TIME=%s\n", request.starttime.toUnixTime));
-
-  // Were the following invented / made up by me ? or mistaken/old ones ?
-  content.put(format("S=HTTPS=%s\n", (request.isSecure)? "1" : "0" ));
-  content.put(format("S=REMOTE_PAGE=%s\n", request.page));
-  content.put(format("S=REQUEST_DIR=%s\n", request.dir));
-  content.put(format("S=HTTP_ACCEPT_CHARSET=%s\n", request.headers.from("Accept-Charset")));
 
   // Write the post information we received
   foreach (p; request.postinfo) {
