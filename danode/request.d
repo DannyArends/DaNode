@@ -175,16 +175,16 @@ struct Request {
 
   final string[string] environ(string localpath) const {
     string[string] env = environment.toAA();
-    env["REQUEST_METHOD"]  = to!string(method);
-    env["QUERY_STRING"]    = query.length > 1 ? query[1 .. $] : "";
-    env["REQUEST_URI"]     = uri;
+    env["REQUEST_METHOD"] = to!string(method);
+    env["QUERY_STRING"] = query.length > 1 ? query[1 .. $] : "";
+    env["REQUEST_URI"] = uripath;
     env["SCRIPT_FILENAME"] = localpath;
-    env["SCRIPT_NAME"]     = path;
+    env["SCRIPT_NAME"] = path;
     env["SERVER_PROTOCOL"] = cast(string)protocol;
-    env["REMOTE_ADDR"]     = ip;
-    env["REMOTE_PORT"]     = to!string(port);
-    env["HTTP_HOST"]       = host;
-    env["HTTPS"]           = isSecure ? "on" : "";
+    env["REMOTE_ADDR"] = ip;
+    env["REMOTE_PORT"] = to!string(port);
+    env["HTTP_HOST"] = host;
+    env["HTTPS"] = isSecure ? "on" : "";
     env["REDIRECT_STATUS"] = "200";
     foreach (k, v; headers) env["HTTP_" ~ k.toUpper().replace("-", "_")] = v;
     return env;
