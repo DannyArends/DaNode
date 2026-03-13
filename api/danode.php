@@ -1,6 +1,5 @@
 <?php
-  $argvs = array_slice($argv, 1);
-  parse_str(implode('&', $argvs), $_GET);
+  parse_str(getenv('QUERY_STRING') ?: '', $_GET);
 
   function toS($_array){
     $size = count($_array);

@@ -199,7 +199,7 @@ void serveCGI(ref Response response, in Request request, in WebConfig config, in
     trace("writing server variables");
     fs.serverAPI(config, request, response);
     trace("creating CGI payload");
-    response.payload = new CGI(request.command(localpath), request.inputfile(fs), removeInput, request.maxtime-5);
+    response.payload = new CGI(request.command(localpath), request.inputfile(fs), request.environ(localpath), removeInput, request.maxtime-5);
     response.ready = true;
   }
 }

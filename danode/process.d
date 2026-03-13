@@ -41,6 +41,7 @@ class Process : Thread {
   private:
     string[]          command;              /// Command to execute
     string            inputfile;            /// Path of input file
+    string[string]    environ;
     bool              completed = false;
     bool              removeInput = true;
 
@@ -60,9 +61,10 @@ class Process : Thread {
     Appender!(char[])  errbuffer;           /// Error appender buffer
 
   public:
-    this(string[] command, string inputfile, bool removeInput = true, long maxtime = 4500) {
+    this(string[] command, string inputfile, string[string] environ, bool removeInput = true, long maxtime = 4500) {
       this.command = command;
       this.inputfile = inputfile;
+      this.environ = environ;
       this.removeInput = removeInput;
       this.maxtime = maxtime;
       this.starttime = Clock.currTime();
@@ -161,7 +163,7 @@ class Process : Thread {
         fStdIn = File(inputfile, "r");
         pStdOut = pipe(); pStdErr = pipe();
         custom(1, "PROC", "command: %s < %s", command, inputfile);
-        auto cpid = spawnProcess(command, fStdIn, pStdOut.writeEnd, pStdErr.writeEnd, null);
+        auto cpid = spawnProcess(command, fStdIn, pStdOut.writeEnd, pStdErr.writeEnd, environ);
 
         fStdOut = pStdOut.readEnd;
         if(!nonblocking(fStdOut) && fStdOut.isOpen()) custom(2, "WARN", "unable to create nonblocking stdout pipe for command");

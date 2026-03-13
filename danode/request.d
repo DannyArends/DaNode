@@ -135,7 +135,7 @@ struct Request {
   }
 
   // Get parameters as associative array
-  final string[string] get() const { return parseQueryString(query[1 .. $], "TRUE"); }
+  final string[string] get() const { return parseQueryString(query[1 .. $]); }
 
   // List of filenames uploaded by the user
   final @property string[]  postfiles() const { 
@@ -162,10 +162,24 @@ struct Request {
   final @property string useragent() const { return(headers.from("User-Agent", "Unknown")); }
   final string shorthost() const { return( (host.indexOf("www.") >= 0)? host[4 .. $] : host ); }
   final string[] command(string localpath) const {
-    string interp  = localpath.interpreter();
-    string[] args  = interp.length > 0 ? interp.split(" ") ~ localpath : [localpath];
-    foreach(k; get.byKey()) { args ~= k ~ "=" ~ get[k]; }
-    return args;
+    string interp = localpath.interpreter();
+    return interp.length > 0 ? interp.split(" ") ~ localpath : [localpath];
+  }
+
+  final string[string] environ(string localpath) const {
+    string[string] env;
+    env["REQUEST_METHOD"]  = to!string(method);
+    env["QUERY_STRING"]    = query.length > 1 ? query[1 .. $] : "";
+    env["REQUEST_URI"]     = uri;
+    env["SCRIPT_FILENAME"] = localpath;
+    env["SCRIPT_NAME"]     = path;
+    env["SERVER_PROTOCOL"] = to!string(protocol);
+    env["REMOTE_ADDR"]     = ip;
+    env["REMOTE_PORT"]     = to!string(port);
+    env["HTTP_HOST"]       = host;
+    env["HTTPS"]           = isSecure ? "on" : "";
+    foreach (k, v; headers) env["HTTP_" ~ k.toUpper().replace("-", "_")] = v;
+    return env;
   }
 
   // Canonical redirect of the Request for a directory to the index page specified in the WebConfig

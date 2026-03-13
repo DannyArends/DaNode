@@ -6,8 +6,6 @@ import std.string : format, indexOf, split, strip, toLower;
 import api.danode;
 
 void main(string[] args){
-  setGET(args);
-
   Appender!(char[]) htmlpage;  // Build the output before writing the headers
 
   htmlpage.put("<html>");

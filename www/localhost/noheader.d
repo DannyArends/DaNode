@@ -4,8 +4,6 @@ import std.string : format, indexOf, split, strip, toLower;
 import api.danode;
 
 void main(string[] args){
-  setGET(args);
-
   writeln("<html>");
   writeln("  <head>");
   writeln("    <title>DaNode 'user defined' CGI (D) test script</title>");
