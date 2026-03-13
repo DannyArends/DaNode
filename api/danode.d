@@ -10,9 +10,20 @@ void setGET() {
   }
 }
 
+void setSERVER() {
+  SERVER["REQUEST_URI"] = environment.get("REQUEST_URI", "");
+  SERVER["SCRIPT_FILENAME"]= environment.get("SCRIPT_FILENAME", "");
+  SERVER["SCRIPT_NAME"] = environment.get("SCRIPT_NAME", "");
+  SERVER["REMOTE_ADDR"] = environment.get("REMOTE_ADDR", "");
+  SERVER["REMOTE_PORT"] = environment.get("REMOTE_PORT", "");
+  SERVER["SERVER_PROTOCOL"]= environment.get("SERVER_PROTOCOL", "");
+  SERVER["REQUEST_METHOD"] = environment.get("REQUEST_METHOD", "");
+  SERVER["QUERY_STRING"] = environment.get("QUERY_STRING", "");
+  SERVER["HTTPS"] = environment.get("HTTPS", "");
+}
+
 void setCONFIG() {
-  string myloc = "./";
-  if(SERVER) myloc = SERVER["SCRIPT_FILENAME"];
+  string myloc = environment.get("SCRIPT_FILENAME", "./");
   string configfile = myloc[0 .. (myloc.lastIndexOf("/"))] ~ "/web.config";
   if(exists(configfile)){
     string[] configcont = to!string(std.file.read(configfile)).split("\n");
@@ -63,6 +74,7 @@ void setPOST(){
 
 static this() {
   setGET();
+  setSERVER();
   setPOST();
   setCONFIG();
 }
