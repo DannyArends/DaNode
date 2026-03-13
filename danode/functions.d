@@ -4,7 +4,6 @@ import danode.imports;
 import danode.log : error, warning, trace, custom;
 import danode.mimetypes : CGI_FILE, mime, UNSUPPORTED_FILE;
 
-immutable string timeFmt =  "%s %s %s %s:%s:%s %s";
 immutable string[int] months; 
 shared static this(){
   months = [ 1 : "Jan", 2 : "Feb", 3 : "Mar", 4 : "Apr",
@@ -55,12 +54,6 @@ string safePath(in string root, in string path) {
   return -1;
 }
 
-pure string toD(T, U)(in T x, in U digits = 6) nothrow {
-  string s = to!string(x);
-  while (s.length < digits) { s = "0" ~ s; }
-  return s;
-}
-
 @nogc pure long Msecs(in SysTime t, in SysTime t0 = Clock.currTime()) nothrow {
   return((t0 - t).total!"msecs"());
 }
@@ -107,8 +100,7 @@ void writeinfile(in string localpath, in string content) {
 
 string htmltime(in SysTime d = Clock.currTime()) {
   auto utc = d.toUTC();
-  return format(timeFmt, utc.day(), months[utc.month()], utc.year(),
-                utc.hour(), toD(utc.minute(),2), toD(utc.second(),2), "GMT");
+  return format("%s %s %s %02d:%02d:%02d GMT", utc.day(), months[utc.month()], utc.year(), utc.hour(), utc.minute(), utc.second());
 }
 
 bool isFILE(in string path) {
@@ -194,8 +186,6 @@ int sISelect(SocketSet set, Socket socket, int timeout = 10) {
 unittest {
   custom(0, "FILE", "%s", __FILE__);
   custom(0, "TEST", "monthToIndex('Feb') = %s", monthToIndex("Feb"));
-  custom(0, "TEST", "toD(5, 4) = %s", toD(5, 4));
-  custom(0, "TEST", "toD(12, 3) = %s", toD(12, 3));
   custom(0, "TEST", "htmltime() = %s", htmltime());
   custom(0, "TEST", "isFILE('danode/functions.d') = %s", isFILE("danode/functions.d"));
   custom(0, "TEST", "isDIR('danode') = %s", isDIR("danode"));
