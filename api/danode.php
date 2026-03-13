@@ -13,6 +13,7 @@
   }
 
   function setServer(){
+    global $_SERVER;
     $keys = ['REQUEST_URI', 'SCRIPT_FILENAME', 'SCRIPT_NAME', 'REMOTE_ADDR',
              'REMOTE_PORT', 'SERVER_PROTOCOL', 'REQUEST_METHOD', 'QUERY_STRING',
              'HTTPS', 'HTTP_HOST'];
