@@ -1,20 +1,18 @@
 module danode.router;
 
 import danode.imports;
-import danode.cgi : CGI;
 import danode.client : Client;
 import danode.interfaces : ClientInterface, DriverInterface, StringDriver;
 import danode.statuscode : StatusCode;
 import danode.request : Request;
-import danode.response;
-import danode.files : FilePayload;
+import danode.response : Response, create, serveBadRequest, domainNotFound, serveForbidden, redirect, serveCGI, serveDirectory, notFound;
+import danode.files : serveStaticFile;
 import danode.webconfig : WebConfig;
-import danode.payload : Message;
-import danode.mimetypes : mime;
-import danode.functions : from, has, isCGI, isFILE, isDIR, Msecs, htmltime, isAllowed, safePath;
+import danode.functions : from, has, isCGI, isFILE, isDIR, isAllowed, safePath;
 import danode.filesystem : FileSystem;
-import danode.post : parsePost, PostType;
+import danode.post : parsePost;
 import danode.log : custom, trace, info, Log, NOTSET, NORMAL;
+
 version(SSL) {
   import danode.ssl : hasCertificate;
 }
@@ -147,11 +145,9 @@ class Router {
 
     // Set the verbose level by string value
     final @property int verbose(string verbose = "") {
-      string[] sp = verbose.split(" ");
-      int nval = NOTSET;
-      if(sp.length == 1) nval = to!int(sp[0]);
-      if(sp.length >= 2) nval = to!int(sp[1]);
-      return(logger.verbose(nval)); 
+      auto sp = verbose.split(" ");
+      int nval = sp.length >= 2 ? to!int(sp[1]) : sp.length == 1 ? to!int(sp[0]) : NOTSET;
+      return logger.verbose(nval);
     }
 }
 
@@ -159,7 +155,7 @@ class Router {
 void runRequest(Router router, string request = "GET /dmd.d HTTP/1.1\nHost: localhost\n\n") {
   auto driver = new StringDriver(request);
   auto client = new Client(router, driver, 250);
-  custom(0, "TEST", "%s:%s %s", client.ip(), client.port(), split(request, "\n")[0]);
+  custom(0, "TEST", "%s:%s %s", client.ip(), client.port(), request.splitLines()[0]);
   client.start();
   while (client.running()) {
     Thread.sleep(dur!"msecs"(2));

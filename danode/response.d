@@ -197,50 +197,6 @@ void serveCGI(ref Response response, in Request request, in WebConfig config, in
   }
 }
 
-// Serve a static file from the disc, send encrypted when requested and available
-void serveStaticFile(ref Response response, in Request request, FileSystem fs) {
-  trace("serving a static file");
-  string localroot = fs.localroot(request.shorthost());
-  FilePayload reqFile = fs.file(localroot, request.path);
-  if (request.acceptsEncoding("deflate") && reqFile.hasEncodedVersion && !request.hasRange) {
-    info("will serve %s with deflate encoding", request.path);
-    reqFile.deflate = true;
-    response.customheader("Content-Encoding","deflate");
-  }
-  response.payload = new FileStream(reqFile);
-
-  if (request.hasRange) { response.serveRangeFile(request, reqFile); return; }
-
-  if (!reqFile.deflate) response.customheader("Accept-Ranges", "bytes");
-  if (request.ifModified >= response.payload.mtime()) {                                        // Non modified static content
-    trace("static file has not changed, sending notmodified");
-    response.notmodified(request, response.payload.mimetype);
-  }
-
-  response.ready = true;
-}
-
-// Serve a File Range from a static file on disc
-void serveRangeFile(ref Response response, in Request request, FilePayload reqFile) {
-  long[2] r = request.range();
-  long total = reqFile.fileSize();
-  long start = r[0];
-  long end = r[1] < 0 ? total - 1 : r[1];
-  if (start >= total || end >= total || start > end) {
-    response.payload = new Message(StatusCode.RangeNotSatisfiable, "");
-    response.customheader("Content-Range", format("bytes */%d", total));
-  } else {
-    response.customheader("Content-Range", format("bytes %d-%d/%d", start, end, total));
-    response.customheader("Accept-Ranges", "bytes");
-    response.rangeStart = start;
-    response.rangeEnd = end;
-    response.isRange = true;
-    response.payload = new FileStream(reqFile);
-    trace("serveRangeFile: serving %d bytes", end - start + 1);
-  }
-  response.ready = true;
-}
-
 // serve a directory browsing request, via a message
 void serveDirectory(ref Response response, ref Request request, in WebConfig config, in FileSystem fs) {
   trace("sending browse directory");

@@ -3,9 +3,12 @@ module danode.files;
 import danode.imports;
 import danode.statuscode : StatusCode;
 import danode.mimetypes : mime;
-import danode.payload : Payload, PayloadType;
+import danode.payload : Payload, PayloadType, Message;
 import danode.log : custom, info, warning, trace, cverbose, DEBUG;
 import danode.functions : isCGI;
+import danode.request : Request;
+import danode.response : Response, notmodified;
+import danode.filesystem : FileSystem;
 
 /* Per-client streaming wrapper around a shared FilePayload.
    Keeps its own File handle open for the duration of streaming,
@@ -157,5 +160,49 @@ class FilePayload : Payload {
       warning("FilePayload.bytes() called on unbuffered file '%s', this should not happen", path);
       return([]);
     } }
+}
+
+
+// Serve a static file from the disc, send encrypted when requested and available
+void serveStaticFile(ref Response response, in Request request, FileSystem fs) {
+  trace("serving a static file");
+  string localroot = fs.localroot(request.shorthost());
+  FilePayload reqFile = fs.file(localroot, request.path);
+  if (request.acceptsEncoding("deflate") && reqFile.hasEncodedVersion && !request.hasRange) {
+    info("will serve %s with deflate encoding", request.path);
+    reqFile.deflate = true;
+    response.customheader("Content-Encoding","deflate");
+  }
+  response.payload = new FileStream(reqFile);
+
+  if (request.hasRange) { response.serveRangeFile(request, reqFile); return; }
+
+  if (!reqFile.deflate) response.customheader("Accept-Ranges", "bytes");
+  if (request.ifModified >= response.payload.mtime()) {                                        // Non modified static content
+    trace("static file has not changed, sending notmodified");
+    response.notmodified(request, response.payload.mimetype);
+  }
+  response.ready = true;
+}
+
+// Serve a File Range from a static file on disc
+void serveRangeFile(ref Response response, in Request request, FilePayload reqFile) {
+  long[2] r = request.range();
+  long total = reqFile.fileSize();
+  long start = r[0];
+  long end = r[1] < 0 ? total - 1 : r[1];
+  if (start >= total || end >= total || start > end) {
+    response.payload = new Message(StatusCode.RangeNotSatisfiable, "");
+    response.customheader("Content-Range", format("bytes */%d", total));
+  } else {
+    response.customheader("Content-Range", format("bytes %d-%d/%d", start, end, total));
+    response.customheader("Accept-Ranges", "bytes");
+    response.rangeStart = start;
+    response.rangeEnd = end;
+    response.isRange = true;
+    response.payload = new FileStream(reqFile);
+    trace("serveRangeFile: serving %d bytes", end - start + 1);
+  }
+  response.ready = true;
 }
 
