@@ -3,7 +3,7 @@ module danode.payload;
 import danode.imports;
 import danode.statuscode : StatusCode;
 import danode.mimetypes : UNSUPPORTED_FILE;
-import danode.log : custom, info, warning, trace, cverbose, DEBUG;
+import danode.log : custom, info, warning, trace;
 
 enum PayloadType { Message, Script, File }
 enum HeaderType { None, FastCGI, HTTP10, HTTP11 }

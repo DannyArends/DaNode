@@ -117,7 +117,7 @@ final void parseMultipart(ref Request request, in FileSystem filesystem, const s
       string fname = extractQuoted(elem[0], "filename");
       custom(1, "MPART", "found on key %s file %s", key, fname);
       bool isarraykey = key.length > 2 && key[($-2) .. $] == "[]";
-      keys[key] = keys.has(key) ? keys[key] + 1 : 0;
+      keys[key] = keys.get(key, -1) + 1;
       custom(1, "MPART", "found on key %s #%d file %s", key, keys[key], fname);
       if (fname != "") {
         string fkey      = isarraykey ? key ~ to!string(keys[key]) : key;

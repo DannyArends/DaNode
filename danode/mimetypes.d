@@ -61,8 +61,8 @@ pure string mime(string i) {
     case ".bib", ".bibtex"  : return "application/x-bibtex";
     case ".doc", ".dot"  : return "application/msword";
     case ".rtf"  : return "application/rtf";
-    case ".docx" : return "applications/vnd.openxmlformats-officedocument.wordprocessingml.document";
-    case ".dotx" : return "applications/vnd.openxmlformats-officedocument.wordprocessingml.template";
+    case ".docx" : return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    case ".dotx" : return "application/vnd.openxmlformats-officedocument.wordprocessingml.template";
 
     case ".ppt"  : return "application/vnd.ms-powerpoint";
     case ".pptx" : return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
@@ -96,7 +96,7 @@ pure string mime(string i) {
     case ".pl"   : return CGI_FILE ~ "perl -X";
     case ".php"  : return CGI_FILE ~ "php -C";
     case ".fphp" : return CGI_FILE ~ "php-cgi -C";
-    case ".py"   : return CGI_FILE ~ "pyton";
+    case ".py"   : return CGI_FILE ~ "python";
     case ".r"    : return CGI_FILE ~ "Rscript --vanilla";
     case ".bf"   : return CGI_FILE ~ "bf";
     case ".ada"  : return CGI_FILE ~ "gnatmake";

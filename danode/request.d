@@ -160,7 +160,7 @@ struct Request {
   final @property bool track() const { return(  headers.from("DNT","0") == "0"); }
   final @property string cookies() const { return(headers.from("Cookie")); }
   final @property string useragent() const { return(headers.from("User-Agent", "Unknown")); }
-  final string shorthost() const { return( (host.indexOf("www.") >= 0)? host[4 .. $] : host ); }
+  final string shorthost() const { return host.startsWith("www.") ? host[4 .. $] : host; }
   final string[] command(string localpath) const {
     import std.path : dirName;
     string interp = localpath.interpreter();
