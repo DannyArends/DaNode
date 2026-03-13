@@ -69,7 +69,7 @@ version(SSL) {
 
     sslAssert(!(ctx is null));
     SSL_CTX_clear_options(ctx, SSL_OP_LEGACY_SERVER_CONNECT);
-    SSL_CTX_set_cipher_list(ctx, "HIGH:!ADH:!LOW:!EXP:!MD5:!RC4:!AES128:!CAMELLIA:!AES256-GCM-SHA384:@STRENGTH");
+    SSL_CTX_set_cipher_list(ctx, "HIGH:!ADH:!LOW:!EXP:!MD5:!RC4:!AES128:!CAMELLIA:@STRENGTH");
     sslAssert(SSL_CTX_use_certificate_file(ctx, cast(const char*) toStringz(certFile), SSL_FILETYPE_PEM) > 0);
     if (exists(chainFile) && isFile(chainFile)) {
       custom(1, "HTTPS", "loading certificate chain from file: %s", chainFile);
