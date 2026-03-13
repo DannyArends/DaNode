@@ -2,7 +2,7 @@ module danode.webconfig;
 
 import danode.imports;
 import danode.functions : has, from;
-import danode.payload : FilePayload;
+import danode.files : FilePayload;
 import danode.request : Request;
 import danode.log : trace;
 

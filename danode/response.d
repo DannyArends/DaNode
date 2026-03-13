@@ -9,7 +9,8 @@ import danode.statuscode : StatusCode;
 import danode.request : Request;
 import danode.router : Router;
 import danode.mimetypes : UNSUPPORTED_FILE;
-import danode.payload : Payload, FilePayload, PayloadType, HeaderType, Empty, Message;
+import danode.files : FileStream, FilePayload;
+import danode.payload : Payload, PayloadType, HeaderType, Empty, Message;
 import danode.log;
 import danode.webconfig;
 import danode.filesystem : FileSystem;
@@ -213,7 +214,7 @@ void serveStaticFile(ref Response response, in Request request, FileSystem fs) {
     reqFile.deflate = true;
     response.customheader("Content-Encoding","deflate");
   }
-  response.payload = reqFile;
+  response.payload = new FileStream(reqFile);
 
   if (request.hasRange) { response.serveRangeFile(request, reqFile); return; }
 
@@ -241,7 +242,7 @@ void serveRangeFile(ref Response response, in Request request, FilePayload reqFi
     response.rangeStart = start;
     response.rangeEnd = end;
     response.isRange = true;
-    response.payload = reqFile;
+    response.payload = new FileStream(reqFile);
     trace("serveRangeFile: serving %d bytes", end - start + 1);
   }
   response.ready = true;

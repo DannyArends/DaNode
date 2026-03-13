@@ -3,7 +3,8 @@ module danode.filesystem;
 import danode.imports;
 import danode.statuscode : StatusCode;
 import danode.mimetypes : mime;
-import danode.payload : Payload, FilePayload, PayloadType;
+import danode.payload : Payload, PayloadType;
+import danode.files : FilePayload;
 import danode.functions : has, isCGI;
 import danode.log : custom, info, Log, warning, trace, cverbose, NOTSET, NORMAL, DEBUG;
 
@@ -114,7 +115,8 @@ unittest {
   custom(0, "TEST", "localhost.buffersize() = %s", localhost.buffersize());
   custom(0, "TEST", "localhost.size() = %s", localhost.size());
   auto file = filesystem.file(filesystem.localroot("localhost"), "/dmd.d");
-  custom(0, "TEST", "file.asStream(0) = %s", file.asStream(0));
+  auto stream = new FileStream(file);
+  custom(0, "TEST", "FileStream.bytes(0) = %s", stream.bytes(0, 6));
   custom(0, "TEST", "file.statuscode() = %s", file.statuscode());
   custom(0, "TEST", "file.mimetype() = %s", file.mimetype());
   custom(0, "TEST", "file.mtime() = %s", file.mtime());

@@ -1,7 +1,7 @@
 module danode.serverconfig;
 
 import danode.imports;
-import danode.payload : FilePayload;
+import danode.files : FilePayload;
 import danode.log : custom;
 
 struct ServerConfig {
