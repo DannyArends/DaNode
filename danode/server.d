@@ -14,7 +14,8 @@ version(SSL) {
   import danode.https : HTTPS;
 }
 
-immutable int MAX_CLIENTS = 1000;
+immutable int MAX_CLIENTS = 2048;
+immutable int MAX_CLIENTS_PER_IP = 32;
 
 class Server : Thread {
   private:
@@ -89,6 +90,12 @@ class Server : Thread {
       }
     } }
 
+    final long nAliveFromIP(string ip) { synchronized {
+      long sum = 0;
+      foreach(Client client; clients){ if(client.running && client.ip == ip) sum++; }
+      return sum;
+    } }
+
     // Stop all clients and shutdown the server
     final void stop(){ synchronized {
       foreach(ref Client client; clients){ client.stop(); } terminated = true;
@@ -123,13 +130,21 @@ class Server : Thread {
           if ((select = set.sISelect(socket)) > 0 && nAlive() < MAX_CLIENTS) {
             custom(3, "SERVER", "accepting HTTP request");
             Client client = this.accept(socket);
-            if(client !is null) persistent.put(client);
+            if (client !is null) {
+              if(nAliveFromIP(client.ip) <= MAX_CLIENTS_PER_IP) {
+                persistent.put(client);
+              } else { warning("rate limit exceeded for %s", client.ip); client.stop(); }
+            }
           }
           version (SSL) {
             if ((select = set.sISelect(sslsocket)) > 0 && nAlive() < MAX_CLIENTS) {
               custom(3, "SERVER", "accepting HTTPs request");
               Client client = this.accept(sslsocket, true);
-              if(client !is null) persistent.put(client);
+              if(client !is null){
+                if(nAliveFromIP(client.ip) <= MAX_CLIENTS_PER_IP) {
+                  persistent.put(client);
+                } else { warning("rate limit exceeded for %s", client.ip); client.stop(); }
+              }
             }
           }
           foreach (Client client; previous) {   // Foreach through the Slice reference
