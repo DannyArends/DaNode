@@ -9,6 +9,14 @@ getGET <- function(){
   return(GET)
 }
 
+getSERVER <- function(){
+  keys <- c('REQUEST_URI', 'SCRIPT_FILENAME', 'SCRIPT_NAME', 'REMOTE_ADDR',
+            'REMOTE_PORT', 'SERVER_PROTOCOL', 'REQUEST_METHOD', 'QUERY_STRING',
+            'HTTPS', 'HTTP_HOST', 'SERVER_SOFTWARE', 'DOCUMENT_ROOT')
+  vals <- sapply(keys, Sys.getenv)
+  return(vals)
+}
+
 POST <- NULL; pnames <- NULL;
 SERVER <- NULL; snames <- NULL;
 f <- file("stdin")
@@ -34,6 +42,9 @@ while(length(line <- readLines(f,1)) > 0) {
 }
 names(POST) <- pnames
 names(SERVER) <- snames
+envSERVER <- getSERVER()
+envSERVER[names(SERVER)] <- SERVER
+SERVER <- envSERVER
 
 toS <- function(args){
   return(paste("['",paste(names(args),args,collapse="','",sep="':'"),"']",sep=""))

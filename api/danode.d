@@ -11,15 +11,9 @@ void setGET() {
 }
 
 void setSERVER() {
-  SERVER["REQUEST_URI"] = environment.get("REQUEST_URI", "");
-  SERVER["SCRIPT_FILENAME"]= environment.get("SCRIPT_FILENAME", "");
-  SERVER["SCRIPT_NAME"] = environment.get("SCRIPT_NAME", "");
-  SERVER["REMOTE_ADDR"] = environment.get("REMOTE_ADDR", "");
-  SERVER["REMOTE_PORT"] = environment.get("REMOTE_PORT", "");
-  SERVER["SERVER_PROTOCOL"]= environment.get("SERVER_PROTOCOL", "");
-  SERVER["REQUEST_METHOD"] = environment.get("REQUEST_METHOD", "");
-  SERVER["QUERY_STRING"] = environment.get("QUERY_STRING", "");
-  SERVER["HTTPS"] = environment.get("HTTPS", "");
+  foreach(key; ["REQUEST_URI", "SCRIPT_FILENAME", "SCRIPT_NAME", "REMOTE_ADDR",
+                "REMOTE_PORT", "SERVER_PROTOCOL", "REQUEST_METHOD", "QUERY_STRING",
+                "HTTPS", "HTTP_HOST"]) { SERVER[key] = environment.get(key, ""); }
 }
 
 void setCONFIG() {

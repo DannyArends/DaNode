@@ -12,6 +12,13 @@
     return($ret . ']');
   }
 
+  function setServer(){
+    $keys = ['REQUEST_URI', 'SCRIPT_FILENAME', 'SCRIPT_NAME', 'REMOTE_ADDR',
+             'REMOTE_PORT', 'SERVER_PROTOCOL', 'REQUEST_METHOD', 'QUERY_STRING',
+             'HTTPS', 'HTTP_HOST'];
+    foreach($keys as $key){ $_SERVER[$key] = getenv($key) ?: ''; }
+  }
+
   function readConfig(){
     $scriptfile = getenv('SCRIPT_FILENAME') ?: '';
     if($scriptfile == '') return [];
@@ -39,6 +46,7 @@
   $_COOKIE = Array();
   $_FILES = Array();
 
+  setServer();
   $_CONFIG = readConfig();
   $f = fopen( 'php://stdin', 'r' );
   stream_set_blocking($f, 0);
