@@ -11,6 +11,7 @@ public import std.array : appender, join;
 public import std.compiler : name, version_major, version_minor;
 public import std.conv : to;
 public import std.datetime : dur, msecs;
+public import std.process : environment;
 public import std.getopt : getopt;
 public import std.path : baseName, extension, absolutePath, buildNormalizedPath;
 public import std.process : pipe, executeShell, spawnProcess, tryWait, wait, kill;

@@ -167,7 +167,7 @@ struct Request {
   }
 
   final string[string] environ(string localpath) const {
-    string[string] env;
+    string[string] env = environment.toAA();
     env["REQUEST_METHOD"]  = to!string(method);
     env["QUERY_STRING"]    = query.length > 1 ? query[1 .. $] : "";
     env["REQUEST_URI"]     = uri;
