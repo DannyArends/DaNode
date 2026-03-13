@@ -43,16 +43,14 @@ class Router {
       if (!response.created) {
         request.initialize(driver, maxtime);
         response = request.create(this.address);
-      } else {
-        request.update(driver.body);
-      }
+      } else { request.update(driver.body); }
       return(true);
     }
 
     // Route a request based on the request header
     final void route(DriverInterface driver, ref Request request, ref Response response, long maxtime = 4500) {
-      if ( !response.routed && parse(driver, request, response, maxtime + 10)) {
-        if ( parsePost(request, response, filesystem) ) { deliver(request, response); }
+      if (!response.routed && parse(driver, request, response, maxtime)) {
+        if (request.parsePost(response, filesystem)) { deliver(request, response); }
       }
     }
 
@@ -87,30 +85,25 @@ class Router {
           trace("SSL redirect %s != %s for %s to fqdn: %s", request.isSecure, hasCert, request.host, fqdn);
           return(response.redirect(request, fqdn, hasCertificate(fqdn)));
         }
-      } else {
-        if (request.host != fqdn) { return(response.redirect(request, fqdn, false)); }
-      }
+      } else { if (request.host != fqdn) { return(response.redirect(request, fqdn, false)); } }
 
       if (pathExists) {
-        trace("allowcgi: %s", config.allowcgi);
-        trace("localpath %s exists", localpath);
+        trace("allowcgi: %s, localpath %s exists", config.allowcgi, localpath);
         if (pathIsCGI && config.allowcgi) {
           trace("localpath %s is a CGI file", localpath);
-          return response.serveCGI(request, config, filesystem);
+          return(response.serveCGI(request, config, filesystem));
         }
         if (pathIsFILE && !pathIsCGI && pathAllowed) {
           trace("localpath %s is a normal file", localpath);
-          return response.serveStaticFile(request, filesystem);
+          return(response.serveStaticFile(request, filesystem));
         }
         if (pathIsDIR && config.dirAllowed(localroot, localpath)) {
           trace("localpath %s is a directory [%s,%s]", localpath, config.redirectdir(), config.index());
-          if (config.redirectdir() && !finalrewrite)
-            return this.redirectDirectory(request, response);
-          if (config.redirect() && exists(localpath ~ "/" ~ config.index()) && !finalrewrite)
-            return this.redirectCanonical(request, response);
-          return response.serveDirectory(request, config, filesystem);
+          if (config.redirectdir() && !finalrewrite) { return(redirectDirectory(request, response)); }
+          if (config.redirect() && exists(localpath ~ "/" ~ config.index()) && !finalrewrite) { return(redirectCanonical(request, response)); }
+          return(response.serveDirectory(request, config, filesystem));
         }
-        return response.serveForbidden(request);
+        return(response.serveForbidden(request));
       }
 
       trace("redirect: %s %d", config.redirect, finalrewrite);
