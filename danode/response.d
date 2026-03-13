@@ -164,6 +164,20 @@ void domainNotFound(ref Response response, in Request request) {
   response.ready = true;
 }
 
+// serve a 413 payload too large page
+void setPayloadTooLarge(ref DriverInterface driver, ref Response response) {
+  response.payload = new Message(StatusCode.PayloadTooLarge, "413 - Payload Too Large\n");
+  response.ready = true;
+  driver.send(response, driver.socket);
+}
+
+// serve a 431 request header fields too large page
+void setHeaderTooLarge(ref DriverInterface driver, ref Response response) {
+  response.payload = new Message(StatusCode.HeaderFieldsTooLarge, "431 - Request Header Fields Too Large\n");
+  response.ready = true;
+  driver.send(response, driver.socket);
+}
+
 // serve a 408 connection timed out page
 void setTimedOut(ref DriverInterface driver, ref Response response) {
   if(response.payload && response.payload.type == PayloadType.Script){

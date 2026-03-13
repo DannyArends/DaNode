@@ -191,12 +191,8 @@ class Process : Thread {
 
         trace("removing process input file %s ? %s", inputfile, removeInput);
         if(removeInput) remove(inputfile);
-
-        this.completed = true;
-      } catch(Exception e) {
-        warning("process.d, exception: '%s'", e.msg);
-        this.completed = true;  // ADD THIS
-      }
+      } catch(Exception e) { warning("process.d, exception: '%s'", e.msg); }
+      this.completed = true;
     }
 }
 
