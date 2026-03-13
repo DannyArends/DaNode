@@ -1,8 +1,11 @@
 
 getGET <- function(){
-  entval     <- strsplit(commandArgs(TRUE),"=")
-  GET        <- unlist(lapply(entval,"[[",2))
-  names(GET) <- unlist(lapply(entval,"[[",1))
+  qs <- Sys.getenv("QUERY_STRING")
+  if(qs == "") return(setNames(character(0), character(0)))
+  params <- strsplit(qs, "&")[[1]]
+  entval <- strsplit(params, "=", fixed=TRUE)
+  GET        <- sapply(entval, function(x) if(length(x) > 1) URLdecode(x[2]) else "")
+  names(GET) <- sapply(entval, function(x) x[1])
   return(GET)
 }
 

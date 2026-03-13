@@ -2,6 +2,7 @@
   parse_str(getenv('QUERY_STRING') ?: '', $_GET);
 
   function toS($_array){
+    if(!is_array($_array)) return '[]';
     $size = count($_array);
     $ret = '[';
     foreach($_array as $i => $a){ 
@@ -11,22 +12,25 @@
     return($ret . ']');
   }
 
-  function readConfig($argv){
-    $config = [];
-    $idx = strpos(strrev($argv[0]),"/");
-    $idx = strlen($argv[0])-strlen("/")-$idx;
-    $configloc   = str_split($argv[0],$idx);
-    $configloc   = $configloc[0]."/web.config";
+  function readConfig(){
+    $scriptfile = isset($_SERVER['SCRIPT_FILENAME']) ? $_SERVER['SCRIPT_FILENAME'] : '';
+    echo "DEBUG scriptfile: " . $scriptfile . "<br>\n";
+    if($scriptfile == '') return [];
+    $configloc = substr($scriptfile, 0, strrpos($scriptfile, '/')) . '/web.config';
+    echo "DEBUG configloc: " . $configloc . "<br>\n";
+    echo "DEBUG exists: " . (file_exists($configloc) ? 'yes' : 'no') . "<br>\n";
     if(file_exists($configloc)){
-      $configcont  = explode("\n", file_get_contents($configloc));
+      $config = [];
+      $configcont = explode("\n", file_get_contents($configloc));
       foreach($configcont as $line){
-        if(substr($line,0,1) != '#' && chop($line) != ""){
+        if(substr($line, 0, 1) != '#' && chop($line) != ''){
           $marray = explode('=', $line);
           $config[chop($marray[0])] = strrev(chop(strrev(chop($marray[1]))));
         }
       }
+      return $config;
     }
-    return $config;
+    return [];
   }
 
   function move_upload_file($tmp, $to){
@@ -38,7 +42,7 @@
   $_COOKIE = Array();
   $_FILES = Array();
 
-  $_CONFIG = readConfig($argv);
+  $_CONFIG = readConfig();
   $f = fopen( 'php://stdin', 'r' );
   stream_set_blocking($f, 0);
 

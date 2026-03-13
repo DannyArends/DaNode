@@ -173,11 +173,12 @@ struct Request {
     env["REQUEST_URI"]     = uri;
     env["SCRIPT_FILENAME"] = localpath;
     env["SCRIPT_NAME"]     = path;
-    env["SERVER_PROTOCOL"] = to!string(protocol);
+    env["SERVER_PROTOCOL"] = cast(string)protocol;
     env["REMOTE_ADDR"]     = ip;
     env["REMOTE_PORT"]     = to!string(port);
     env["HTTP_HOST"]       = host;
     env["HTTPS"]           = isSecure ? "on" : "";
+    env["REDIRECT_STATUS"] = "200";
     foreach (k, v; headers) env["HTTP_" ~ k.toUpper().replace("-", "_")] = v;
     return env;
   }

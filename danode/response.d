@@ -78,7 +78,8 @@ struct Response {
         return(hdr.data); // The script can communicate
       }
       if (connection != "Close") {
-        custom(0, "WARN", "script '%s', failed (%s, %d)\n%s", script.command, script.headerType(), clength, scriptheader);
+        custom(1, "WARN", "script '%s', failed - headerType: %s, Content-Length: %d, connection: '%s', headerLength: %d, header: [%s]", 
+               script.command, script.headerType(), clength, connection, scriptheader.length, scriptheader);
       }else{
         custom(1, "INFO", "script '%s', header generation (%s, %d)", script.command, script.headerType(), clength);
       }

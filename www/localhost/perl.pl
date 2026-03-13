@@ -1,5 +1,6 @@
 #!perl -w
 use strict;
+use lib '.';
 use api::danode;
 
 print "HTTP/1.1 200 OK\n";
@@ -13,7 +14,7 @@ print "  <body>";
 print "  DaNode 'user defined' CGI (perl) test script<br>";
 print "    <form action='perl.pl' method='post' enctype='multipart/form-data'>";
 print "    <table>";
-print "     <tr><td><a href='perl.pl?test=GET'>GET</a>:</td><td> ".toS($_GET)."</td></tr>";
+print "     <tr><td><a href='perl.pl?test=GET&do'>GET</a>:</td><td> ".toS($_GET)."</td></tr>";
 print "     <tr><td>POST:</td><td>".toS($_POST)."</td></tr>";
 print "      <tr><td>Test:</td><td> <input name='test' type='text'></td></tr>";
 print "      <tr><td>File:</td><td> <input name='file' type='file'></td></tr>";

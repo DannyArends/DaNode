@@ -99,16 +99,12 @@ string[string] parseQueryString(const string query) {
 }
 
 void writeinfile(in string localpath, in string content) {
-  if (content.length > 0) { 
-    try {
-      auto fp = File(localpath, "wb");
-      fp.rawWrite(content);
-      fp.close();
-      trace("writeinfile: %d bytes to: %s", content.length, localpath);
-    } catch(Exception e) {
-      error("writeinfile: I/O exception '%s'", e.msg);
-    }
-  }
+  try {
+    auto fp = File(localpath, "wb");
+    fp.rawWrite(content);
+    fp.close();
+    trace("writeinfile: %d bytes to: %s", content.length, localpath);
+  } catch(Exception e) { error("writeinfile: I/O exception '%s'", e.msg); }
 }
 
 string htmltime(in SysTime d = Clock.currTime()) {

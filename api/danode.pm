@@ -9,9 +9,10 @@ our $_POST = getPOST();
 
 sub getGET{
   my $pref = {};
-  foreach my $p (@ARGV){
-    my @array = split(/=/,$p);
-    $pref->{$array[0]} = uri_unescape($array[1]);
+  my $qs = $ENV{QUERY_STRING} // '';
+  foreach my $p (split(/&/, $qs)){
+    my @array = split(/=/, $p, 2);
+    $pref->{$array[0]} = @array > 1 ? uri_unescape($array[1]) : '';
   }
   return $pref;
 }
