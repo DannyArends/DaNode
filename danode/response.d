@@ -42,23 +42,17 @@ struct Response {
 
   // Generate a HTTP header for the response
   @property final char[] header() {
-    if (hdr.data) {
-      return(hdr.data); // Header was constructed
-    }
-    // Scripts are allowed to have their own header
+    if (hdr.data) { return(hdr.data); /* Header was constructed */ }
+
+    // Scripts are allowed to have/send their own header
     if (payload.type == PayloadType.Script) {
       CGI script = to!CGI(payload);
       string scriptheader = script.fullHeader();
       auto status = script.statuscode();
-      /*custom(0, "DBG", "scriptheader length: %d", scriptheader.length);
-      custom(0, "DBG", "scriptheader: [%s]", scriptheader);
-      custom(0, "DBG", "status.code: %d", status.code);
-      custom(0, "DBG", "headerType: %s", script.headerType());
-      custom(0, "DBG", "endOfHeader: %d", script.endOfHeader()); */
       custom(1, "INFO", "script '%s', status (%s)", script.command, status);
       connection = script.getHeader("Connection", "No Request");
       long clength = script.getHeader("Content-Length", -1); // Is the content length provided ?
-      foreach (line; scriptheader.split("\n")) { 
+      foreach (line; scriptheader.split("\n")) {
         auto v = line.split(": ");
         if(v.length == 2) this.headers[v[0]] = chomp(v[1]);
       }

@@ -162,10 +162,9 @@ class Process : Thread {
         }
         fStdIn = File(inputfile, "r");
         pStdOut = pipe(); pStdErr = pipe();
-        custom(2, "PROC", "command: %s < %s", command, inputfile);
+        custom(1, "PROC", "command: %s < %s", command, inputfile);
         import std.process : Config;
         auto cpid = spawnProcess(command, fStdIn, pStdOut.writeEnd, pStdErr.writeEnd, environ, Config.none, environ.get("PWD", "."));
-        custom(2, "PROC", "environ: %s", environ);
 
         fStdOut = pStdOut.readEnd;
         if(!nonblocking(fStdOut) && fStdOut.isOpen()) custom(2, "WARN", "unable to create nonblocking stdout pipe for command");
@@ -189,7 +188,7 @@ class Process : Thread {
         this.readpipe(fStdOut, outbuffer);  // Non blocking slurp of stdout
         this.readpipe(fStdErr, errbuffer);  // Non blocking slurp of stderr
         trace("Output %d & %d processed after %s msecs", outbuffer.data.length, errbuffer.data.length, time());
-        if (errbuffer.data.length > 0) custom(0, "PROC", "stderr: %s", errbuffer.data);
+        if (errbuffer.data.length > 0) custom(1, "PROC", "stderr: %s", errbuffer.data);
 
         // Close the file handles
         fStdIn.close(); fStdOut.close(); fStdErr.close();
