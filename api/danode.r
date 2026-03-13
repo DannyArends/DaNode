@@ -14,7 +14,9 @@ getSERVER <- function(){
             'REMOTE_PORT', 'SERVER_PROTOCOL', 'REQUEST_METHOD', 'QUERY_STRING',
             'HTTPS', 'HTTP_HOST', 'SERVER_SOFTWARE', 'DOCUMENT_ROOT')
   vals <- sapply(keys, Sys.getenv)
-  return(vals)
+  httpkeys <- grep("^HTTP_", names(Sys.getenv()), value=TRUE)
+  httpvals <- sapply(httpkeys, Sys.getenv)
+  return(c(vals, httpvals))
 }
 
 POST <- NULL; pnames <- NULL;

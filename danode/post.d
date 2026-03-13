@@ -141,13 +141,6 @@ final void serverAPI(in FileSystem filesystem, in WebConfig config, in Request r
   Appender!(string) content;
   content.put(format("S=REDIRECT_STATUS=%d\n", response.payload.statuscode));
 
-  content.put(format("S=HTTP_USER_AGENT=%s\n", request.headers.from("User-Agent")));
-  content.put(format("S=HTTP_ACCEPT=%s\n", request.headers.from("Accept")));
-  content.put(format("S=HTTP_ACCEPT_LANGUAGE=%s\n", request.headers.from("Accept-Language")));
-  content.put(format("S=HTTP_ACCEPT_ENCODING=%s\n", request.headers.from("Accept-Encoding")));
-  content.put(format("S=HTTP_REFERER=%s\n", request.headers.from("HTTP_REFERER")));
-  content.put(format("S=HTTP_CONNECTION=%s\n", (response.keepalive)? "Keep-Alive" : "Close" ));
-
   // Give HTTP_COOKIES to CGI
   foreach (c; request.cookies.split("; ")) { content.put(format("C=%s\n", chomp(c)) ); }
   content.put(format("S=SERVER_SOFTWARE=%s\n", SERVERINFO));
@@ -167,7 +160,6 @@ final void serverAPI(in FileSystem filesystem, in WebConfig config, in Request r
   // Were the following invented / made up by me ? or mistaken/old ones ?
   content.put(format("S=REMOTE_PAGE=%s\n", request.page));
   content.put(format("S=REQUEST_DIR=%s\n", request.dir));
-  content.put(format("S=HTTP_ACCEPT_CHARSET=%s\n", request.headers.from("Accept-Charset")));
 
   // Write the post information we received
   foreach (p; request.postinfo) {

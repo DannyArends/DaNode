@@ -14,6 +14,7 @@ void setSERVER() {
   foreach(key; ["REQUEST_URI", "SCRIPT_FILENAME", "SCRIPT_NAME", "REMOTE_ADDR",
                 "REMOTE_PORT", "SERVER_PROTOCOL", "REQUEST_METHOD", "QUERY_STRING",
                 "HTTPS", "HTTP_HOST"]) { SERVER[key] = environment.get(key, ""); }
+  foreach(key, value; environment.toAA()) { if(key.startsWith("HTTP_")) SERVER[key] = value; }
 }
 
 void setCONFIG() {

@@ -18,6 +18,7 @@
              'REMOTE_PORT', 'SERVER_PROTOCOL', 'REQUEST_METHOD', 'QUERY_STRING',
              'HTTPS', 'HTTP_HOST'];
     foreach($keys as $key){ $_SERVER[$key] = getenv($key) ?: ''; }
+    foreach($_ENV as $key => $value){ if(strpos($key, 'HTTP_') === 0) $_SERVER[$key] = $value; }
   }
 
   function readConfig(){
