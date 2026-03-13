@@ -5,7 +5,6 @@ import danode.filesystem : FileSystem;
 import danode.interfaces : ClientInterface, DriverInterface;
 import danode.functions : interpreter, from, parseHtmlDate, parseQueryString;
 import danode.webconfig : WebConfig;
-import danode.http : HTTP;
 import danode.post : PostItem, PostType;
 import danode.log : custom, info, trace, warning;
 

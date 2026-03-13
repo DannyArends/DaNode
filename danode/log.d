@@ -22,12 +22,7 @@ void info(A...)(const string fmt, auto ref A args) { if(atomicLoad(cverbose) >= 
 
 /* Informational level of debug to stdout */
 void custom(A...)(const int lvl, const string pre, const string fmt, auto ref A args) {
-  if(atomicLoad(cverbose) >= lvl) {
-    string sep = " ";
-    size_t i = 1;
-    while(i < (7 - pre.length)) { sep ~= " "; i++; }
-    stdout.writefln("[" ~ pre ~ "]" ~ sep ~ fmt, args);
-  }
+  if(atomicLoad(cverbose) >= lvl) { stdout.writefln("[%s]%s" ~ fmt, pre, " ".replicate(max(1, 7 - pre.length)), args); }
 }
 
 /* Trace level debug to stdout */
@@ -110,14 +105,13 @@ class Log {
 
     // Log the responses to the request
     void logRequest(in ClientInterface cl, in Request rq, in Response rs) {
-      if (atomicLoad(cverbose) >= NOTSET) {
-        string uri;
-        try { uri = decodeComponent(rq.uri); } catch (Exception e) { uri = rq.uri; }
-        string s = format("[%d]    %s %s:%s %s%s %s %s", rs.statuscode, htmltime(), cl.ip, cl.port, rq.shorthost, uri, Msecs(rq.starttime), rs.isRange ? (rs.rangeEnd - rs.rangeStart + 1) : rs.payload.length);
-        RequestLogFp.writeln(s);
-        custom(-1, "REQ", s);
-        RequestLogFp.flush();
-      }
+      string uri;
+      try { uri = decodeComponent(rq.uri); } catch (Exception e) { uri = rq.uri; }
+      long bytes = rs.isRange ? (rs.rangeEnd - rs.rangeStart + 1) : rs.payload.length;
+      string s = format("[%d]    %s %s:%s %s%s %s %s", rs.statuscode, htmltime(), cl.ip, cl.port, rq.shorthost, uri, Msecs(rq.starttime), bytes);
+      RequestLogFp.writeln(s);
+      custom(-1, "REQ", s);
+      RequestLogFp.flush();
     }
 }
 
