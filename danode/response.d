@@ -3,11 +3,9 @@ module danode.response;
 import danode.imports;
 import danode.cgi : CGI;
 import danode.interfaces : DriverInterface, StringDriver;
-import danode.process : Process, WaitResult;
 import danode.functions : htmltime;
 import danode.statuscode : StatusCode;
 import danode.request : Request;
-import danode.router : Router;
 import danode.mimetypes : UNSUPPORTED_FILE;
 import danode.files : FileStream, FilePayload;
 import danode.payload : Payload, PayloadType, HeaderType, Empty, Message;
@@ -62,8 +60,8 @@ struct Response {
           hdr.put(format("%s %d %s\r\n", protocol, payload.statuscode, payload.statuscode.reason));
         }
         hdr.put(scriptheader);
-        if (!to!string(hdr.data).endsWith("\r\n\r\n")) hdr.put("\r\n");
-        if(clength == -1) connection = "Close";
+        if (!hdr.data.endsWith("\r\n\r\n")) hdr.put("\r\n");
+        if (clength == -1) connection = "Close";
         return(hdr.data);
       }
       if (connection != "No Request" && clength > -1) {
@@ -108,7 +106,7 @@ struct Response {
     if (isRange) return StatusCode.PartialContent;
     return payload.statuscode;
   }
-  @property final bool keepalive() const { return( toLower(connection) == "keep-alive"); }
+  @property final bool keepalive() const { return(icmp(connection, "keep-alive") == 0); }
   @property final long length() {
     if (isRange) return header.length + (rangeEnd - rangeStart + 1);
     return header.length + payload.length;
@@ -156,7 +154,7 @@ void notmodified(ref Response response, in Request request, in string mimetype =
 // serve a 404 domain not found page
 void domainNotFound(ref Response response, in Request request) {
   warning("requested domain '%s', was not found", request.shorthost());
-  response.payload = new Message(StatusCode.NotFound, format("404 - No such domain is available\n"));
+  response.payload = new Message(StatusCode.NotFound, "404 - No such domain is available\n");
   response.ready = true;
 }
 
@@ -180,7 +178,7 @@ void setTimedOut(ref DriverInterface driver, ref Response response) {
     CGI cgi = to!CGI(response.payload);
     cgi.notifyovertime();
   }
-  response.payload = new Message(StatusCode.TimedOut, format("408 - Connection Timed Out\n"));
+  response.payload = new Message(StatusCode.TimedOut, "408 - Connection Timed Out\n");
   response.ready = true;
   driver.send(response, driver.socket);           // Send the response, hit multiple times, send what you can and return
 }
@@ -255,21 +253,21 @@ void serveDirectory(ref Response response, ref Request request, in WebConfig con
 // serve a forbidden page
 void serveForbidden(ref Response response, in Request request) {
   trace("resource is restricted from being accessed");
-  response.payload = new Message(StatusCode.Forbidden, format("403 - Access to this resource has been restricted\n"));
+  response.payload = new Message(StatusCode.Forbidden, "403 - Access to this resource has been restricted\n");
   response.ready = true;
 }
 
 // serve a 400 bad request 
 void serveBadRequest(ref Response response, in Request request) {
   trace("Request was malformed");
-  response.payload = new Message(StatusCode.BadRequest, format("400 - Bad Request\n"));
+  response.payload = new Message(StatusCode.BadRequest, "400 - Bad Request\n");
   response.ready = true;
 }
 
 // serve a 404 not found page
 void notFound(ref Response response) {
   trace("resource not found");
-  response.payload = new Message(StatusCode.NotFound, format("404 - The requested path does not exists on disk\n"));
+  response.payload = new Message(StatusCode.NotFound, "404 - The requested path does not exists on disk\n");
   response.ready = true;
 }
 

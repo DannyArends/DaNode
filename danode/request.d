@@ -154,7 +154,7 @@ struct Request {
 
   // path component of uri (pre-rewrite, used for canonical redirects)
   final @property string uripath() const { ptrdiff_t i = uri.indexOf("?"); if(i > 0){ return(uri[0 .. i]); }else{ return(uri); } }
-  final @property bool keepalive() const { return( toLower(headers.from("Connection")) == "keep-alive"); }
+  final @property bool keepalive() const { return(icmp(headers.from("Connection"), "keep-alive") == 0); }
   final @property SysTime ifModified() const { return(parseHtmlDate(headers.from("If-Modified-Since"))); }
   final @property bool acceptsEncoding(string encoding = "deflate") const { return(headers.from("Accept-Encoding").canFind(encoding)); }
   final @property bool track() const { return(  headers.from("DNT","0") == "0"); }
