@@ -83,7 +83,7 @@ class Router {
         bool hasCert = hasCertificate(fqdn);
         if (request.isSecure != hasCert || request.host != fqdn) {
           trace("SSL redirect %s != %s for %s to fqdn: %s", request.isSecure, hasCert, request.host, fqdn);
-          return(response.redirect(request, fqdn, hasCertificate(fqdn)));
+          return(response.redirect(request, fqdn, hasCert));
         }
       } else { if (request.host != fqdn) { return(response.redirect(request, fqdn, false)); } }
 
