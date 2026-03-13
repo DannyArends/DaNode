@@ -76,11 +76,6 @@ string[string] parseQueryString(const string query) {
   return params;
 }
 
-@nogc pure bool has(T)(in T[] buffer, in T key) nothrow {
-  foreach(T i; buffer) { if(i == key) { return(true); } } 
-  return false;
-}
-
 @nogc pure T from(T,K)(in T[K] buffer, in K key, T def = T.init) nothrow {
   T* p = cast(T*)(key in buffer);
   if(p is null) return def;
@@ -102,24 +97,24 @@ string htmltime(in SysTime d = Clock.currTime()) {
 }
 
 bool isFILE(in string path) {
-  try { return isFile(path); }
+  try { return(isFile(path)); }
   catch(Exception e) { error("isFILE: I/O exception '%s'", e.msg); }
   return false;
 }
 
 bool isDIR(in string path) {
-  try { return isDir(path); }
+  try { return(isDir(path)); }
   catch(Exception e) { error("isDIR: I/O exception '%s'", e.msg); }
   return false;
 }
 
 bool isCGI(in string path) {
-  try { return isFile(path) && mime(path).indexOf(CGI_FILE) >= 0; }
+  try { return(isFile(path) && mime(path).indexOf(CGI_FILE) >= 0); }
   catch(Exception e) { error("isCGI: I/O exception '%s'", e.msg); }
   return false;
 }
 
-pure bool isAllowed(in string path) { if (mime(path) == UNSUPPORTED_FILE){ return false; } return true; }
+pure bool isAllowed(in string path) { return(mime(path) != UNSUPPORTED_FILE); }
 
 // Where does the HTTP request header end ?
 @nogc pure ptrdiff_t endofheader(T)(const(T) buffer) nothrow {
