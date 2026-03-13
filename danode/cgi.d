@@ -15,11 +15,9 @@ class CGI : Payload {
 
   public:
     string command;
-    string path;
 
     this(string[] command, string path, string[string] environ, bool removeInput = true, long maxtime = 4500){
       this.command = command.join(" ");
-      this.path = path;
       external = new Process(command, path, environ, removeInput, maxtime); 
       external.start();
     }

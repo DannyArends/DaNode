@@ -48,8 +48,6 @@ struct Request {
   RequestMethod method; /// requested HTTP method
   string uri = "/"; /// raw URI from the request line, never modified after parsing
   string url = "/"; /// working path used for routing, may be rewritten by canonical/directory redirects
-  string page; /// page is used when performing a canonical redirect
-  string dir; /// dir is used in directory redirection
   HTTPVersion protocol; /// protocol requested
   string[string] headers; /// Associative array holding the header values
   SysTime starttime; /// start time of the Request
@@ -191,10 +189,7 @@ struct Request {
 
   // Canonical redirect of the Request for a directory to the index page specified in the WebConfig
   final void redirectdir(in WebConfig config) {
-    if(config.redirectdir() && config.redirect){
-      this.dir = this.path()[1..$]; // We need to redirect, so save the path to this.dir
-      this.url = config.index;
-    }
+    if(config.redirectdir() && config.redirect) { this.url = config.index; }
   }
 
   // Clear all files uploaded by the user after the Request is done

@@ -20,7 +20,6 @@ immutable string SERVERINFO = "DaNode/0.0.3";
 struct Response {
   string            protocol = "HTTP/1.1";
   string            connection = "Close";
-  string            charset = "UTF-8";
   Address           address;
   long              maxage = 0;
   string[string]    headers;
@@ -29,7 +28,6 @@ struct Response {
   bool              havepost = false;
   bool              routed = false;
   bool              completed = false;
-  bool              cgiheader = false;
   Appender!(char[]) hdr;
   ptrdiff_t         index = 0;
   bool              isRange    = false;
@@ -91,8 +89,7 @@ struct Response {
         hdr.put(format("Cache-Control: max-age=%d, public\r\n", maxage));
       }
     }
-    hdr.put(format("Content-Type: %s\r\n", payload.mimetype)); // We just send our mime and an encoding
-    //hdr.put(format("Content-Type: %s; charset=%s\r\n", payload.mimetype, charset)); // We just send our mime and an encoding
+    hdr.put(format("Content-Type: %s\r\n", payload.mimetype)); // We just send our mime type
     hdr.put(format("Connection: %s\r\n\r\n", connection)); // Client can choose to keep-alive
     return(hdr.data);
   }

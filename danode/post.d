@@ -4,7 +4,7 @@ import danode.imports;
 import danode.cgi : CGI;
 import danode.client : MAX_REQUEST_SIZE;
 import danode.statuscode : StatusCode;
-import danode.request : Request;
+import danode.request : Request, RequestMethod;
 import danode.response : SERVERINFO, Response, redirect, create, notmodified;
 import danode.webconfig : WebConfig;
 import danode.payload : Message;
@@ -31,22 +31,17 @@ struct PostItem {
 // when the entire request body is not yet available. POST data supplied in Multipart 
 // and X-form post formats are currently supported
 final bool parsePost (ref Request request, ref Response response, in FileSystem filesystem) {
-  if (response.havepost || request.method != "POST") {
-    response.havepost = true;
-    return(true);
-  }
+  if (response.havepost || request.method != RequestMethod.POST) { return(response.havepost = true); }
+
   long expectedlength = to!long(from(request.headers, "Content-Length", "0"));
   string content = request.body;
   if (expectedlength == 0) {
     custom(2, "POST", "Content-Length was not specified or 0: real length: %s", content.length);
-    response.havepost = true;
-    return(true); // When we don't receive any post data it is meaningless to scan for any content
+    return(response.havepost = true); // When we don't receive any post data it is meaningless to scan for any content
   } else if (expectedlength > MAX_REQUEST_SIZE) {
     warning("Upload too large: %d bytes from %s", expectedlength, request.ip);
     response.payload = new Message(StatusCode.PayloadTooLarge, "413 - Payload Too Large\n");
-    response.ready = true;
-    response.havepost = true;
-    return(true);
+    return(response.ready = response.havepost = true);
   }
   custom(2, "POST", "received %s of %s", content.length, expectedlength);
   if(content.length < expectedlength) return(false);
@@ -156,10 +151,6 @@ final void serverAPI(in FileSystem filesystem, in WebConfig config, in Request r
   content.put(format("S=GATEWAY_INTERFACE=%s\n", "CGI/1.1"));
   content.put(format("S=PHP_SELF=%s\n", request.path));
   content.put(format("S=REQUEST_TIME=%s\n", request.starttime.toUnixTime));
-
-  // Were the following invented / made up by me ? or mistaken/old ones ?
-  content.put(format("S=REMOTE_PAGE=%s\n", request.page));
-  content.put(format("S=REQUEST_DIR=%s\n", request.dir));
 
   // Write the post information we received
   foreach (p; request.postinfo) {

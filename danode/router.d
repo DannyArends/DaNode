@@ -124,7 +124,6 @@ class Router {
     // Perform a canonical redirect of a non-existing page to the index script
     void redirectCanonical(ref Request request, ref Response response){
       trace("redirecting non-existing page (canonical url) to the index page");
-      request.page = request.uripath(); // Save the URL path
       request.url  = format("%s?%s", config.index, request.query);
       return deliver(request, response, true);
     }
