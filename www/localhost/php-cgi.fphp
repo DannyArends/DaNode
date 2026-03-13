@@ -14,8 +14,8 @@
   </head>
   <body>
     DaNode 'user defined' CGI (PHP) test script<br/>
-    Config: <small><?php echo var_dump($_CONFIG); ?></small><br>
-    Server: <small><?php echo var_dump($_SERVER); ?></small><br>
+    Config: <small><?php echo toS($_CONFIG); ?></small><br>
+    Server: <small><?php echo toS($_SERVER); ?></small><br>
     <form action='php-cgi.fphp' method='post' enctype='multipart/form-data'>
     <table>
       <tr><td><a href='php-cgi.fphp?test=GET&do'>Get</a>:</td><td><?php echo toS($_GET); ?> </td></tr>

@@ -2,7 +2,7 @@
   parse_str(getenv('QUERY_STRING') ?: '', $_GET);
 
   function toS($_array){
-    if(!is_array($_array)) return '[]';
+    if(!is_array($_array) || count($_array) == 0) return '[]';
     $size = count($_array);
     $ret = '[';
     foreach($_array as $i => $a){ 
@@ -13,12 +13,9 @@
   }
 
   function readConfig(){
-    $scriptfile = isset($_SERVER['SCRIPT_FILENAME']) ? $_SERVER['SCRIPT_FILENAME'] : '';
-    echo "DEBUG scriptfile: " . $scriptfile . "<br>\n";
+    $scriptfile = getenv('SCRIPT_FILENAME') ?: '';
     if($scriptfile == '') return [];
     $configloc = substr($scriptfile, 0, strrpos($scriptfile, '/')) . '/web.config';
-    echo "DEBUG configloc: " . $configloc . "<br>\n";
-    echo "DEBUG exists: " . (file_exists($configloc) ? 'yes' : 'no') . "<br>\n";
     if(file_exists($configloc)){
       $config = [];
       $configcont = explode("\n", file_get_contents($configloc));
