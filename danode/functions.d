@@ -77,9 +77,7 @@ string[string] parseQueryString(const string query) {
 }
 
 @nogc pure bool has(T)(in T[] buffer, in T key) nothrow {
-  foreach(T i; buffer) { 
-    if(i == key) return(true);
-  } 
+  foreach(T i; buffer) { if(i == key) { return(true); } } 
   return false;
 }
 
@@ -104,30 +102,24 @@ string htmltime(in SysTime d = Clock.currTime()) {
 }
 
 bool isFILE(in string path) {
-  try {
-    if (exists(path) && isFile(path)) return true;
-  } catch(Exception e) { error("isFILE: I/O exception '%s'", e.msg); }
+  try { return isFile(path); }
+  catch(Exception e) { error("isFILE: I/O exception '%s'", e.msg); }
   return false;
 }
 
 bool isDIR(in string path) {
-  try {
-    if (exists(path) && isDir(path)) return true;
-  } catch(Exception e) { error("isDIR: I/O exception '%s'", e.msg); }
+  try { return isDir(path); }
+  catch(Exception e) { error("isDIR: I/O exception '%s'", e.msg); }
   return false;
 }
 
 bool isCGI(in string path) {
-  try {
-    if (exists(path) && isFile(path) && mime(path).indexOf(CGI_FILE) >= 0) return true;
-  } catch(Exception e) { error("isCGI: I/O exception '%s'", e.msg); }
+  try { return isFile(path) && mime(path).indexOf(CGI_FILE) >= 0; }
+  catch(Exception e) { error("isCGI: I/O exception '%s'", e.msg); }
   return false;
 }
 
-pure bool isAllowed(in string path) {
-  if (mime(path) == UNSUPPORTED_FILE) return false;
-  return true;
-}
+pure bool isAllowed(in string path) { if (mime(path) == UNSUPPORTED_FILE){ return false; } return true; }
 
 // Where does the HTTP request header end ?
 @nogc pure ptrdiff_t endofheader(T)(const(T) buffer) nothrow {
