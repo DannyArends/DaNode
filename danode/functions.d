@@ -36,24 +36,22 @@ pure string htmlEscape(string s) {
 
 // Returns null if path escapes root
 string safePath(in string root, in string path) {
-    if (path.canFind("..")) return null;
-    if (path.canFind("\0")) return null;
-    string full = root ~ (path.startsWith("/") ? path : "/" ~ path);
-    try {
-        if (exists(full)) {
-            string resolved = buildNormalizedPath(absolutePath(full)).replace("\\", "/");
-            string absroot  = root.endsWith("/") ? root : root ~ "/";
-            if (resolved != absroot[0..$-1] && !resolved.startsWith(absroot)) return null;
-        }
-    } catch (Exception e) { return null; }
-    return full;
+  if (path.canFind("..")) return null;
+  if (path.canFind("\0")) return null;
+  string full = root ~ (path.startsWith("/") ? path : "/" ~ path);
+  try {
+    if (exists(full)) {
+      string resolved = buildNormalizedPath(absolutePath(full)).replace("\\", "/");
+      string absroot  = root.endsWith("/") ? root : root ~ "/";
+      if (resolved != absroot[0..$-1] && !resolved.startsWith(absroot)) return null;
+    }
+  } catch (Exception e) { return null; }
+  return full;
 }
 
 // Month to index of the year
-pure int monthToIndex(in string m) {
-  for (int x = 1; x <= 12; ++x) {
-    if(m.toLower() == months[x].toLower()) return x;
-  }
+@nogc pure int monthToIndex(in string m) nothrow {
+  for (int x = 1; x <= 12; ++x) { if(icmp(m, months[x]) == 0) return x; }
   return -1;
 }
 
