@@ -52,9 +52,7 @@ class Router {
     // Route a request based on the request header
     final void route(DriverInterface driver, ref Request request, ref Response response, long maxtime = 4500) {
       if ( !response.routed && parse(driver, request, response, maxtime + 10)) {
-        if ( parsePost(request, response, filesystem) ) { // We have stored all the post data, and can deliver a response
-          deliver(request, response);
-        }
+        if ( parsePost(request, response, filesystem) ) { deliver(request, response); }
       }
     }
 
