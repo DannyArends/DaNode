@@ -7,7 +7,6 @@ import danode.interfaces : DriverInterface;
 import danode.http : HTTP;
 import danode.router : Router;
 import danode.log;
-import danode.serverconfig : ServerConfig;
 
 version(SSL) {
   import danode.ssl : initSSL, closeSSL;
