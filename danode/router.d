@@ -60,69 +60,64 @@ class Router {
 
     // Deliver a response to the request
     final void deliver(ref Request request, ref Response response, bool finalrewrite = false) {
-      if (!request.isValid) return response.serveBadRequest(request);
+      if (!request.isValid) return(response.serveBadRequest(request));
 
       string localroot = filesystem.localroot(request.shorthost());
-
       trace("%s:%s %s client (%s)", request.ip, request.port, (finalrewrite? "redirecting" : "routing"), request.id);
       trace("shorthost -> localroot: %s -> %s", request.shorthost(), localroot);
-
-      if (request.shorthost() == "" || !exists(localroot)) // No domain requested, or we are not hosting it
-        return response.domainNotFound(request);
+      if (request.shorthost() == "" || !exists(localroot)) return(response.domainNotFound(request));
 
       config = WebConfig(filesystem.file(localroot, "/web.config"));
       string fqdn = config.domain(request.shorthost());
       string localpath = safePath(localroot, decodeComponent(request.path));
-      trace("safePath result: '%s', isFILE: %s, isAllowed: %s, isCGI: %s", localpath, localpath.isFILE(), localpath.isAllowed(), localpath.isCGI());
-      if (localpath is null) return response.serveForbidden(request);
+      if (localpath is null) return(response.serveForbidden(request));
+
+      bool pathExists  = localpath.exists();
+      bool pathIsCGI   = pathExists && localpath.isCGI();
+      bool pathIsFILE  = pathExists && localpath.isFILE();
+      bool pathIsDIR   = pathExists && localpath.isDIR();
+      bool pathAllowed = localpath.isAllowed();
+      trace("safePath result: '%s', isFILE: %s, isAllowed: %s, isCGI: %s", localpath, pathIsFILE, pathAllowed, pathIsCGI);
 
       trace("configfile at: %s%s", localroot, "/web.config");
       trace("request.host: %s, fqdn: %s", request.host, fqdn);
-      trace("localpath: %s, exists ? %s", localpath, localpath.exists());
+      trace("localpath: %s, exists ? %s", localpath, pathExists);
 
       version (SSL) {
-        // Check if teh security requested can be provided, by checking SSL status
-        // against a certificate availability, and/or fix the requested the wrong 
-        // shortdomain requested by the client (domain.com or www.domain.com)
-        if (request.isSecure != hasCertificate(fqdn) || request.host != fqdn) {
-          trace("SSL redirect %s != %s for %s to fqdn: %s", request.isSecure, hasCertificate(fqdn), request.host, fqdn);
-          return response.redirect(request, fqdn, hasCertificate(fqdn));
+        bool hasCert = hasCertificate(fqdn);
+        if (request.isSecure != hasCert || request.host != fqdn) {
+          trace("SSL redirect %s != %s for %s to fqdn: %s", request.isSecure, hasCert, request.host, fqdn);
+          return(response.redirect(request, fqdn, hasCertificate(fqdn)));
         }
-      } else {  
-        // No SSL, just check if the client requested the 'wrong' fully qualified 
-        // domain (domain.com or www.domain.com), and redirect them
-        if (request.host != fqdn) { return response.redirect(request, fqdn, false); }
+      } else {
+        if (request.host != fqdn) { return(response.redirect(request, fqdn, false)); }
       }
 
-      if (localpath.exists()) {
+      if (pathExists) {
         trace("allowcgi: %s", config.allowcgi);
         trace("localpath %s exists", localpath);
-        // A path that can be responded to has been detected, it is an existing resource
-        if (localpath.isCGI() && config.allowcgi) {
+        if (pathIsCGI && config.allowcgi) {
           trace("localpath %s is a CGI file", localpath);
-          return response.serveCGI(request, config, filesystem); // Serve CGI script
+          return response.serveCGI(request, config, filesystem);
         }
-        if (localpath.isFILE() && !localpath.isCGI() && localpath.isAllowed()) {
+        if (pathIsFILE && !pathIsCGI && pathAllowed) {
           trace("localpath %s is a normal file", localpath);
           return response.serveStaticFile(request, filesystem);
         }
-        if (localpath.isDIR() && config.dirAllowed(localroot, localpath)) {
+        if (pathIsDIR && config.dirAllowed(localroot, localpath)) {
           trace("localpath %s is a directory [%s,%s]", localpath, config.redirectdir(), config.index());
-          if (config.redirectdir() && !finalrewrite)  // Route this directory request to the index page
-            return this.redirectDirectory(request, response); // Redirect the directory
-
-          if (config.redirect() && exists(localpath ~ "/" ~ config.index()) && !finalrewrite)  // Route this directory request to the index page
-            return this.redirectCanonical(request, response); // Redirect the directory
-
+          if (config.redirectdir() && !finalrewrite)
+            return this.redirectDirectory(request, response);
+          if (config.redirect() && exists(localpath ~ "/" ~ config.index()) && !finalrewrite)
+            return this.redirectCanonical(request, response);
           return response.serveDirectory(request, config, filesystem);
         }
         return response.serveForbidden(request);
       }
+
       trace("redirect: %s %d", config.redirect, finalrewrite);
-      if(config.redirect && !finalrewrite) { // Route this request as canonical request the index page
-        return this.redirectCanonical(request, response);
-      }
-      return response.notFound();  // Request is not hosted on this server
+      if(config.redirect && !finalrewrite) { return(this.redirectCanonical(request, response)); }
+      return(response.notFound());  // Request is not hosted on this server
     }
 
     // Expose scan() by forwarding to filesystem.scan()
