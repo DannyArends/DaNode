@@ -140,28 +140,29 @@ pure bool isAllowed(in string path) {
 }
 
 // Where does the HTTP request header end ?
-pure ptrdiff_t endofheader(T)(const(T) buffer) {
-  auto str = to!string(buffer);
-  ptrdiff_t idx = str.indexOf("\r\n\r\n");
-  if(idx <= 0) idx = str.indexOf("\n\n");
-  return(idx);
+@nogc pure ptrdiff_t endofheader(T)(const(T) buffer) nothrow {
+  ptrdiff_t len = buffer.length;
+  for (ptrdiff_t i = 0; i < len - 3; i++) {
+    if (buffer[i] == '\r' && buffer[i+1] == '\n' && buffer[i+2] == '\r' && buffer[i+3] == '\n') return i;
+    if (buffer[i] == '\n' && buffer[i+1] == '\n') return i;
+  }
+  return -1;
 }
 
 // Where does the HTTP request body start ?
-pure ptrdiff_t bodystart(T)(const(T) buffer) {
-  auto str = to!string(buffer);
-  ptrdiff_t idx = str.indexOf("\r\n\r\n");
-  if (idx > 0) return (idx + 4);
-  idx = str.indexOf("\n\n");
-  if (idx > 0) return (idx + 2);
-  return(-1);
+@nogc pure ptrdiff_t bodystart(T)(const(T) buffer) nothrow {
+  ptrdiff_t len = buffer.length;
+  for (ptrdiff_t i = 0; i < len - 3; i++) {
+    if (buffer[i] == '\r' && buffer[i+1] == '\n' && buffer[i+2] == '\r' && buffer[i+3] == '\n') return i + 4;
+    if (buffer[i] == '\n' && buffer[i+1] == '\n') return i + 2;
+  }
+  return -1;
 }
 
 // get the HTTP header contained in the buffer
 pure string fullheader(T)(const(T) buffer) {
   auto i = bodystart(buffer);
-  if (i > 0 && i <= buffer.length)
-    return(to!string(buffer[0 .. i]));
+  if (i > 0 && i <= buffer.length) { return(to!string(buffer[0 .. i])); }
   return [];
 }
 
