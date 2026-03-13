@@ -162,8 +162,15 @@ struct Request {
   final @property string useragent() const { return(headers.from("User-Agent", "Unknown")); }
   final string shorthost() const { return( (host.indexOf("www.") >= 0)? host[4 .. $] : host ); }
   final string[] command(string localpath) const {
+    import std.path : dirName;
     string interp = localpath.interpreter();
-    return interp.length > 0 ? interp.split(" ") ~ localpath : [localpath];
+    if (interp.length == 0) return [localpath];
+    string[] cmd = interp.split(" ");
+    if (cmd[0] == "php-cgi") {
+      string daroot = dirName(dirName(dirName(localpath)));
+      cmd ~= ["-d", "include_path=.:" ~ daroot];
+    }
+    return cmd ~ localpath;
   }
 
   final string[string] environ(string localpath) const {

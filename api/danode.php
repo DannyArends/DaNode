@@ -35,6 +35,7 @@
   }
 
   $_REQUEST = $_GET;
+  $_SERVER = Array();
   $_COOKIE = Array();
   $_FILES = Array();
 
