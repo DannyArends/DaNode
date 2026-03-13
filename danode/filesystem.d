@@ -4,7 +4,7 @@ import danode.imports;
 import danode.statuscode : StatusCode;
 import danode.mimetypes : mime;
 import danode.payload : Payload, PayloadType;
-import danode.files : FilePayload;
+import danode.files : FilePayload, FileStream;
 import danode.functions : has, isCGI;
 import danode.log : custom, info, Log, warning, trace, cverbose, NOTSET, NORMAL, DEBUG;
 
