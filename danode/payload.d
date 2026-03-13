@@ -153,7 +153,7 @@ class FilePayload : Payload {
       //custom(1, "STREAM", "asStream: from=%d sz=%d fileSize=%d", from, maxsize, fileSize());
       char[] tmpbuf = new char[](maxsize);
       char[] slice = [];
-      if (cverbose >= DEBUG && from == 0) write("[STREAM] .");
+      if (atomicLoad(cverbose) >= DEBUG && from == 0) write("[STREAM] .");
       if (from >= fileSize()) {
         trace("from >= filesize, are we still trying to send?");
         return([]);
@@ -165,8 +165,8 @@ class FilePayload : Payload {
           fp.seek(from);
           slice = fp.rawRead!char(tmpbuf);
           fp.close();
-          if (cverbose >= DEBUG) write(".");
-          if (cverbose >= DEBUG && (from + slice.length) >= fileSize()) write("\n");
+          if (atomicLoad(cverbose) >= DEBUG) write(".");
+          if (atomicLoad(cverbose) >= DEBUG && (from + slice.length) >= fileSize()) write("\n");
         }
       } catch(Exception e) { 
         warning("exception %s while streaming file: %s", e.msg, path);
