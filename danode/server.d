@@ -162,10 +162,18 @@ class Server : Thread {
           clients = persistent.data;
           if (Msecs(lastScan) > 86_400_000) {   // Scan for deleted files & expiring certificates every day
             router.scan();
-            version(SSL) { new Thread({ checkAndRenew(certDir, keyFile, accountKey); }).start(); }
+            version(SSL) { 
+              new Thread({
+                try { checkAndRenew(certDir, keyFile, accountKey); }
+                catch (Exception e) { error("ACME: checkAndRenew exception: %s", e.msg); }
+                catch (Error e) { error("ACME: checkAndRenew error: %s", e.msg); }
+              }).start();
+            }
             lastScan = Clock.currTime();
           }
         } catch(Exception e) {
+          error("Unspecified top level server exception: %s", e.msg);
+        } catch(Error e) {
           error("Unspecified top level server error: %s", e.msg);
         }
       }
@@ -214,7 +222,11 @@ void main(string[] args) {
 
     auto server = new Server(port, backlog, wwwRoot, certDir, keyFile, accountKey, verbose);
     version (SSL) {
-      new Thread({ checkAndRenew(certDir, keyFile, accountKey); }).start();
+      new Thread({
+        try { checkAndRenew(certDir, keyFile, accountKey); }
+        catch (Exception e) { error("ACME: checkAndRenew exception: %s", e.msg); }
+        catch (Error e) { error("ACME: checkAndRenew error: %s", e.msg); }
+      }).start();
       server.initSSL();  // Load SSL certificates, using the server key
     }
     server.start();
