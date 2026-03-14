@@ -176,7 +176,7 @@ struct Request {
     string[string] env = environment.toAA();
     env["REQUEST_METHOD"] = to!string(method);
     env["QUERY_STRING"] = query.length > 1 ? query[1 .. $] : "";
-    env["REQUEST_URI"] = uripath;
+    env["REQUEST_URI"] = decodeComponent(uripath);
     env["SCRIPT_FILENAME"] = localpath;
     env["SCRIPT_NAME"] = path;
     env["SERVER_PROTOCOL"] = cast(string)protocol;
