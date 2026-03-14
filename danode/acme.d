@@ -53,14 +53,19 @@ version(SSL) {
     string orderURL;
     JSONValue order = newOrder(dir, pkey, kid, domain, orderURL);
     info("ACME: order: %s, orderURL: %s", order.toString(), orderURL);
-    JSONValue challenge = getHTTP01Challenge(order, dir, pkey, kid);
-    if (challenge.type == JSONType.null_) return false;
+    string[] tokens;
+    foreach (authURL; order["authorizations"].array) {
+      JSONValue challenge = getHTTP01Challenge(authURL.str, dir, pkey, kid);
+      if (challenge.type == JSONType.null_) return false;
+      tokens ~= prepareChallenge(challenge, pkey);
+      triggerChallenge(challenge, dir, pkey, kid);
+    }
 
-    string token = prepareChallenge(challenge, pkey);
-    triggerChallenge(challenge, dir, pkey, kid);
-
-    if (!pollAuthorization(order, dir, pkey, kid)) { synchronized(getAcmeMutex()) { acmeChallenges.remove(token); } return false; }
-    synchronized(getAcmeMutex()) { acmeChallenges.remove(token); }
+    if (!pollAllAuthorizations(order, dir, pkey, kid)) {
+      foreach (t; tokens) synchronized(getAcmeMutex()) { acmeChallenges.remove(t); }
+      return false;
+    }
+    foreach (t; tokens) synchronized(getAcmeMutex()) { acmeChallenges.remove(t); }
 
     JSONValue finalized = finalizeOrder(order, dir, pkey, kid, csrPath);
     info("ACME: order status: %s, finalized: %s", finalized["status"].str, finalized.toString());
@@ -161,16 +166,18 @@ version(SSL) {
   }
 
   // Poll authorization URL until valid or invalid
-  bool pollAuthorization(JSONValue order, JSONValue dir, EVP_PKEY* pkey, string kid) {
-    string authURL = order["authorizations"][0].str;
+  bool pollAllAuthorizations(JSONValue order, JSONValue dir, EVP_PKEY* pkey, string kid) {
     foreach (i; 0 .. 10) {
       Thread.sleep(dur!"seconds"(2));
-      JSONValue auth = acmePost(pkey, dir, authURL, kid, "");
-
-      string status = auth["status"].str;
-      info("ACME: authorization status: %s", status);
-      if (status == "valid")   return true;
-      if (status == "invalid") { error("ACME: authorization failed"); return false; }
+      bool allValid = true;
+      foreach (authURL; order["authorizations"].array) {
+        JSONValue auth = acmePost(pkey, dir, authURL.str, kid, "");
+        string status = auth["status"].str;
+        info("ACME: authorization status for %s: %s", authURL.str, status);
+        if (status == "invalid") { error("ACME: authorization failed"); return false; }
+        if (status != "valid") allValid = false;
+      }
+      if (allValid) return true;
     }
     error("ACME: authorization timed out");
     return false;
@@ -182,9 +189,8 @@ version(SSL) {
   }
 
   // Fetch challenge URL and token for HTTP-01 from an order
-  JSONValue getHTTP01Challenge(JSONValue order, JSONValue dir, EVP_PKEY* pkey, string kid) {
-    JSONValue auth = acmePost(pkey, dir, order["authorizations"][0].str, kid, "");
-
+  JSONValue getHTTP01Challenge(string authURL, JSONValue dir, EVP_PKEY* pkey, string kid) {
+    JSONValue auth = acmePost(pkey, dir, authURL, kid, "");
     foreach (challenge; auth["challenges"].array) { if (challenge["type"].str == "http-01") return challenge; }
     error("ACME: no HTTP-01 challenge found");
     return JSONValue.init;
