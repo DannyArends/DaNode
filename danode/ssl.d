@@ -146,7 +146,8 @@ version(SSL) {
         if (hostname.length < 255) {
           string chainFile = d.name;
           info("reloading certificate at: '%s'", chainFile);
-          localContexts ~= loadContext(chainFile, hostname, keyFile);
+          auto lc = loadContext(chainFile, hostname, keyFile);
+          if (lc.context !is null) localContexts ~= lc;
         }
       }
     }
