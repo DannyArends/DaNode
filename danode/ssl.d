@@ -50,7 +50,7 @@ version(SSL) {
   }
 
   // Create a new SSL context pointer using a certificate, chain and privateKey file
-  SSL_CTX* createCTX(string certFile, string keyFile, string chainFile) {
+  SSL_CTX* createCTX(string chainFile, string keyFile) {
     SSL_CTX* ctx = SSL_CTX_new(TLS_server_method());
     sslAssert(!(ctx is null));
 
@@ -64,8 +64,7 @@ version(SSL) {
       custom(1, "HTTPS", "loading certificate+chain from file: %s", chainFile);
       sslAssert(SSL_CTX_use_certificate_chain_file(ctx, cast(const char*) toStringz(chainFile)) > 0);
     } else {
-      custom(1, "HTTPS", "loading certificate from file: %s", certFile);
-      sslAssert(SSL_CTX_use_certificate_file(ctx, cast(const char*) toStringz(certFile), 1) > 0);
+      custom(1, "WARN", "No chain file for %s", chainFile);
     }
     sslAssert(SSL_CTX_use_PrivateKey_file(ctx, cast(const char*) toStringz(keyFile), 1) > 0);
     sslAssert(SSL_CTX_check_private_key(ctx) > 0);
@@ -115,12 +114,12 @@ version(SSL) {
     return(err);
   }
 
-  // loads an SSL context for hostname from the .crt file at path;
-  SSLcontext loadContext(string path, string hostname, string keyFile, string chainFile) {
+  // loads an SSL context for hostname from the .chain file at path;
+  SSLcontext loadContext(string chainFile, string hostname, string keyFile) {
     SSLcontext ctx;
     for(size_t x = 0; x < hostname.length; x++) { ctx.hostname[x] = hostname[x]; }
     ctx.hostname[hostname.length] = '\0';
-    ctx.context = createCTX(path, keyFile, chainFile);
+    ctx.context = createCTX(chainFile, keyFile);
     custom(1, "HTTPS", "context created for certificate: %s", to!string(ctx.hostname.ptr));
     SSL_CTX_callback_ctrl(ctx.context,SSL_CTRL_SET_TLSEXT_SERVERNAME_CB, cast(ExternC!(void function())) &switchContext);
     return(ctx);
@@ -144,9 +143,8 @@ version(SSL) {
         string hostname = baseName(d.name, ".chain");
         if (hostname.length < 255) {
           string chainFile = d.name;
-          string certFile  = certDir ~ hostname ~ ".crt"; // fallback if no chain
           info("reloading certificate at: '%s'", chainFile);
-          localContexts ~= loadContext(certFile, hostname, keyFile, chainFile);
+          localContexts ~= loadContext(chainFile, hostname, keyFile);
         }
       }
     }
