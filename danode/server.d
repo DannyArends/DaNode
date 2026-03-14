@@ -162,7 +162,7 @@ class Server : Thread {
           clients = persistent.data;
           if (Msecs(lastScan) > 86_400_000) {   // Scan for deleted files & expiring certificates every day
             router.scan();
-            version(SSL) { checkAndRenew(certDir, keyFile, accountKey, true); }
+            version(SSL) { new Thread({ checkAndRenew(certDir, keyFile, accountKey, staging); }).start(); }
             lastScan = Clock.currTime();
           }
         } catch(Exception e) {
@@ -214,7 +214,7 @@ void main(string[] args) {
 
     auto server = new Server(port, backlog, wwwRoot, certDir, keyFile, accountKey, verbose);
     version (SSL) {
-      checkAndRenew(certDir, keyFile, accountKey, true);
+      new Thread({ checkAndRenew(certDir, keyFile, accountKey, staging); }).start();
       server.initSSL();  // Load SSL certificates, using the server key
     }
     server.start();

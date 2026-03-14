@@ -81,14 +81,8 @@ version(SSL) {
       string domain = baseName(d.name, ".csr");
       string chainPath = certDir ~ domain ~ ".chain";
 
-      auto _certDir = certDir; auto _keyFile = keyFile; auto _domain = domain;
-      auto _csr = d.name; auto _chain = chainPath; auto _key = accountKey; auto _staging = staging;
       if (!exists(chainPath)) { info("ACME: no chain found for %s, bootstrapping", domain);
-        new Thread({
-          if (renewCert(_domain, "Danny.Arends@gmail.com", _csr, _chain, _key, _staging)) {
-            reloadSSL(_certDir, _keyFile);
-          }
-        }).start();
+        if (renewCert(_domain, "Danny.Arends@gmail.com", _csr, _chain, _key, _staging)) { reloadSSL(_certDir, _keyFile); }
         continue;
       }
 
@@ -104,11 +98,7 @@ version(SSL) {
 
       info("ACME: chain %s expires in %d days", domain, days);
       if (days < 30) { info("ACME: renewing chain for %s", domain);
-        new Thread({
-          if (renewCert(_domain, "Danny.Arends@gmail.com", _csr, _chain, _key, _staging)) {
-            reloadSSL(_certDir, _keyFile);
-          }
-        }).start();
+        if (renewCert(_domain, "Danny.Arends@gmail.com", _csr, _chain, _key, _staging)) { reloadSSL(_certDir, _keyFile); }
       }
     }
   }
