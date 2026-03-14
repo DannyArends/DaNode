@@ -4,6 +4,7 @@ www/rotationz.nl
 www/rotationz.test
 www/grassland.test
 www/localhost/ddoc
+bin/
 server
 *.exe
 *.pdb

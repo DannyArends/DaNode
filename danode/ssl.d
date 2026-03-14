@@ -3,8 +3,7 @@ module danode.ssl;
 import danode.log : custom, warning, info;
 
 version(SSL) {
-  import deimos.openssl.ssl;
-  import deimos.openssl.err;
+  import danode.includes;
 
   import danode.imports;
   import danode.client;
@@ -64,18 +63,16 @@ version(SSL) {
 
   // Create a new SSL context pointer using a certificate, chain and privateKey file
   SSL_CTX* createCTX(string certFile, string keyFile, string chainFile) {
-    SSL_CTX* ctx = SSL_CTX_new(TLSv1_2_server_method());
-    //SSL_CTX* ctx = SSL_CTX_new(SSLv3_server_method());
-
+    SSL_CTX* ctx = SSL_CTX_new(TLS_server_method());
     sslAssert(!(ctx is null));
-    SSL_CTX_clear_options(ctx, SSL_OP_LEGACY_SERVER_CONNECT);
+
     SSL_CTX_set_cipher_list(ctx, "HIGH:!ADH:!LOW:!EXP:!MD5:!RC4:!AES128:!CAMELLIA:@STRENGTH");
-    sslAssert(SSL_CTX_use_certificate_file(ctx, cast(const char*) toStringz(certFile), SSL_FILETYPE_PEM) > 0);
+    sslAssert(SSL_CTX_use_certificate_file(ctx, cast(const char*) toStringz(certFile), 1) > 0);
     if (exists(chainFile) && isFile(chainFile)) {
       custom(1, "HTTPS", "loading certificate chain from file: %s", chainFile);
       sslAssert(SSL_CTX_use_certificate_chain_file(ctx, cast(const char*) toStringz(chainFile)) > 0);
     } else { info("chain not loaded: %s", chainFile); }
-    sslAssert(SSL_CTX_use_PrivateKey_file(ctx, cast(const char*) toStringz(keyFile), SSL_FILETYPE_PEM) > 0);
+    sslAssert(SSL_CTX_use_PrivateKey_file(ctx, cast(const char*) toStringz(keyFile), 1) > 0);
     sslAssert(SSL_CTX_check_private_key(ctx) > 0);
     return ctx;
   }
@@ -173,7 +170,7 @@ version(SSL) {
   }
 
   void sslAssert(bool ret) { 
-    if (!ret) { ERR_print_errors_fp(stderr.getFP()); throw new Exception("SSL_ERROR"); }
+    if (!ret) { ERR_print_errors_fp(null); throw new Exception("SSL_ERROR"); }
   }
 
   unittest {

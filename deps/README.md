@@ -1,5 +1,10 @@
 Build OpenSSL for Windows (or linux)
 ------------------------------------
+Clone the repository, or update submodules
+```bash
+git clone --recursive https://github.com/DannyArends/DaNode.git
+git submodule update --init --recursive
+```
 
 ##### Windows
 Download the requirements:
@@ -7,7 +12,7 @@ Download the requirements:
 - [NASM](https://www.nasm.us/)
 
 Compile OpenSSL:
-```
+```cmd
 call "C:/Program Files (x86)/Microsoft Visual Studio/2019/BuildTools/VC/Auxiliary/Build/vcvars64.bat" 
 cd deps/openssl
 perl Configure VC-WIN64A

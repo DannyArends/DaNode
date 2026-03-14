@@ -1,8 +1,7 @@
 module danode.https;
 
 version(SSL) {
-  import deimos.openssl.ssl;
-  import deimos.openssl.err;
+  import danode.includes;
 
   import danode.imports;
   import danode.functions : Msecs;
