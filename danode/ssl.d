@@ -140,12 +140,13 @@ version(SSL) {
 
     SSLcontext[] localContexts;
     foreach (DirEntry d; dirEntries(certDir, SpanMode.shallow)) {
-      if (d.name.endsWith(".crt")) {
-        string hostname = baseName(d.name, ".crt");
+      if (d.name.endsWith(".chain")) {
+        string hostname = baseName(d.name, ".chain");
         if (hostname.length < 255) {
-          string chainFile = certDir ~ baseName(d.name, ".crt") ~ ".chain";
-          info("reloading certificate at: '%s', chain from: '%s'", d.name, chainFile);
-          localContexts ~= loadContext(d.name, hostname, keyFile, chainFile);
+          string chainFile = d.name;
+          string certFile  = certDir ~ hostname ~ ".crt"; // fallback if no chain
+          info("reloading certificate at: '%s'", chainFile);
+          localContexts ~= loadContext(certFile, hostname, keyFile, chainFile);
         }
       }
     }
