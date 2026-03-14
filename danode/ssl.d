@@ -65,6 +65,7 @@ version(SSL) {
       sslAssert(SSL_CTX_use_certificate_chain_file(ctx, cast(const char*) toStringz(chainFile)) > 0);
     } else {
       custom(1, "WARN", "No chain file for %s", chainFile);
+      return(null);
     }
     sslAssert(SSL_CTX_use_PrivateKey_file(ctx, cast(const char*) toStringz(keyFile), 1) > 0);
     sslAssert(SSL_CTX_check_private_key(ctx) > 0);
@@ -125,7 +126,7 @@ version(SSL) {
     return(ctx);
   }
 
-  // loads all crt files in the certDir, using keyfile: server.key
+  // loads all chain files in the server.certDir, using server.keyFile
   void initSSL(Server server, VERSION v = SSL23) {
     custom(0, "HTTPS", "loading Deimos.openSSL, certDir: %s, keyFile: %s, SSL:%s", server.certDir, server.keyFile, v);
     reloadSSL(server.certDir, server.keyFile);
