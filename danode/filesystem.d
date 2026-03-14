@@ -54,7 +54,7 @@ class FileSystem {
         if (f.isFile()) {
           string shortname = replace(f.name[dname.length .. $], "\\", "/");
           if (shortname.endsWith(".in") || shortname.endsWith(".up")) continue;
-          custom(1, "SCAN", "file: %s -> %s", f.name, shortname);
+          custom(2, "SCAN", "file: %s -> %s", f.name, shortname);
           if (!domain.files.has(shortname)) {
             domain.files[shortname] = new FilePayload(f.name, maxsize);
             domain.entries++;
@@ -91,7 +91,7 @@ class FileSystem {
         if (domains[localroot].files[path].needsupdate) domains[localroot].files[path].buffer();
         return(domains[localroot].files[path]);
       }
-      custom(1, "SCAN", "should not be here not in index, but exists %s, %s", path, localroot);
+      custom(0, "SCAN", "should not be here not in index, but exists %s, %s", path, localroot);
       return new FilePayload("", maxsize);
     } }
 

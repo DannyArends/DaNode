@@ -5,7 +5,8 @@ import danode.client : Client;
 import danode.interfaces : ClientInterface, DriverInterface, StringDriver;
 import danode.statuscode : StatusCode;
 import danode.request : Request;
-import danode.response : Response, create, serveBadRequest, domainNotFound, serveForbidden, redirect, serveCGI, serveDirectory, notFound;
+import danode.response : Response, Message, create, serveBadRequest, domainNotFound, serveForbidden, redirect, serveCGI, serveDirectory, notFound;
+import danode.payload : Message;
 import danode.files : serveStaticFile;
 import danode.webconfig : WebConfig;
 import danode.functions : from, has, isCGI, isFILE, isDIR, isAllowed, safePath;
@@ -63,6 +64,8 @@ class Router {
       trace("shorthost -> localroot: %s -> %s", request.shorthost(), localroot);
       if (request.shorthost() == "" || !exists(localroot)) return(response.domainNotFound(request));
 
+      version(SSL) { if (serveACMEChallenge(request, response)) return; }
+
       config = WebConfig(filesystem.file(localroot, "/web.config"));
       string fqdn = config.domain(request.shorthost());
       string localpath = safePath(localroot, decodeComponent(request.path));
@@ -109,6 +112,26 @@ class Router {
       trace("redirect: %s %d", config.redirect, finalrewrite);
       if(config.redirect && !finalrewrite) { return(this.redirectCanonical(request, response)); }
       return(response.notFound());  // Request is not hosted on this server
+    }
+
+    version(SSL) {
+      import danode.acme : acmeChallenges, getAcmeMutex;
+
+      bool serveACMEChallenge(ref Request request, ref Response response) {
+        if (!request.isSecure && request.path.startsWith("/.well-known/acme-challenge/")) {
+          info("Router: serveACMEChallenge path: %s", request.path);
+          string token = baseName(request.path);
+          string keyAuth;
+          synchronized(getAcmeMutex()) {
+            if (token in acmeChallenges) keyAuth = acmeChallenges[token];
+          }
+          if (keyAuth.length) {
+            response.payload = new Message(StatusCode.Ok, keyAuth, "text/plain");
+            return(response.ready = true);
+          }
+        }
+        return(false);
+      }
     }
 
     // Expose scan() by forwarding to filesystem.scan()

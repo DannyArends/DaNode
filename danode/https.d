@@ -1,8 +1,7 @@
 module danode.https;
 
 version(SSL) {
-  import deimos.openssl.ssl;
-  import deimos.openssl.err;
+  import danode.includes;
 
   import danode.imports;
   import danode.functions : Msecs;
@@ -72,7 +71,7 @@ version(SSL) {
 
             bool handshaked = performHandshake();
             if (!handshaked) {
-              error("couldn't handshake SSL connection");
+              custom(2, "ERROR", "couldn't handshake SSL connection");
               return(false);
             }
           } catch (Exception e) {
@@ -100,6 +99,7 @@ version(SSL) {
           try {
             if (socket.isAlive()) {
               if (ssl) {
+                SSL_shutdown(ssl);
                 SSL_shutdown(ssl);
               } else {
                 error("No SSL object to close, are certificates available?");

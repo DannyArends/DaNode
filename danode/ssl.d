@@ -3,25 +3,12 @@ module danode.ssl;
 import danode.log : custom, warning, info;
 
 version(SSL) {
-  import deimos.openssl.ssl;
-  import deimos.openssl.err;
+  import danode.includes;
 
   import danode.imports;
   import danode.client;
   import danode.server : Server;
   import danode.response : Response;
-
-  static if (OPENSSL_VERSION_NUMBER < 0x10100000L) {
-      // OpenSSL 1.0.x - real functions exist, nothing to shim
-  } else {
-    //--- Add shims for OpenSSL 1.1, from: https://github.com/CyberShadow/ae
-    alias SSLv3_server_method = TLSv1_server_method;
-    struct OPENSSL_INIT_SETTINGS;
-    extern(C) void OPENSSL_init_ssl(ulong opts, const OPENSSL_INIT_SETTINGS *settings) nothrow;
-    void SSL_library_init() { OPENSSL_init_ssl(0, null); }
-    void OpenSSL_add_all_algorithms() { SSL_library_init(); }
-    void SSL_load_error_strings() {}
-  }
 
   // SSL context structure, stored relation between hostname 
   // and the SSL context, should be allocated only once available to C, and deallocated at exit
@@ -63,19 +50,24 @@ version(SSL) {
   }
 
   // Create a new SSL context pointer using a certificate, chain and privateKey file
-  SSL_CTX* createCTX(string certFile, string keyFile, string chainFile) {
-    SSL_CTX* ctx = SSL_CTX_new(TLSv1_2_server_method());
-    //SSL_CTX* ctx = SSL_CTX_new(SSLv3_server_method());
-
+  SSL_CTX* createCTX(string chainFile, string keyFile) {
+    SSL_CTX* ctx = SSL_CTX_new(TLS_server_method());
     sslAssert(!(ctx is null));
-    SSL_CTX_clear_options(ctx, SSL_OP_LEGACY_SERVER_CONNECT);
-    SSL_CTX_set_cipher_list(ctx, "HIGH:!ADH:!LOW:!EXP:!MD5:!RC4:!AES128:!CAMELLIA:@STRENGTH");
-    sslAssert(SSL_CTX_use_certificate_file(ctx, cast(const char*) toStringz(certFile), SSL_FILETYPE_PEM) > 0);
+
+    SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION);
+    SSL_CTX_set_cipher_list(ctx, "ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-CHACHA20-POLY1305");
+    SSL_CTX_set_ciphersuites(ctx, "TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256");
+    SSL_CTX_set_options(ctx, 0x00400000U); //SSL_OP_CIPHER_SERVER_PREFERENCE
+    SSL_CTX_set1_groups_list(ctx, "X25519:P-256:P-384");
+
     if (exists(chainFile) && isFile(chainFile)) {
-      custom(1, "HTTPS", "loading certificate chain from file: %s", chainFile);
+      custom(1, "HTTPS", "loading certificate+chain from file: %s", chainFile);
       sslAssert(SSL_CTX_use_certificate_chain_file(ctx, cast(const char*) toStringz(chainFile)) > 0);
-    } else { info("chain not loaded: %s", chainFile); }
-    sslAssert(SSL_CTX_use_PrivateKey_file(ctx, cast(const char*) toStringz(keyFile), SSL_FILETYPE_PEM) > 0);
+    } else {
+      custom(1, "WARN", "No chain file for %s", chainFile);
+      return(null);
+    }
+    sslAssert(SSL_CTX_use_PrivateKey_file(ctx, cast(const char*) toStringz(keyFile), 1) > 0);
     sslAssert(SSL_CTX_check_private_key(ctx) > 0);
     return ctx;
   }
@@ -123,44 +115,44 @@ version(SSL) {
     return(err);
   }
 
-  // loads an SSL context for hostname from the .crt file at path;
-  SSLcontext loadContext(string path, string hostname, string keyFile, string chainFile) {
+  // loads an SSL context for hostname from the .chain file at path;
+  SSLcontext loadContext(string chainFile, string hostname, string keyFile) {
     SSLcontext ctx;
     for(size_t x = 0; x < hostname.length; x++) { ctx.hostname[x] = hostname[x]; }
     ctx.hostname[hostname.length] = '\0';
-    ctx.context = createCTX(path, keyFile, chainFile);
+    ctx.context = createCTX(chainFile, keyFile);
+    if (ctx.context is null) { warning("HTTPS: failed to create context for %s", hostname); return ctx; }
     custom(1, "HTTPS", "context created for certificate: %s", to!string(ctx.hostname.ptr));
     SSL_CTX_callback_ctrl(ctx.context,SSL_CTRL_SET_TLSEXT_SERVERNAME_CB, cast(ExternC!(void function())) &switchContext);
     return(ctx);
   }
 
-  // loads all crt files in the certDir, using keyfile: server.key
-  void initSSL(Server server, string certDir = ".ssl/", string keyFile = ".ssl/server.key", VERSION v = SSL23) {
-    custom(0, "HTTPS", "loading Deimos.openSSL, certDir: %s, keyFile: %s, SSL:%s", certDir, keyFile, v);
-    SSL_library_init();
-    OpenSSL_add_all_algorithms();
-    SSL_load_error_strings();
-    custom(0, "HTTPS", "certificate folder: %d", exists(certDir));
+  // loads all chain files in the server.certDir, using server.keyFile
+  void initSSL(Server server, VERSION v = SSL23) {
+    custom(0, "HTTPS", "loading Deimos.openSSL, certDir: %s, keyFile: %s, SSL:%s", server.certDir, server.keyFile, v);
+    reloadSSL(server.certDir, server.keyFile);
+  }
 
-    if (!exists(certDir)) { warning("SSL certificate folder '%s' not found", certDir); return; }
-    if (!isDir(certDir)) { warning("SSL certificate folder '%s' not a folder", certDir); return; }
-    if (!exists(keyFile)) { warning("SSL private key file: '%s' not found", certDir); return; }
-    if (!isFile(keyFile)) { warning("SSL private key file: '%s' not a file", certDir); return; }
+  // Reload all SSL contexts from certDir without restarting the server
+  void reloadSSL(string certDir = ".ssl/", string keyFile = ".ssl/server.key") {
+    custom(0, "HTTPS", "(re)loading SSL certificates from: %s", certDir);
+    if (!exists(certDir) || !isDir(certDir)) { warning("SSL cert dir '%s' not found", certDir); return; }
+    if (!exists(keyFile) || !isFile(keyFile)) { warning("SSL key file '%s' not found", keyFile); return; }
 
     SSLcontext[] localContexts;
     foreach (DirEntry d; dirEntries(certDir, SpanMode.shallow)) {
-      if (d.name.endsWith(".crt")) {
-        string hostname = baseName(d.name, ".crt");
+      if (d.name.endsWith(".chain")) {
+        string hostname = baseName(d.name, ".chain");
         if (hostname.length < 255) {
-          string chainFile = ".ssl/" ~ baseName(d.name, ".crt") ~ ".chain";
-          info("loading certificate at: '%s', chain from: '%s'", d.name, chainFile);
-          localContexts ~= loadContext(d.name, hostname, keyFile, chainFile);
-          custom(1, "HTTPS", "stored certificate: %s in context: %d", to!string(localContexts[$-1].hostname.ptr), localContexts.length-1);
+          string chainFile = d.name;
+          info("reloading certificate at: '%s'", chainFile);
+          auto lc = loadContext(chainFile, hostname, keyFile);
+          if (lc.context !is null) localContexts ~= lc;
         }
       }
     }
-    contexts = localContexts;  // single assignment after all certs loaded
-    custom(0, "HTTPS", "loaded %s SSL certificates", contexts.length);
+    contexts = localContexts;  // atomic single assignment
+    custom(0, "HTTPS", "(re)loaded %s SSL certificates", contexts.length);
   }
 
   // Close the server SSL socket, and clean up the different contexts
@@ -173,7 +165,7 @@ version(SSL) {
   }
 
   void sslAssert(bool ret) { 
-    if (!ret) { ERR_print_errors_fp(stderr.getFP()); throw new Exception("SSL_ERROR"); }
+    if (!ret) { ERR_print_errors_fp(null); throw new Exception("SSL_ERROR"); }
   }
 
   unittest {

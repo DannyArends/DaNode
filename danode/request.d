@@ -48,6 +48,7 @@ struct Request {
   RequestMethod method; /// requested HTTP method
   string uri = "/"; /// raw URI from the request line, never modified after parsing
   string url = "/"; /// working path used for routing, may be rewritten by canonical/directory redirects
+  string dir;  /// original dir path for directory redirects
   HTTPVersion protocol; /// protocol requested
   string[string] headers; /// Associative array holding the header values
   SysTime starttime; /// start time of the Request
@@ -174,7 +175,7 @@ struct Request {
     string[string] env = environment.toAA();
     env["REQUEST_METHOD"] = to!string(method);
     env["QUERY_STRING"] = query.length > 1 ? query[1 .. $] : "";
-    env["REQUEST_URI"] = uripath;
+    env["REQUEST_URI"] = decodeComponent(uripath);
     env["SCRIPT_FILENAME"] = localpath;
     env["SCRIPT_NAME"] = path;
     env["SERVER_PROTOCOL"] = cast(string)protocol;
@@ -189,6 +190,7 @@ struct Request {
 
   // Canonical redirect of the Request for a directory to the index page specified in the WebConfig
   final void redirectdir(in WebConfig config) {
+    this.dir = this.path()[1..$];
     if(config.redirectdir() && config.redirect) { this.url = config.index; }
   }
 

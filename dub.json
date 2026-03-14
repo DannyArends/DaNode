@@ -6,7 +6,7 @@
 	"importPaths": ["danode"],
 	"sourcePaths": ["danode"],
 	"mainSourceFile": "danode/server.d",
-	"targetPath": "danode",
+	"targetPath": "bin",
 	"targetName": "server",
 	"configurations": [
 	{
@@ -17,9 +17,12 @@
 		"name": "ssl",
 		"targetType": "executable",
 		"versions": ["SSL"],
-		"lflags-windows-x86_64": ["/LIBPATH:C:/OpenSSL-Win64/lib"],
+		"dflags": ["-P-I$PACKAGE_DIR/deps/openssl/include"],
+		"lflags-linux-x86_64": ["-L$PACKAGE_DIR/deps/openssl", "-rpath=$PACKAGE_DIR/deps/openssl"],
+		"libs-linux-x86_64": ["ssl", "crypto"],
+		"lflags-windows-x86_64": ["/LIBPATH:$PACKAGE_DIR/deps/openssl"],
 		"libs-windows-x86_64": ["libssl", "libcrypto"],
-		"dependencies": {"openssl": "~>3.4.0"}
+		"copyFiles-windows-x86_64": ["deps/openssl/libssl-3-x64.dll", "deps/openssl/libcrypto-3-x64.dll"]
 	}
 	]
 }
