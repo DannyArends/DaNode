@@ -178,7 +178,7 @@ version(SSL) {
 
   // Place a new order for a domain certificate
   JSONValue newOrder(JSONValue dir, EVP_PKEY* pkey, string kid, string domain, out string orderURL) {
-    return acmePost(pkey, dir, dir["newOrder"].str, kid, `{"identifiers":[{"type":"dns","value":"` ~ domain ~ `"}]}`, &orderURL);
+    return acmePost(pkey, dir, dir["newOrder"].str, kid, `{"identifiers":[{"type":"dns","value":"` ~ domain ~ `"},{"type":"dns","value":"www.` ~ domain ~ `"}]}`, &orderURL);
   }
 
   // Fetch challenge URL and token for HTTP-01 from an order
