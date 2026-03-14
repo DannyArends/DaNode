@@ -100,6 +100,7 @@ version(SSL) {
             if (socket.isAlive()) {
               if (ssl) {
                 SSL_shutdown(ssl);
+                SSL_shutdown(ssl);
               } else {
                 error("No SSL object to close, are certificates available?");
               }
