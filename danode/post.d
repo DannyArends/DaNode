@@ -151,7 +151,8 @@ final void serverAPI(in FileSystem filesystem, in WebConfig config, in Request r
   content.put(format("S=GATEWAY_INTERFACE=%s\n", "CGI/1.1"));
   content.put(format("S=PHP_SELF=%s\n", request.path));
   content.put(format("S=REQUEST_TIME=%s\n", request.starttime.toUnixTime));
-
+  content.put(format("S=REMOTE_PAGE=%s\n", request.page));
+  content.put(format("S=REQUEST_DIR=%s\n", request.dir));
   // Write the post information we received
   foreach (p; request.postinfo) {
     if(p.type == PostType.Input)  content.put(format("P=%s=%s\n", p.name, p.value));

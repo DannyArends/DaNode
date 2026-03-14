@@ -48,6 +48,8 @@ struct Request {
   RequestMethod method; /// requested HTTP method
   string uri = "/"; /// raw URI from the request line, never modified after parsing
   string url = "/"; /// working path used for routing, may be rewritten by canonical/directory redirects
+  string page; /// original URI for canonical redirects
+  string dir;  /// original dir path for directory redirects
   HTTPVersion protocol; /// protocol requested
   string[string] headers; /// Associative array holding the header values
   SysTime starttime; /// start time of the Request
@@ -189,6 +191,7 @@ struct Request {
 
   // Canonical redirect of the Request for a directory to the index page specified in the WebConfig
   final void redirectdir(in WebConfig config) {
+    this.dir = this.path()[1..$];
     if(config.redirectdir() && config.redirect) { this.url = config.index; }
   }
 
