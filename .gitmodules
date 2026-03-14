@@ -1,0 +1,3 @@
+[submodule "deps/openssl"]
+	path = deps/openssl
+	url = https://github.com/openssl/openssl
