@@ -10,18 +10,6 @@ version(SSL) {
   import danode.server : Server;
   import danode.response : Response;
 
-  static if (OPENSSL_VERSION_NUMBER < 0x10100000L) {
-      // OpenSSL 1.0.x - real functions exist, nothing to shim
-  } else {
-    //--- Add shims for OpenSSL 1.1, from: https://github.com/CyberShadow/ae
-    alias SSLv3_server_method = TLSv1_server_method;
-    struct OPENSSL_INIT_SETTINGS;
-    extern(C) void OPENSSL_init_ssl(ulong opts, const OPENSSL_INIT_SETTINGS *settings) nothrow;
-    void SSL_library_init() { OPENSSL_init_ssl(0, null); }
-    void OpenSSL_add_all_algorithms() { SSL_library_init(); }
-    void SSL_load_error_strings() {}
-  }
-
   // SSL context structure, stored relation between hostname 
   // and the SSL context, should be allocated only once available to C, and deallocated at exit
   struct SSLcontext {
@@ -66,7 +54,9 @@ version(SSL) {
     SSL_CTX* ctx = SSL_CTX_new(TLS_server_method());
     sslAssert(!(ctx is null));
 
-    SSL_CTX_set_cipher_list(ctx, "HIGH:!ADH:!LOW:!EXP:!MD5:!RC4:!AES128:!CAMELLIA:@STRENGTH");
+    SSL_CTX_set_min_proto_version(ctx, TLS1_3_VERSION);
+    SSL_CTX_set_ciphersuites(ctx, "TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256");
+
     sslAssert(SSL_CTX_use_certificate_file(ctx, cast(const char*) toStringz(certFile), 1) > 0);
     if (exists(chainFile) && isFile(chainFile)) {
       custom(1, "HTTPS", "loading certificate chain from file: %s", chainFile);
@@ -134,9 +124,6 @@ version(SSL) {
   // loads all crt files in the certDir, using keyfile: server.key
   void initSSL(Server server, string certDir = ".ssl/", string keyFile = ".ssl/server.key", VERSION v = SSL23) {
     custom(0, "HTTPS", "loading Deimos.openSSL, certDir: %s, keyFile: %s, SSL:%s", certDir, keyFile, v);
-    SSL_library_init();
-    OpenSSL_add_all_algorithms();
-    SSL_load_error_strings();
     custom(0, "HTTPS", "certificate folder: %d", exists(certDir));
 
     if (!exists(certDir)) { warning("SSL certificate folder '%s' not found", certDir); return; }
