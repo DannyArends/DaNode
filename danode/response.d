@@ -137,7 +137,7 @@ Response create(in Request request, Address address, in StatusCode statuscode = 
 void redirect(ref Response response, in Request request, in string fqdn, bool isSecure = false) {
   trace("redirecting request to %s", fqdn);
   response.payload = new Empty(StatusCode.MovedPermanently);
-  response.customheader("Location", format("http%s://%s%s%s", isSecure? "s": "", fqdn, request.uripath, request.query));
+  response.customheader("Location", format("http%s://%s%s%s", isSecure? "s": "", fqdn, request.path, request.query));
   response.connection = "Close";
   response.ready = true;
 }
