@@ -115,14 +115,18 @@ class Router {
     }
 
     version(SSL) {
-      import danode.acme : acmeChallenges;
+      import danode.acme : acmeChallenges, getAcmeMutex;
 
       bool serveACMEChallenge(ref Request request, ref Response response) {
         if (!request.isSecure && request.path.startsWith("/.well-known/acme-challenge/")) {
           info("Router: serveACMEChallenge path: %s", request.path);
           string token = baseName(request.path);
-          if (token in acmeChallenges) {
-            response.payload = new Message(StatusCode.Ok, acmeChallenges[token], "text/plain");
+          string keyAuth;
+          synchronized(getAcmeMutex()) {
+            if (token in acmeChallenges) keyAuth = acmeChallenges[token];
+          }
+          if (keyAuth.length) {
+            response.payload = new Message(StatusCode.Ok, keyAuth, "text/plain");
             return(response.ready = true);
           }
         }

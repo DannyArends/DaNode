@@ -11,6 +11,11 @@ version(SSL) {
   immutable string ACME_DIR_STAGING = "https://acme-staging-v02.api.letsencrypt.org/directory";
 
   __gshared string[string] acmeChallenges; // Shared challenge store: token -> keyAuthorization
+  __gshared Mutex acmeMutex;
+  Mutex getAcmeMutex() {
+    if (acmeMutex is null) acmeMutex = new Mutex();
+    return acmeMutex;
+  }
 
   // POST a JWS request to an ACME URL and return parsed JSON response
   JSONValue acmePost(EVP_PKEY* pkey, JSONValue dir, string url, string kid, string payload,
@@ -54,8 +59,8 @@ version(SSL) {
     string token = prepareChallenge(challenge, pkey);
     triggerChallenge(challenge, dir, pkey, kid);
 
-    if (!pollAuthorization(order, dir, pkey, kid)) { acmeChallenges.remove(token); return false; }
-    acmeChallenges.remove(token);
+    if (!pollAuthorization(order, dir, pkey, kid)) { synchronized(getAcmeMutex()) { acmeChallenges.remove(token); } return false; }
+    synchronized(getAcmeMutex()) { acmeChallenges.remove(token); }
 
     JSONValue finalized = finalizeOrder(order, dir, pkey, kid, csrPath);
     info("ACME: order status: %s, finalized: %s", finalized["status"].str, finalized.toString());
@@ -76,8 +81,14 @@ version(SSL) {
       string domain = baseName(d.name, ".csr");
       string chainPath = certDir ~ domain ~ ".chain";
 
+      auto _certDir = certDir; auto _keyFile = keyFile; auto _domain = domain;
+      auto _csr = d.name; auto _chain = chainPath; auto _key = accountKey; auto _staging = staging;
       if (!exists(chainPath)) { info("ACME: no chain found for %s, bootstrapping", domain);
-        if(renewCert(domain, "Danny.Arends@gmail.com", d.name, chainPath, accountKey, staging)){ reloadSSL(certDir, keyFile); }
+        new Thread({
+          if (renewCert(_domain, "Danny.Arends@gmail.com", _csr, _chain, _key, _staging)) {
+            reloadSSL(_certDir, _keyFile);
+          }
+        }).start();
         continue;
       }
 
@@ -93,7 +104,11 @@ version(SSL) {
 
       info("ACME: chain %s expires in %d days", domain, days);
       if (days < 30) { info("ACME: renewing chain for %s", domain);
-        if(renewCert(domain, "Danny.Arends@gmail.com", d.name, chainPath, accountKey, staging)){ reloadSSL(certDir, keyFile); }
+        new Thread({
+          if (renewCert(_domain, "Danny.Arends@gmail.com", _csr, _chain, _key, _staging)) {
+            reloadSSL(_certDir, _keyFile);
+          }
+        }).start();
       }
     }
   }
@@ -108,7 +123,7 @@ version(SSL) {
   string prepareChallenge(JSONValue challenge, EVP_PKEY* pkey) {
     string token = challenge["token"].str;
     string keyAuth = token ~ "." ~ jwkThumbprint(pkey);
-    acmeChallenges[token] = keyAuth;
+    synchronized(getAcmeMutex()) { acmeChallenges[token] = keyAuth; }
     info("ACME: challenge token: %s", token);
     return token;
   }
