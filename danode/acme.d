@@ -28,6 +28,7 @@ version(SSL) {
       };
     }
     http.perform();
+    info("ACME: POST %s -> %s", url, cast(string) response);
     return parseJSON(response);
   }
 
@@ -45,6 +46,7 @@ version(SSL) {
 
     string orderURL;
     JSONValue order = newOrder(dir, pkey, kid, domain, orderURL);
+    info("ACME: order: %s, orderURL: %s", order.toString(), orderURL);
     JSONValue challenge = getHTTP01Challenge(order, dir, pkey, kid);
     if (challenge.type == JSONType.null_) return false;
 
@@ -55,7 +57,7 @@ version(SSL) {
     acmeChallenges.remove(token);
 
     JSONValue finalized = finalizeOrder(order, dir, pkey, kid, csrPath);
-    info("ACME: order status: %s", finalized["status"].str);
+    info("ACME: order status: %s, finalized: %s", finalized["status"].str, finalized.toString());
 
     foreach (i; 0 .. 10) { // Poll until certificate is ready
       if (finalized["status"].str == "valid") break;
@@ -219,6 +221,7 @@ version(SSL) {
   string acmeAccountURL(JSONValue dir, EVP_PKEY* pkey, string email) {
     string kid;
     acmePost(pkey, dir, dir["newAccount"].str, "", `{"termsOfServiceAgreed":true,"onlyReturnExisting":true,"contact":["mailto:` ~ email ~ `"]}`, &kid);
+    info("ACME: kid: %s", kid);
     return kid;
   }
 
