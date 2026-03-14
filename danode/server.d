@@ -9,6 +9,7 @@ import danode.router : Router;
 import danode.log;
 
 version(SSL) {
+  import danode.acme : checkAndRenew;
   import danode.ssl : initSSL, closeSSL;
   import danode.https : HTTPS;
 }
@@ -26,14 +27,22 @@ class Server : Thread {
     Router            router;           // Router to route requests
     version(SSL) {
       Socket          sslsocket;        // SSL / HTTPs socket
+      public:
+        string certDir = ".ssl/";
+        string keyFile = ".ssl/server.key";
+        string accountKey = ".ssl/account.key";
     }
 
   public:
-    this(ushort port = 80, int backlog = 100, string wwwRoot = "./www/", int verbose = NORMAL) {
+    this(ushort port = 80, int backlog = 100, string wwwRoot = "./www/", 
+         string certDir = ".ssl/", string keyFile = ".ssl/server.key", string accountKey = ".ssl/account.key", int verbose = NORMAL) {
       this.starttime = Clock.currTime();            // Start the timer
       this.socket = initialize(port, backlog);      // Create the HTTP socket
       this.router = new Router(wwwRoot, this.socket.localAddress(), verbose);   // Start the router
       version(SSL) {
+        this.certDir = certDir;
+        this.keyFile = keyFile;
+        this.accountKey = accountKey;
         this.sslsocket = initialize(443, backlog);  // Create the SSL / HTTPs socket
       }
       set = new SocketSet(1);                       // Create a server socket set
@@ -151,8 +160,10 @@ class Server : Thread {
             else if(!client.isRunning) client.join();           // join finished threads
           }
           clients = persistent.data;
-          if (Msecs(lastScan) > 86_400_000) {   // Scan for deleted file every day
-            router.scan(); lastScan = Clock.currTime();
+          if (Msecs(lastScan) > 86_400_000) {   // Scan for deleted files & expiring certificates every day
+            router.scan();
+            version(SSL) { checkAndRenew(certDir, accountKey, true); }
+            lastScan = Clock.currTime();
           }
         } catch(Exception e) {
           error("Unspecified top level server error: %s", e.msg);
@@ -175,17 +186,19 @@ void parseKeyInput(ref Server server){
 
 void main(string[] args) {
   version(unittest){ ushort port = 8080; }else{ ushort port = 80; }
-  int    backlog  = 100;
-  int    verbose  = NORMAL;
-  bool   keyoff   = false;
-  string certDir  = ".ssl/";
-  string keyFile  = ".ssl/server.key";
-  string wwwRoot  = "./www/";
+  int    backlog      = 100;
+  int    verbose      = NORMAL;
+  bool   keyoff       = false;
+  string certDir      = ".ssl/";
+  string keyFile      = ".ssl/server.key";
+  string accountKey   = ".ssl/account.key";
+  string wwwRoot      = "./www/";
   getopt(args, "port|p",     &port,         // Port to listen on
                "backlog|b",  &backlog,      // Backlog of clients supported
                "keyoff|k",   &keyoff,       // Keyboard on or off
                "certDir",    &certDir,      // Location of SSL certificates
                "keyFile",    &keyFile,      // Server private key
+               "accountKey", &accountKey,   // Server Let's encrypt account key
                "wwwRoot",    &wwwRoot,      // Server www root folder
                "verbose|v",  &verbose);     // Verbose level (via commandline)
   version (unittest) {
@@ -201,15 +214,14 @@ void main(string[] args) {
       keyoff = true;
     }
 
-    auto server = new Server(port, backlog, wwwRoot, verbose);
+    auto server = new Server(port, backlog, wwwRoot, certDir, keyFile, accountKey, verbose);
     version (SSL) {
-      server.initSSL(certDir, keyFile);  // Load SSL certificates, using the server key
+      checkAndRenew(certDir, accountKey, true);
+      server.initSSL();  // Load SSL certificates, using the server key
     }
     server.start();
     while (server.running) {
-      if (!keyoff) {
-        server.parseKeyInput();
-      }
+      if (!keyoff) { server.parseKeyInput(); }
       stdout.flush();
       Thread.sleep(dur!"msecs"(250));
     }

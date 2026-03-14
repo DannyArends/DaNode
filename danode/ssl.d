@@ -127,23 +127,23 @@ version(SSL) {
   }
 
   // loads all crt files in the certDir, using keyfile: server.key
-  void initSSL(Server server, string certDir = ".ssl/", string keyFile = ".ssl/server.key", VERSION v = SSL23) {
-    custom(0, "HTTPS", "loading Deimos.openSSL, certDir: %s, keyFile: %s, SSL:%s", certDir, keyFile, v);
-    custom(0, "HTTPS", "certificate folder: %d", exists(certDir));
+  void initSSL(Server server, VERSION v = SSL23) {
+    custom(0, "HTTPS", "loading Deimos.openSSL, certDir: %s, keyFile: %s, SSL:%s", server.certDir, server.keyFile, v);
+    custom(0, "HTTPS", "certificate folder, exists: %d", exists(server.certDir));
 
-    if (!exists(certDir)) { warning("SSL certificate folder '%s' not found", certDir); return; }
-    if (!isDir(certDir)) { warning("SSL certificate folder '%s' not a folder", certDir); return; }
-    if (!exists(keyFile)) { warning("SSL private key file: '%s' not found", certDir); return; }
-    if (!isFile(keyFile)) { warning("SSL private key file: '%s' not a file", certDir); return; }
+    if (!exists(server.certDir)) { warning("SSL certificate folder '%s' not found", server.certDir); return; }
+    if (!isDir(server.certDir)) { warning("SSL certificate folder '%s' not a folder", server.certDir); return; }
+    if (!exists(server.keyFile)) { warning("SSL private key file: '%s' not found", server.keyFile); return; }
+    if (!isFile(server.keyFile)) { warning("SSL private key file: '%s' not a file", server.keyFile); return; }
 
     SSLcontext[] localContexts;
-    foreach (DirEntry d; dirEntries(certDir, SpanMode.shallow)) {
+    foreach (DirEntry d; dirEntries(server.certDir, SpanMode.shallow)) {
       if (d.name.endsWith(".crt")) {
         string hostname = baseName(d.name, ".crt");
         if (hostname.length < 255) {
           string chainFile = ".ssl/" ~ baseName(d.name, ".crt") ~ ".chain";
           info("loading certificate at: '%s', chain from: '%s'", d.name, chainFile);
-          localContexts ~= loadContext(d.name, hostname, keyFile, chainFile);
+          localContexts ~= loadContext(d.name, hostname, server.keyFile, chainFile);
           custom(1, "HTTPS", "stored certificate: %s in context: %d", to!string(localContexts[$-1].hostname.ptr), localContexts.length-1);
         }
       }

@@ -75,14 +75,8 @@ class FilePayload : Payload {
     final bool needsupdate() {
       if (!isStaticFile()) return false; // CGI files are never buffered, since they are executed
       if (fileSize() > 0 && fileSize() < buffermaxsize) { //
-        if (!buffered) {
-          info("need to buffer file record: %s", path);
-          return true;
-        }
-        if (mtime > btime) {
-          info("re-buffer stale file record: %s", path);
-          return true;
-        }
+        if (!buffered) { trace("need to buffer file record: %s", path); return true; }
+        if (mtime > btime) { trace("re-buffer stale file record: %s", path); return true; }
       }else{
         info("file %s does not fit into the buffer (%d)", path, buffermaxsize);
       }

@@ -9,14 +9,17 @@ public import core.atomic;
 public import core.thread;
 
 // Public imported function from std
-public import std.algorithm : mean, canFind, min, max;
+public import std.algorithm;
 public import std.array;
+public import std.base64 : Base64URL;
 public import std.compiler;
 public import std.conv;
 public import std.datetime;
 public import std.file;
 public import std.format;
 public import std.getopt;
+public import std.json;
+public import std.net.curl : HTTP, get;
 public import std.path;
 public import std.process;
 public import std.regex;
