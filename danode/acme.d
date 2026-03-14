@@ -79,7 +79,7 @@ version(SSL) {
   }
 
     // Check cert expiry and renew if < 30 days remaining
-  void checkAndRenew(string certDir = ".ssl/", string keyFile = ".ssl/server.key", string accountKey = ".ssl/account.key", bool staging = true) {
+  void checkAndRenew(string certDir = ".ssl/", string keyFile = ".ssl/server.key", string accountKey = ".ssl/account.key", bool staging = false) {
     info("ACME: checkAndRenew called on '%s' with key '%s'", certDir, accountKey);
     foreach (DirEntry d; dirEntries(certDir, SpanMode.shallow)) {
       if (!d.name.endsWith(".csr")) continue;
