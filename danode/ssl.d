@@ -57,11 +57,13 @@ version(SSL) {
     SSL_CTX_set_min_proto_version(ctx, TLS1_3_VERSION);
     SSL_CTX_set_ciphersuites(ctx, "TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256");
 
-    sslAssert(SSL_CTX_use_certificate_file(ctx, cast(const char*) toStringz(certFile), 1) > 0);
     if (exists(chainFile) && isFile(chainFile)) {
-      custom(1, "HTTPS", "loading certificate chain from file: %s", chainFile);
+      custom(1, "HTTPS", "loading certificate+chain from file: %s", chainFile);
       sslAssert(SSL_CTX_use_certificate_chain_file(ctx, cast(const char*) toStringz(chainFile)) > 0);
-    } else { info("chain not loaded: %s", chainFile); }
+    } else {
+      custom(1, "HTTPS", "loading certificate from file: %s", certFile);
+      sslAssert(SSL_CTX_use_certificate_file(ctx, cast(const char*) toStringz(certFile), 1) > 0);
+    }
     sslAssert(SSL_CTX_use_PrivateKey_file(ctx, cast(const char*) toStringz(keyFile), 1) > 0);
     sslAssert(SSL_CTX_check_private_key(ctx) > 0);
     return ctx;
