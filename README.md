@@ -61,8 +61,9 @@ Confirm that the web server is running by going to: http://localhost:8080/
 
 ##### Enable HTTPs support
 
-To compile the server with HTTPS support (binds to port 443), use dub and specify 
-the _ssl_ configuration:
+To compile the server with HTTPS support (binds to port 443), first compile openSSL in 
+the [deps](./deps/) folder, see the [guide](./deps/README.md). After that use dub and 
+specify the _ssl_ configuration:
 
 ```
 dub build --config=ssl
