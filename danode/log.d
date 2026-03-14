@@ -108,7 +108,7 @@ class Log {
       string uri;
       try { uri = decodeComponent(rq.uri); } catch (Exception e) { uri = rq.uri; }
       long bytes = rs.isRange ? (rs.rangeEnd - rs.rangeStart + 1) : rs.payload.length;
-      string s = format("[%d]    %s %s:%s %s%s %s %s", rs.statuscode, htmltime(), cl.ip, cl.port, rq.shorthost, uri, Msecs(rq.starttime), bytes);
+      string s = format("[%d]    %s %s:%s %s%s %s %s", rs.statuscode, htmltime(), cl.ip, cl.port, rq.shorthost, uri.replace("%", "%%"), Msecs(rq.starttime), bytes);
       RequestLogFp.writeln(s);
       custom(-1, "REQ", s);
       RequestLogFp.flush();
