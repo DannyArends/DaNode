@@ -1,12 +1,12 @@
-# APIs
-
+APIs
+----
 The APIs provide access to POST and GET data in hosted CGI applications.
 
-## PHP
+### PHP
 See a working example [HERE](../www/localhost/php.php).
 
 ```PHP
-     <?php include 'api/danode.php'; ?>
+<?php include 'api/danode.php'; ?>
 ```
 
 Common variables, are available after including the api:
@@ -16,27 +16,23 @@ Common variables, are available after including the api:
 - $_POST - POST variables
 - $_COOKIE - Retrieve cookies set using the setcookie() function
 
-## PERL
+### PERL
 See a working example [HERE](../www/localhost/perl.pl)
 
 ```Perl
-     use api::danode;
+use api::danode;
 ```
 
-## D
+### D
 See a working example  [HERE](../www/localhost/dmd.d)
 
 ```D
-     import api.danode;
-     
-     void main(string[] args){
-       setGET(args);              // Set the GET variables from the cmd args
-     }
+import api.danode;
 ```
 
-## R
+### R
 See a working example  [HERE](../www/localhost/rscript.r)
 
 ```R
-     source("api/danode.r")
+source("api/danode.r")
 ```

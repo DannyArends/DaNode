@@ -6,7 +6,7 @@ git clone --recursive https://github.com/DannyArends/DaNode.git
 git submodule update --init --recursive
 ```
 
-##### Windows
+### Windows
 Download the requirements:
 - [Strawberry Perl](https://strawberryperl.com/)
 - [NASM](https://www.nasm.us/)
@@ -19,7 +19,7 @@ perl Configure VC-WIN64A
 nmake
 ```
 
-##### Linux
+### Linux
 Install requirements:
 ```bash
 sudo apt-get install build-essential
