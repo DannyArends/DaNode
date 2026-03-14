@@ -1,4 +1,4 @@
-DaNode - A secure and small footprint web server for D 
+DaNode - A secure and small footprint web server for D
 ------------------------------------------------------
 master: [![D](https://github.com/DannyArends/DaNode/actions/workflows/d.yml/badge.svg?branch=master)](https://github.com/DannyArends/DaNode/actions/workflows/d.yml)
 licence: [![license](https://img.shields.io/github/license/DannyArends/DaNode.svg?style=flat)](https://github.com/DannyArends/DaNode/blob/master/LICENSE.txt)

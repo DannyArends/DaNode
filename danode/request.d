@@ -48,7 +48,6 @@ struct Request {
   RequestMethod method; /// requested HTTP method
   string uri = "/"; /// raw URI from the request line, never modified after parsing
   string url = "/"; /// working path used for routing, may be rewritten by canonical/directory redirects
-  string page; /// original URI for canonical redirects
   string dir;  /// original dir path for directory redirects
   HTTPVersion protocol; /// protocol requested
   string[string] headers; /// Associative array holding the header values
