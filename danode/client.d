@@ -32,7 +32,7 @@ class Client : Thread, ClientInterface {
    final void run() {
       trace("new connection established %s:%d", ip(), port() );
       try {
-        if (driver.openConnection() == false) { warning("new connection aborted: unable to open connection"); stop(); }
+        if (driver.openConnection() == false) { custom(2, "WARN", "new connection aborted: unable to open connection"); stop(); }
         Request request;
         Response response;
         scope (exit) {

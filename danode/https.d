@@ -71,7 +71,7 @@ version(SSL) {
 
             bool handshaked = performHandshake();
             if (!handshaked) {
-              error("couldn't handshake SSL connection");
+              custom(2, "ERROR", "couldn't handshake SSL connection");
               return(false);
             }
           } catch (Exception e) {
