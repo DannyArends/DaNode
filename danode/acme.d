@@ -71,23 +71,28 @@ version(SSL) {
   void checkAndRenew(string certDir = ".ssl/", string accountKey = ".ssl/account.key", bool staging = true) {
     info("ACME: checkAndRenew called on '%s' with key '%s'", certDir, accountKey);
     foreach (DirEntry d; dirEntries(certDir, SpanMode.shallow)) {
-      if (!d.name.endsWith(".crt")) continue;
-      string domain = baseName(d.name, ".crt");
+      if (!d.name.endsWith(".csr")) continue;
+      string domain = baseName(d.name, ".csr");
+      string chainPath = certDir ~ domain ~ ".chain";
 
-      BIO* bio = BIO_new_file(toStringz(d.name), "r");
+      if (!exists(chainPath)) { info("ACME: no chain found for %s, bootstrapping", domain);
+        renewCert(domain, "Danny.Arends@gmail.com", d.name, chainPath, accountKey, staging);
+        continue;
+      }
+
+      BIO* bio = BIO_new_file(toStringz(chainPath), "r");
       X509* cert = PEM_read_bio_X509(bio, null, null, null);
       BIO_free(bio);
       if (cert is null) continue;
 
       ASN1_TIME* notAfter = X509_getm_notAfter(cert);
-      int days;
-      int secs;
+      int days, secs;
       ASN1_TIME_diff(&days, &secs, null, notAfter);
       X509_free(cert);
 
-      info("ACME: cert %s expires in %d days", domain, days);
-      if (days < 30) { info("ACME: renewing cert for %s", domain);
-        renewCert(domain, "Danny.Arends@gmail.com", certDir ~ domain ~ ".csr", certDir ~ domain ~ ".chain", accountKey, staging);
+      info("ACME: chain %s expires in %d days", domain, days);
+      if (days < 30) { info("ACME: renewing chain for %s", domain);
+        renewCert(domain, "Danny.Arends@gmail.com", d.name, chainPath, accountKey, staging);
       }
     }
   }
