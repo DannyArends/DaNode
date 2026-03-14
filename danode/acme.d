@@ -4,6 +4,7 @@ version(SSL) {
   import danode.imports;
   import danode.includes;
   import danode.log : info, warning, error;
+  import danode.ssl : reloadSSL;
   import danode.functions : writeinfile;
 
   immutable string ACME_DIR_PROD    = "https://acme-v02.api.letsencrypt.org/directory";
@@ -68,7 +69,7 @@ version(SSL) {
   }
 
     // Check cert expiry and renew if < 30 days remaining
-  void checkAndRenew(string certDir = ".ssl/", string accountKey = ".ssl/account.key", bool staging = true) {
+  void checkAndRenew(string certDir = ".ssl/", string keyFile = ".ssl/server.key", string accountKey = ".ssl/account.key", bool staging = true) {
     info("ACME: checkAndRenew called on '%s' with key '%s'", certDir, accountKey);
     foreach (DirEntry d; dirEntries(certDir, SpanMode.shallow)) {
       if (!d.name.endsWith(".csr")) continue;
@@ -92,7 +93,9 @@ version(SSL) {
 
       info("ACME: chain %s expires in %d days", domain, days);
       if (days < 30) { info("ACME: renewing chain for %s", domain);
-        renewCert(domain, "Danny.Arends@gmail.com", d.name, chainPath, accountKey, staging);
+        if(renewCert(domain, "Danny.Arends@gmail.com", d.name, chainPath, accountKey, staging)){
+          reloadSSL(certDir, keyFile);
+        }
       }
     }
   }
@@ -117,6 +120,7 @@ version(SSL) {
     // Load CSR from file
     BIO* bio = BIO_new_file(toStringz(csrPath), "r");
     X509_REQ* req = PEM_read_bio_X509_REQ(bio, null, null, null);
+    if (req is null) { error("ACME: failed to load CSR from %s", csrPath); return JSONValue.init; }
     BIO_free(bio);
 
     // Convert CSR to DER
