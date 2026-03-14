@@ -121,6 +121,7 @@ version(SSL) {
     for(size_t x = 0; x < hostname.length; x++) { ctx.hostname[x] = hostname[x]; }
     ctx.hostname[hostname.length] = '\0';
     ctx.context = createCTX(chainFile, keyFile);
+    if (ctx.context is null) { warning("HTTPS: failed to create context for %s", hostname); return ctx; }
     custom(1, "HTTPS", "context created for certificate: %s", to!string(ctx.hostname.ptr));
     SSL_CTX_callback_ctrl(ctx.context,SSL_CTRL_SET_TLSEXT_SERVERNAME_CB, cast(ExternC!(void function())) &switchContext);
     return(ctx);

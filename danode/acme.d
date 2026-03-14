@@ -77,7 +77,7 @@ version(SSL) {
       string chainPath = certDir ~ domain ~ ".chain";
 
       if (!exists(chainPath)) { info("ACME: no chain found for %s, bootstrapping", domain);
-        renewCert(domain, "Danny.Arends@gmail.com", d.name, chainPath, accountKey, staging);
+        if(renewCert(domain, "Danny.Arends@gmail.com", d.name, chainPath, accountKey, staging)){ reloadSSL(certDir, keyFile); }
         continue;
       }
 
@@ -93,9 +93,7 @@ version(SSL) {
 
       info("ACME: chain %s expires in %d days", domain, days);
       if (days < 30) { info("ACME: renewing chain for %s", domain);
-        if(renewCert(domain, "Danny.Arends@gmail.com", d.name, chainPath, accountKey, staging)){
-          reloadSSL(certDir, keyFile);
-        }
+        if(renewCert(domain, "Danny.Arends@gmail.com", d.name, chainPath, accountKey, staging)){ reloadSSL(certDir, keyFile); }
       }
     }
   }
