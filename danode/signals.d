@@ -5,15 +5,15 @@ version(Posix) {
   import core.sys.posix.signal : SIGPIPE;
 
   import danode.imports;
-  import danode.log : cverbose;
+  import danode.log : cv;
 
   extern(C) @nogc nothrow void handle_signal(int signal) {
     switch (signal) {
       case SIGPIPE:
-        if(atomicLoad(cverbose) > 1) write(2, cast(const(void*)) "[SIG]    Broken pipe caught, and ignored\n\0".ptr, 41);
+        if(atomicLoad(cv) > 1) write(2, cast(const(void*)) "[SIG]    Broken pipe caught, and ignored\n\0".ptr, 41);
         break;
       default:
-        if(atomicLoad(cverbose) > 1) write(2, cast(const(void*)) "[SIG]    Caught\n\0".ptr, 17);
+        if(atomicLoad(cv) > 1) write(2, cast(const(void*)) "[SIG]    Caught\n\0".ptr, 17);
         break;
     }
   }
