@@ -4,10 +4,6 @@ import danode.imports;
 import danode.functions : Msecs;
 import danode.log : log, tag, error, Level;
 
-version(Posix) {
-  import core.sys.posix.fcntl : fcntl, F_SETFL, O_NONBLOCK;
-}
-
 immutable size_t MAX_CGI_OUTPUT = 1024 * 1024 * 10; // 10MB script output limit
 
 struct WaitResult {
@@ -18,12 +14,14 @@ struct WaitResult {
 /* Set a filestream to nonblocking mode, if not Posix, use winbase.h */
 bool nonblocking(ref File file) {
   version(Posix) {
+    import core.sys.posix.fcntl : fcntl, F_SETFL, O_NONBLOCK;
+
     return(fcntl(fileno(file.getFP()), F_SETFL, O_NONBLOCK) != -1); 
   }else{
     import core.sys.windows.winbase;
+
     auto x = PIPE_NOWAIT;
-    auto res = SetNamedPipeHandleState(file.windowsHandle(), &x, null, null);
-    return(res != 0);
+    return(SetNamedPipeHandleState(file.windowsHandle(), &x, null, null) != 0);
   }
 }
 
@@ -77,47 +75,31 @@ class Process : Thread {
 
      // Query Output/Errors from 'from' to the end, if the outbuffer contains any output this will be served
      // from is checked to be in-range of the outbuffer/errbuffer, if not an empty array is returned
-    final @property const(char)[] output(ptrdiff_t from) const { 
-      synchronized {
-        if (outbuffer.data.length > 0 && from >= 0 && from <= outbuffer.data.length) {
-          return outbuffer.data[from .. $];
-        }
-        if (from >= 0 && from <= errbuffer.data.length) {
-          return errbuffer.data[from .. $]; 
-        }
-        return [];
-      }
-    }
+    final @property const(char)[] output(ptrdiff_t from) const { synchronized {
+      if (outbuffer.data.length > 0 && from >= 0 && from <= outbuffer.data.length) { return outbuffer.data[from .. $]; }
+      if (from >= 0 && from <= errbuffer.data.length) { return errbuffer.data[from .. $]; }
+      return [];
+    } }
 
     // Runtime of the thread in mseconds
-    final @property long time() const {
-      synchronized { return(Msecs(starttime)); }
-    }
+    final @property long time() const { synchronized { return(Msecs(starttime)); } }
 
     // Last time the process was modified (e.g. data on stdout/stderr)
-    final @property long lastmodified() const {
-      synchronized { return(Msecs(modified)); }
-    }
+    final @property long lastmodified() const { synchronized { return(Msecs(modified)); } }
 
     // Is the external process still running ?
-    final @property bool running() const { 
-      synchronized { return(!process.terminated); }
-    }
+    final @property bool running() const { synchronized { return(!process.terminated); } }
 
     // Did our internal thread finish processing the external process, etc ?
-    final @property bool finished() const { 
-      synchronized { return(this.completed); }
-    }
+    final @property bool finished() const { synchronized { return(this.completed); } }
 
     // Returns the 'flattened' exit status of the external process 
     // ( -1 = non-0 exit code, 0 = succes, 1 = still running )
-    final @property int status() const { 
-      synchronized { 
-        if (running) return 1;
-        if (process.status == 0) return 0;
-        return -1;
-      }
-    }
+    final @property int status() const { synchronized {
+      if (running) return 1;
+      if (process.status == 0) return 0;
+      return -1;
+    } }
 
     // Length of output, if the outbuffer contains any data, the outbuffer will be prefered (errors are silenced)
     final @property long length() const { synchronized { 
@@ -141,7 +123,7 @@ class Process : Thread {
           }
         }
       } catch (Exception e) { error("Exception during readpipe command: %s", e); file.close();
-      } catch(Error e) { error("Error during readpipe command: %s", e); file.close();
+      } catch (Error e) { error("Error during readpipe command: %s", e); file.close();
       }
     }
 
