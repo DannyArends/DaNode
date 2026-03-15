@@ -6,7 +6,7 @@ version(SSL) {
   import danode.imports;
   import danode.functions : Msecs;
   import danode.response : Response;
-  import danode.log : tag, log, error, Level;
+  import danode.log : log, error, Level;
   import danode.interfaces : DriverInterface;
   import danode.ssl;
 
@@ -104,7 +104,7 @@ version(SSL) {
   }
 
   unittest {
-    tag(Level.Always, "FILE", "%s", __FILE__);
+    log(Level.Always, "%s", __FILE__);
   }
 }
 

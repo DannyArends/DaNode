@@ -9,7 +9,7 @@ import danode.interfaces : DriverInterface, ClientInterface, StringDriver;
 import danode.response : Response, setPayload;
 import danode.request : Request;
 import danode.payload : Message, PayloadType;
-import danode.log : log, req, tag, error, Level;
+import danode.log : log, tag, error, Level;
 
 immutable size_t MAX_HEADER_SIZE  = 1024 * 32;          //  32KB Header
 immutable size_t MAX_REQUEST_SIZE = 1024 * 1024 * 2;    //   2MB Body
@@ -64,7 +64,7 @@ class Client : Thread, ClientInterface {
             driver.send(response, driver.socket);           // Send the response, hit multiple times, send what you can and return
           }
           if (response.ready && response.completed) {       // We've completed the request, response cycle
-            req(this, request, response);
+            this.log(request, response);
             log(Level.Trace, "completed: index=%d length=%d", response.index, response.length);
             request.clearUploadFiles();                     // Clean uploaded files
             request.destroy();                              // Clear the request structure
@@ -77,7 +77,7 @@ class Client : Thread, ClientInterface {
             log(Level.Trace, "timeout: index=%d length=%d completed=%s", response.index, response.length, response.completed);
             log(Level.Trace, "inactivity: %s > %s", lastmodified, maxtime);
             driver.setTimedOut(response);
-            req(this, request, response);
+            this.log(request, response);
             stop(); continue;
           }
           log(Level.Trace, "Connection %s:%s (%s msecs) %s", ip, port, starttime, to!string(driver.inbuffer.data));
@@ -113,11 +113,11 @@ class Client : Thread, ClientInterface {
     final @property string ip() const { return(driver.ip()); } 
 }
 
-void req(in ClientInterface cl, in Request rq, in Response rs) {
+void log(in ClientInterface cl, in Request rq, in Response rs) {
   string uri;
   try { uri = decodeComponent(rq.uri); } catch (Exception e) { uri = rq.uri; }
   long bytes = rs.isRange ? (rs.rangeEnd - rs.rangeStart + 1) : rs.payload.length;
-  req(format("%d", rs.statuscode), "%s %s:%s %s%s %s %s", htmltime(), cl.ip, cl.port, rq.shorthost, uri.replace("%", "%%"), Msecs(rq.starttime), bytes);
+  tag(Level.Always, format("%d", rs.statuscode), "%s %s:%s %s%s %s %s", htmltime(), cl.ip, cl.port, rq.shorthost, uri.replace("%", "%%"), Msecs(rq.starttime), bytes);
 }
 
 // serve a 408 connection timed out page

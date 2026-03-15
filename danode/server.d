@@ -6,7 +6,7 @@ import danode.client : Client;
 import danode.interfaces : DriverInterface;
 import danode.http : HTTP;
 import danode.router : Router;
-import danode.log : initLogs, abort, log, tag, error, Level;
+import danode.log : abort, log, tag, error, Level;
 
 version(SSL) {
   import danode.acme : checkAndRenew;
@@ -162,7 +162,6 @@ void main(string[] args) {
   int    backlog      = 100;
   int    verbose      = Level.Verbose;
   bool   keyoff       = false;
-  string logFolder    = "logs/";
   string wwwFolder    = "www/";
   string sslFolder    = ".ssl/";
   string sslKey       = "server.key";
@@ -171,7 +170,6 @@ void main(string[] args) {
   getopt(args, "port|p",      &port,         // Port to listen on
                "backlog|b",   &backlog,      // Backlog of clients supported
                "keyoff|k",    &keyoff,       // Keyboard on or off
-               "log",         &logFolder,    // Location of LOG
                "www",         &wwwFolder,    // Server www root folder
                "ssl",         &sslFolder,    // Location of SSL certificates
                "sslKey",      &sslKey,       // Server private key
@@ -180,7 +178,6 @@ void main(string[] args) {
   version (unittest) {
     // Do nothing, unittests will run
   } else {
-    logFolder.resolveFolder().initLogs(verbose);
     version (Posix) {
       import core.sys.posix.signal : signal, SIGPIPE;
       import danode.signals : handle_signal;

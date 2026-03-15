@@ -95,6 +95,14 @@ version(SSL) {
     int err = SSL_get_error(ssl, retcode);
     switch (err) {
       case SSL_ERROR_NONE: break;
+      case SSL_ERROR_SSL: break;
+      case SSL_ERROR_ZERO_RETURN: break;
+      case SSL_ERROR_WANT_READ: break;
+      case SSL_ERROR_WANT_WRITE: break;
+      case SSL_ERROR_WANT_CONNECT: break;
+      case SSL_ERROR_WANT_ACCEPT: break;
+      case SSL_ERROR_WANT_X509_LOOKUP: break;
+      case SSL_ERROR_SYSCALL: break;
       default: error("SSL: SSL_get_error %s %d", err, retcode); break;
     }
     return(err);
