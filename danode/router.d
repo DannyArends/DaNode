@@ -94,7 +94,10 @@ class Router {
         if (pathIsDIR && config.dirAllowed(localroot, localpath)) {
           log(Level.Trace, "Router: [T] localpath %s is a directory [%s,%s]", localpath, config.redirectdir(), config.index());
           if (config.redirectdir() && !finalrewrite) { return(redirectDirectory(request, response)); }
-          if (config.redirect() && exists(localpath ~ "/" ~ config.index()) && !finalrewrite) { return(redirectCanonical(request, response)); }
+          if (config.redirect() && exists(localpath ~ "/" ~ config.index()) && !finalrewrite) {
+            if (!config.allowcgi) return(response.notFound());
+            return(redirectCanonical(request, response));
+          }
           return(response.serveDirectory(request, config, filesystem));
         }
         return(response.forbidden());
