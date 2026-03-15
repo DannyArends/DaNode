@@ -18,7 +18,7 @@ interface Payload {
     @property SysTime             mtime();
     @property string              mimetype() const;
 
-    const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 4096, bool isRange = false, long rangeStart = 0, long rangeEnd = -1);
+    const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 4096, bool isRange = false, long start = 0, long end = -1);
 }
 
 /* Implementation of the Payload interface, by using an underlying string buffer */
@@ -41,8 +41,8 @@ class Message : Payload {
     final @property SysTime mtime() { return Clock.currTime(); }
     final @property string mimetype() const { return mime; }
     final @property StatusCode statuscode() const { return status; }
-    char[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 4096, bool isRange = false, long rangeStart = 0, long rangeEnd = -1) {
-      return( message[from .. to!ptrdiff_t(min(from+maxsize, $))].dup );
+    char[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 4096, bool isRange = false, long start = 0, long end = -1) {
+      return( message[from .. to!ptrdiff_t(min(from + maxsize, $))].dup );
     }
 }
 
