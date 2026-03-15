@@ -72,10 +72,10 @@ class FilePayload : Payload {
     final bool needsupdate() {
       if (!isStaticFile()) return false; // CGI files are never buffered, since they are executed
       if (fileSize() > 0 && fileSize() < buffermaxsize) { //
-        if (!buffered) { log(Level.Trace, "need to buffer file record: %s", path); return true; }
-        if (mtime > btime) { log(Level.Trace, "re-buffer stale file record: %s", path); return true; }
+        if (!buffered) { log(Level.Trace, "File: '%s' needs buffering", path); return true; }
+        if (mtime > btime) { log(Level.Trace, "File: '%s' stale record", path); return true; }
       }else{
-        log(Level.Verbose, "file %s does not fit into the buffer (%d)", path, buffermaxsize);
+        log(Level.Verbose, "File: '%s' exceeds buffer (%d > %d)", path, fileSize(), buffermaxsize);
       }
       return false;
     }
@@ -90,12 +90,12 @@ class FilePayload : Payload {
         auto f = File(path, "rb");
         f.rawRead(buf);
         f.close();
-      } catch (Exception e) { log(Level.Verbose, "exception during buffering '%s': %s", path, e.msg); return; }
+      } catch (Exception e) { error("Exception during buffering '%s': %s", path, e.msg); return; }
       try {
         encbuf = cast(char[])( compress(buf, 9) );
-      } catch (Exception e) { log(Level.Verbose, "exception during compressing '%s': %s", path, e.msg); }
+      } catch (Exception e) { error("Exception during compressing '%s': %s", path, e.msg); }
       btime = Clock.currTime();
-      log(Level.Trace, "buffered %s: %d|%d bytes", path, fileSize(), encbuf.length);
+      log(Level.Trace, "File: '%s' buffered %d|%d bytes", path, fileSize(), encbuf.length);
       buffered = true;
     } }
 

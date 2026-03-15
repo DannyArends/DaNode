@@ -50,7 +50,7 @@ class Server : Thread {
         sslsocket = initialize(443, backlog);  // Create the SSL / HTTPs socket
       }
       set = new SocketSet(1);                       // Create a server socket set
-      log(Level.Always, "server '%s' created backlog: %d", this.hostname(), backlog);
+      log(Level.Always, "Server '%s' created backlog: %d", this.hostname(), backlog);
       super(&run);
     }
 
@@ -63,7 +63,7 @@ class Server : Thread {
         socket.blocking = false;
         socket.bind(new InternetAddress(port));
         socket.listen(backlog);
-        log(Level.Always, "socket listening on port %s", port);
+        log(Level.Always, "Socket listening port %s", port);
       } catch(Exception e) { abort(format("unable to bind socket on port %s\n%s", port, e.msg), -1); }
       return socket;
     }
@@ -71,7 +71,7 @@ class Server : Thread {
     // Accept an incoming connection and create a client object
     final void accept(ref Appender!(Client[]) persistent, Socket socket, bool secure = false) {
       if (set.sISelect(socket) <= 0 || nAlive() >= MAX_CLIENTS) return;
-      log(Level.Trace, "accepting %s request", secure ? "HTTPs" : "HTTP");
+      log(Level.Trace, "Accepting %s request", secure ? "HTTPs" : "HTTP");
       try {
           DriverInterface driver = null;
           if (!secure) driver = new HTTP(socket.accept(), false);
@@ -81,8 +81,8 @@ class Server : Thread {
           client.start();
           if (nAliveFromIP(client.ip) <= MAX_CLIENTS_PER_IP) {
             persistent.put(client);
-          } else { log(Level.Always, "rate limit exceeded for %s", client.ip); client.stop(); }
-      } catch(Exception e) { error("unable to accept connection: %s", e.msg); }
+          } else { log(Level.Always, "Rate limit exceeded [%s]", client.ip); client.stop(); }
+      } catch(Exception e) { error("Unable to accept connection: %s", e.msg); }
     }
 
     // is the server still running ?
@@ -109,7 +109,7 @@ class Server : Thread {
     final @property Duration uptime() const { return(Clock.currTime() - starttime); }
 
      // Print some server information
-    final @property void info() { log(Level.Always, "uptime %s, connections: %d / %d", uptime(), nAlive(), clients.length); }
+    final @property void info() { log(Level.Always, "Uptime %s, Connections: %d / %d", uptime(), nAlive(), clients.length); }
     
     // Hostname of the server
     final @property string hostname() { return(socket.hostName()); }
@@ -185,7 +185,7 @@ void main(string[] args) {
       signal(SIGPIPE, &handle_signal);
     }
     version (Windows) {
-      log(Level.Always, "-k has been set to true, we cannot handle keyboard input under windows at the moment");
+      log(Level.Always, "-k was set to true. However, keyboard input under windows is not supported");
       keyoff = true;
     }
     auto server = new Server(port, backlog, wwwFolder, sslFolder, sslKey, accountKey);
@@ -199,7 +199,7 @@ void main(string[] args) {
       stdout.flush();
       Thread.sleep(dur!"msecs"(250));
     }
-    log(Level.Always, "server shutting down: %d", server.running);
+    log(Level.Always, "Server shutting down: %d", server.running);
     server.info();
   }
 }

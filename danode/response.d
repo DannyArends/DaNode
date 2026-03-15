@@ -45,7 +45,7 @@ struct Response {
       CGI script = to!CGI(payload);
       string scriptheader = script.fullHeader();
       auto status = script.statuscode();
-      log(Level.Verbose, "script '%s', status (%s)", script.command, status);
+      log(Level.Verbose, "Script '%s', status (%s)", script.command, status);
       connection = script.getHeader("Connection", "No Request");
       long clength = script.getHeader("Content-Length", -1); // Is the content length provided ?
       foreach (line; scriptheader.split("\n")) {
@@ -63,15 +63,15 @@ struct Response {
         return(hdr.data);
       }
       if (connection != "No Request" && clength > -1) {
-        log(Level.Verbose, "script '%s' in keepalive mode connection '%s' (%s, %d)", script.command, connection, script.headerType(), clength);
+        log(Level.Verbose, "Script '%s' in keepalive mode connection '%s' (%s, %d)", script.command, connection, script.headerType(), clength);
         hdr.put(scriptheader);
         return(hdr.data); // The script can communicate
       }
       if (connection != "Close") {
-        log(Level.Verbose, "script '%s', failed - headerType: %s, Content-Length: %d, connection: '%s', headerLength: %d, header: [%s]", 
+        log(Level.Verbose, "Script '%s', failed - headerType: %s, Content-Length: %d, connection: '%s', headerLength: %d, header: [%s]", 
                script.command, script.headerType(), clength, connection, scriptheader.length, scriptheader);
       }else{
-        log(Level.Verbose, "script '%s', header generation (%s, %d)", script.command, script.headerType(), clength);
+        log(Level.Verbose, "Script '%s', header generation (%s, %d)", script.command, script.headerType(), clength);
       }
       connection = "Close";
     }
@@ -140,7 +140,7 @@ bool setPayload(ref Response response, StatusCode code, string msg = "", in stri
 
 // send a redirect permanently response
 void redirect(ref Response response, in Request request, in string fqdn, bool isSecure = false) {
-  log(Level.Trace, "redirecting request to %s", fqdn);
+  log(Level.Trace, "Redirecting request to %s", fqdn);
   response.setPayload(StatusCode.MovedPermanently);
   response.customheader("Location", format("http%s://%s%s%s", isSecure? "s": "", fqdn, request.path, request.query));
   response.connection = "Close";
@@ -158,13 +158,13 @@ void domainNotFound(ref Response response) {
 
 // serve a the output of an external script 
 void serveCGI(ref Response response, in Request request, in WebConfig config, in FileSystem fs, bool removeInput = true) {
-  log(Level.Trace, "requested a cgi file, execution allowed");
+  log(Level.Trace, "Requested a cgi file, execution allowed");
   string localroot = fs.localroot(request.shorthost());
   string localpath = config.localpath(localroot, request.path);
   if (!response.routed) { // Store POST data (could fail multiple times)
-    log(Level.Trace, "writing server variables");
+    log(Level.Trace, "Writing server variables");
     fs.serverAPI(config, request, response);
-    log(Level.Trace, "creating CGI payload");
+    log(Level.Trace, "Creating CGI payload");
     response.payload = new CGI(request.command(localpath), request.inputfile(fs), request.environ(localpath), removeInput, request.maxtime-5);
     response.ready = true;
   }

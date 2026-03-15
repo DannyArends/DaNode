@@ -6,7 +6,7 @@ version(SSL) {
 
   import danode.log : acme, acmeError, Level;
   import danode.ssl : loadSSL, generateKey;
-  import danode.functions : writeinfile;
+  import danode.functions : writeFile;
 
   immutable string ACME_DIR_PROD    = "https://acme-v02.api.letsencrypt.org/directory";
   immutable string ACME_DIR_STAGING = "https://acme-staging-v02.api.letsencrypt.org/directory";
@@ -161,7 +161,7 @@ version(SSL) {
     http.onReceive = (ubyte[] data) { response ~= cast(char[]) data; return data.length; };
     http.perform();
 
-    writeinfile(certPath, cast(string) response);
+    certPath.writeFile(cast(string) response);
     acme(Level.Verbose, "ACME: certificate saved to %s", certPath);
     return true;
   }

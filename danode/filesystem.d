@@ -52,7 +52,7 @@ class FileSystem {
         if (f.isFile()) {
           string shortname = replace(f.name[dname.length .. $], "\\", "/");
           if (shortname.endsWith(".in") || shortname.endsWith(".up")) continue;
-          log(Level.Trace, "file: %s -> %s", f.name, shortname);
+          log(Level.Trace, "File: '%s' as '%s'", f.name, shortname);
           if (!domain.files.has(shortname)) {
             domain.files[shortname] = new FilePayload(f.name, maxsize);
             domain.entries++;
@@ -66,8 +66,8 @@ class FileSystem {
       // Remove files that no longer exist on disk
       foreach (k; domain.files.keys) { if (!exists(dname ~ k)) { domain.files.remove(k); } }
 
-      log(Level.Verbose, "domain: %s, files %s|%s", dname, domain.buffered, domain.entries);
-      log(Level.Verbose, "%s = size: %.2f/%.2f kB", dname, domain.buffersize / 1024.0, domain.size / 1024.0);
+      log(Level.Verbose, "Domain: '%s' files %s|%s", dname, domain.buffered, domain.entries);
+      log(Level.Verbose, "Domain: '%s' size %.2f/%.2f kB", dname, domain.buffersize / 1024.0, domain.size / 1024.0);
       return(domain);
     } }
 
@@ -77,11 +77,11 @@ class FileSystem {
     /* Get the FilePayload at path from the localroot, with update check on buffers */
     final FilePayload file(string localroot, string path){ synchronized {
       if (!(localroot in domains)) {
-        log(Level.Verbose, "file(): unknown domain '%s'", localroot);
+        log(Level.Verbose, "File: '%s' unknown domain '%s'", path, localroot);
         return new FilePayload("", maxsize);
       }
       if (!domains[localroot].files.has(path) && exists(format("%s%s", localroot, path))) {
-        log(Level.Verbose, "New file %s, rescanning index: %s", path, localroot);
+        log(Level.Verbose, "File: '%s' new, rescanning index: %s", path, localroot);
         domains[localroot] = scan(localroot);
       }
       // File exists, buffer the individual file if modified after buffer date
@@ -89,7 +89,7 @@ class FileSystem {
         if (domains[localroot].files[path].needsupdate) domains[localroot].files[path].buffer();
         return(domains[localroot].files[path]);
       }
-      error("should not be here not in index, but exists %s, %s", path, localroot);
+      error("Should not be here, %s not in index, but exists %s", path, localroot);
       return new FilePayload("", maxsize);
     } }
 

@@ -23,9 +23,7 @@ SysTime parseHtmlDate(const string datestr) {
     try {
       ts = SysTime(DateTime(to!int(m.captures[3]), monthToIndex(m.captures[2]), to!int(m.captures[1]),      // 21 Apr 2014
                             to!int(m.captures[4]), to!int(m.captures[5]), to!int(m.captures[6])), UTC());   // 20:20:13
-    } catch(Exception e) {
-       log(Level.Verbose, "parseHtmlDate exception, could not parse '%s'", datestr);
-    }
+    } catch(Exception e) { error("parseHtmlDate exception, could not parse '%s'", datestr); }
   }
   return(ts);
 }
@@ -34,9 +32,9 @@ pure string htmlEscape(string s) nothrow {
   return(s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&#39;"));
 }
 
-string resolve(string path){ return(buildNormalizedPath(absolutePath(path)).replace("\\", "/")); }
+pure string resolve(string path) { return(buildNormalizedPath(absolutePath(path)).replace("\\", "/")); }
 
-string resolveFolder(string path){
+string resolveFolder(string path) {
   path = path.resolve();
   path = (path.endsWith("/"))? path : path ~ "/";
   if (!exists(path)) mkdirRecurse(path);
@@ -92,13 +90,13 @@ string[string] parseQueryString(const string query) {
   return(*p);
 }
 
-void writeinfile(in string localpath, in string content) {
+void writeFile(in string localpath, in string content) {
   try {
     auto fp = File(localpath, "wb");
     fp.rawWrite(content);
     fp.close();
-    log(Level.Trace, "writeinfile: %d bytes to: %s", content.length, localpath);
-  } catch(Exception e) { error("writeinfile: I/O exception '%s'", e.msg); }
+    log(Level.Trace, "writeFile: %d bytes to: %s", content.length, localpath);
+  } catch(Exception e) { error("writeFile: I/O exception '%s'", e.msg); }
 }
 
 string htmltime(in SysTime d = Clock.currTime()) {
