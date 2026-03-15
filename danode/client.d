@@ -76,7 +76,7 @@ class Client : Thread, ClientInterface {
           if (lastmodified >= maxtime) { // Client are not allowed to be silent for more than maxtime
             log(Level.Trace, "inactivity: %s > %s", lastmodified, maxtime);
             driver.setTimedOut(response);
-            this.log(request, response);
+            if (request.isValid) { this.log(request, response); }
             stop(); continue;
           }
           log(Level.Trace, "Connection %s:%s (%s msecs) %s", ip, port, starttime, to!string(driver.inbuffer.data));
