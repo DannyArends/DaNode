@@ -7,7 +7,7 @@ import danode.payload : Payload, PayloadType, Message;
 import danode.log : custom, info, warning, trace, cverbose, DEBUG;
 import danode.functions : isCGI;
 import danode.request : Request;
-import danode.response : Response, notmodified;
+import danode.response : Response, notModified;
 import danode.filesystem : FileSystem;
 
 /* Per-client streaming wrapper around a shared FilePayload.
@@ -27,25 +27,22 @@ class FileStream : Payload {
       }
     }
 
-    final @property PayloadType   type()      const { return PayloadType.File; }
-    final @property long          ready()           { return payload.ready(); }
-    final @property ptrdiff_t     length()    const { return payload.length(); }
-    final @property SysTime       mtime()           { return payload.mtime(); }
-    final @property string        mimetype()  const { return payload.mimetype(); }
-    final @property StatusCode    statuscode() const { return payload.statuscode(); }
+    final @property PayloadType type() const { return PayloadType.File; }
+    final @property long ready() { return payload.ready(); }
+    final @property ptrdiff_t length() const { return payload.length(); }
+    final @property SysTime mtime() { return payload.mtime(); }
+    final @property string mimetype() const { return payload.mimetype(); }
+    final @property StatusCode statuscode() const { return payload.statuscode(); }
 
-    final const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 4096, bool isRange = false, long rangeStart = 0, long rangeEnd = -1) {
+    final const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 4096, bool isRange = false, long start = 0, long end = -1) {
       // If buffered, delegate to the shared in-memory buffer — no file handle needed
-      if (payload.isBuffered()) { return payload.bytes(from, maxsize, isRange, rangeStart, rangeEnd); }
-
+      if (payload.isBuffered()) { return payload.bytes(from, maxsize, isRange, start, end); }
       if (!handle.isOpen()) return [];
-      ptrdiff_t offset = isRange ? to!ptrdiff_t(rangeStart) + from : from;
-      ptrdiff_t limit  = isRange ? to!ptrdiff_t(rangeEnd - rangeStart + 1) : -1;
-      ptrdiff_t sz     = (limit > 0) ? to!ptrdiff_t(min(maxsize, max(0, limit - from))) : maxsize;
-      if (offset >= payload.fileSize()) return [];
+      auto r = rangeCalc(from, maxsize, isRange, start, end);
+      if (r[0] >= payload.fileSize()) return [];
       try {
-        char[] tmpbuf = new char[](sz);
-        handle.seek(offset);
+        char[] tmpbuf = new char[](r[1]);
+        handle.seek(r[0]);
         return handle.rawRead!char(tmpbuf).dup;
       } catch (Exception e) { warning("FileStream.bytes exception '%s': %s", payload.filePath(), e.msg); return []; }
     }
@@ -139,23 +136,28 @@ class FilePayload : Payload {
     }
 
     /* Get bytes in a lockfree manner from the correct underlying buffer */
-    final const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 4096, bool isRange = false, long rangeStart = 0, long rangeEnd = -1) { synchronized {
+    final const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 4096, bool isRange = false, long start = 0, long end = -1) { synchronized {
       if (!realfile) { return []; }
       if (needsupdate) { buffer();  if (!buffered) { warning("FilePayload.bytes() failed to buffer '%s'", path); return([]); } }
-      ptrdiff_t offset = isRange ? to!ptrdiff_t(rangeStart) + from : from;
-      ptrdiff_t limit  = isRange ? to!ptrdiff_t(rangeEnd - rangeStart + 1) : -1;
-      ptrdiff_t sz     = (limit > 0) ? to!ptrdiff_t(min(maxsize, max(0, limit - from))) : maxsize;
-      trace("bytes: isRange=%s start=%d end=%d from=%d offset=%d sz=%d", isRange, rangeStart, rangeEnd, from, offset, sz);
+      auto r = rangeCalc(from, maxsize, isRange, start, end);
+      trace("bytes: isRange=%s start=%d end=%d from=%d offset=%d sz=%d", isRange, start, end, from, r[0], r[1]);
       if(hasEncodedVersion && deflate) {
-        if(offset < encbuf.length) return( encbuf[offset .. to!ptrdiff_t(min(offset+sz, $))] );
+        if(r[0] < encbuf.length) return( encbuf[r[0] .. to!ptrdiff_t(min(r[0]+r[1], $))] );
       } else {
-        if(offset < buf.length) return( buf[offset .. to!ptrdiff_t(min(offset+sz, $))] );
+        if(r[0] < buf.length) return( buf[r[0] .. to!ptrdiff_t(min(r[0]+r[1], $))] );
       }
       warning("FilePayload.bytes() called on unbuffered file '%s', this should not happen", path);
       return([]);
     } }
 }
 
+// Compute the Range
+@nogc pure ptrdiff_t[2] rangeCalc(ptrdiff_t from, ptrdiff_t maxsize, bool isRange, long start, long end) nothrow {
+  ptrdiff_t offset = isRange ? to!ptrdiff_t(start) + from : from;
+  ptrdiff_t limit = isRange ? to!ptrdiff_t(end - start + 1) : -1;
+  ptrdiff_t sz = (limit > 0) ? to!ptrdiff_t(min(maxsize, max(0, limit - from))) : maxsize;
+  return [offset, sz];
+}
 
 // Serve a static file from the disc, send encrypted when requested and available
 void serveStaticFile(ref Response response, in Request request, FileSystem fs) {
@@ -172,9 +174,9 @@ void serveStaticFile(ref Response response, in Request request, FileSystem fs) {
   if (request.hasRange) { response.serveRangeFile(request, reqFile); return; }
 
   if (!reqFile.deflate) response.customheader("Accept-Ranges", "bytes");
-  if (request.ifModified >= response.payload.mtime()) {                                        // Non modified static content
+  if (request.ifModified >= response.payload.mtime()) {
     trace("static file has not changed, sending notmodified");
-    response.notmodified(request, response.payload.mimetype);
+    response.notModified(response.payload.mimetype);
   }
   response.ready = true;
 }
@@ -186,7 +188,7 @@ void serveRangeFile(ref Response response, in Request request, FilePayload reqFi
   long start = r[0];
   long end = r[1] < 0 ? total - 1 : r[1];
   if (start >= total || end >= total || start > end) {
-    response.payload = new Message(StatusCode.RangeNotSatisfiable, "");
+    response.payload = new Message(StatusCode.RangeNotSatisfiable);
     response.customheader("Content-Range", format("bytes */%d", total));
   } else {
     response.customheader("Content-Range", format("bytes %d-%d/%d", start, end, total));

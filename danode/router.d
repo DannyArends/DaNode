@@ -5,7 +5,7 @@ import danode.client : Client;
 import danode.interfaces : ClientInterface, DriverInterface, StringDriver;
 import danode.statuscode : StatusCode;
 import danode.request : Request;
-import danode.response : Response, Message, create, serveBadRequest, domainNotFound, serveForbidden, redirect, serveCGI, serveDirectory, notFound;
+import danode.response : Response, setPayload, create, badRequest, domainNotFound, forbidden, redirect, serveCGI, serveDirectory, notFound;
 import danode.payload : Message;
 import danode.files : serveStaticFile;
 import danode.webconfig : WebConfig;
@@ -57,19 +57,19 @@ class Router {
 
     // Deliver a response to the request
     final void deliver(ref Request request, ref Response response, bool finalrewrite = false) {
-      if (!request.isValid) return(response.serveBadRequest(request));
+      if (!request.isValid) return(response.badRequest());
 
       string localroot = filesystem.localroot(request.shorthost());
       trace("%s:%s %s client (%s)", request.ip, request.port, (finalrewrite? "redirecting" : "routing"), request.id);
       trace("shorthost -> localroot: %s -> %s", request.shorthost(), localroot);
-      if (request.shorthost() == "" || !exists(localroot)) return(response.domainNotFound(request));
+      if (request.shorthost() == "" || !exists(localroot)) return(response.domainNotFound());
 
       version(SSL) { if (serveACMEChallenge(request, response)) return; }
 
       config = WebConfig(filesystem.file(localroot, "/web.config"));
       string fqdn = config.domain(request.shorthost());
       string localpath = safePath(localroot, decodeComponent(request.path));
-      if (localpath is null) return(response.serveForbidden(request));
+      if (localpath is null) return(response.forbidden());
 
       bool pathExists  = localpath.exists();
       bool pathIsCGI   = pathExists && localpath.isCGI();
@@ -106,7 +106,7 @@ class Router {
           if (config.redirect() && exists(localpath ~ "/" ~ config.index()) && !finalrewrite) { return(redirectCanonical(request, response)); }
           return(response.serveDirectory(request, config, filesystem));
         }
-        return(response.serveForbidden(request));
+        return(response.forbidden());
       }
 
       trace("redirect: %s %d", config.redirect, finalrewrite);
@@ -125,10 +125,7 @@ class Router {
           synchronized(getAcmeMutex()) {
             if (token in acmeChallenges) keyAuth = acmeChallenges[token];
           }
-          if (keyAuth.length) {
-            response.payload = new Message(StatusCode.Ok, keyAuth, "text/plain");
-            return(response.ready = true);
-          }
+          if (keyAuth.length) { return(response.setPayload(StatusCode.Ok, keyAuth, "text/plain")); }
         }
         return(false);
       }

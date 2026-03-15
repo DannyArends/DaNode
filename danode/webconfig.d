@@ -24,17 +24,13 @@ struct WebConfig {
     }
   }
 
+  private @nogc bool flag(string key, string def, string match) const nothrow { return data.from(key, def) == match; }
+
   // Which domain is the prefered domain to be used: http://www.xxx.nl or http://xxx.nl
-  @property string domain(string shorthost) const { 
-    if (data.from("shorturl", "yes") == "yes") return(shorthost);
-    return(format("www.%s", shorthost));
-  }
+  @property string domain(string shorthost) const { return flag("shorturl", "yes", "yes") ? shorthost : format("www.%s", shorthost); }
 
   // Is CGI allowed ?
-  @property @nogc bool allowcgi() const nothrow { 
-    if (data.from("allowcgi", "no") == "yes") return(true);
-    return(false);
-  }
+  @property @nogc bool allowcgi()    const nothrow { return flag("allowcgi",    "no", "yes"); }
 
   // concats localroot with the path specified
   @property string localpath(in string localroot, in string path) const {
@@ -42,14 +38,10 @@ struct WebConfig {
   }
 
   // Should redirection be performed ?
-  @property @nogc bool redirect() const nothrow { 
-    return(data.from("redirect", "/") != "/");
-  }
+  @property @nogc bool redirect() const nothrow { return !flag("redirect",   "/",  "/"); }
 
   // Should directories be redirected to the index page ?
-  @property @nogc bool redirectdir() const nothrow { 
-    return(data.from("redirectdir", "no") != "no");
-  }
+  @property @nogc bool redirectdir() const nothrow { return !flag("redirectdir","no", "no"); }
 
   // What index page is specified in the 'redirect' option in the web.config file
   @property string index() const {

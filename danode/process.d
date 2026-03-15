@@ -144,6 +144,9 @@ class Process : Thread {
       }
     }
 
+    // Drain both stdout & stderr
+    void drainPipes() { readpipe(fStdOut, outbuffer); readpipe(fStdErr, errbuffer); }
+
     @property void notifyovertime() { maxtime = -1; }
 
     // Execute the process
@@ -153,7 +156,6 @@ class Process : Thread {
     // inputfile is removed when the run() returns succesfully, on error, it is kept
     final void run() {
       try {
-        int  ch;
         if( !exists(inputfile) ) {
           warning("no input path: %s", inputfile);
           this.process.terminated = true;
@@ -173,8 +175,7 @@ class Process : Thread {
         if(!nonblocking(fStdErr) && fStdErr.isOpen()) custom(2, "WARN", "unable to create nonblocking error pipe for command");
 
         while (running && lastmodified < maxtime) {
-          this.readpipe(fStdOut, outbuffer);  // Non blocking slurp of stdout
-          this.readpipe(fStdErr, errbuffer);  // Non blocking slurp of stderr
+          drainPipes();
           process = cast(WaitResult) tryWait(cpid);
           Thread.sleep(msecs(1));
         }
@@ -184,9 +185,8 @@ class Process : Thread {
           process = WaitResult(true, wait(cpid));
         }
         trace("command finished %d after %s msecs", status(), time());
+        drainPipes();
 
-        this.readpipe(fStdOut, outbuffer);  // Non blocking slurp of stdout
-        this.readpipe(fStdErr, errbuffer);  // Non blocking slurp of stderr
         trace("Output %d & %d processed after %s msecs", outbuffer.data.length, errbuffer.data.length, time());
         if (errbuffer.data.length > 0) custom(1, "PROC", "stderr: %s", errbuffer.data);
 

@@ -1,12 +1,13 @@
 module danode.client;
 
 import danode.imports;
+import danode.cgi : CGI;
 import danode.router : Router, runRequest;
 import danode.statuscode : StatusCode;
 import danode.interfaces : DriverInterface, ClientInterface, StringDriver;
-import danode.response : Response, setTimedOut, setPayloadTooLarge, setHeaderTooLarge;
+import danode.response : Response, setPayload;
 import danode.request : Request;
-import danode.payload : Message;
+import danode.payload : Message, PayloadType;
 import danode.log : custom, info, trace, warning, NOTSET, NORMAL;
 
 immutable size_t MAX_HEADER_SIZE  = 1024 * 32;          //  32KB Header
@@ -117,6 +118,25 @@ class Client : Thread, ClientInterface {
     final @property long port() const { return(driver.port()); } 
     // ip address of the client
     final @property string ip() const { return(driver.ip()); } 
+}
+
+// serve a 408 connection timed out page
+void setTimedOut(ref DriverInterface driver, ref Response response) {
+  if(response.payload && response.payload.type == PayloadType.Script){ to!CGI(response.payload).notifyovertime(); }
+  response.setPayload(StatusCode.TimedOut, "408 - Connection Timed Out\n", "text/plain");
+  driver.send(response, driver.socket);
+}
+
+// serve a 431 request header fields too large page
+void setHeaderTooLarge(ref DriverInterface driver, ref Response response) {
+  response.setPayload(StatusCode.HeaderFieldsTooLarge, "431 - Request Header Fields Too Large\n", "text/plain");
+  driver.send(response, driver.socket);
+}
+
+// serve a 413 payload too large page
+void setPayloadTooLarge(ref DriverInterface driver, ref Response response) {
+  response.setPayload(StatusCode.PayloadTooLarge, "413 - Payload Too Large\n", "text/plain");
+  driver.send(response, driver.socket);
 }
 
 unittest {

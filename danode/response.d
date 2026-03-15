@@ -8,7 +8,7 @@ import danode.statuscode : StatusCode;
 import danode.request : Request;
 import danode.mimetypes : UNSUPPORTED_FILE;
 import danode.files : FileStream, FilePayload;
-import danode.payload : Payload, PayloadType, HeaderType, Empty, Message;
+import danode.payload : Payload, PayloadType, HeaderType, Message;
 import danode.log;
 import danode.webconfig;
 import danode.filesystem : FileSystem;
@@ -127,57 +127,33 @@ Response create(in Request request, Address address, in StatusCode statuscode = 
   response.address = address;
   response.customheader("Server", SERVERINFO);
   response.customheader("X-Powered-By", format("%s %s.%s", name, version_major, version_minor));
-  response.payload = new Empty(statuscode, mimetype);
+  response.payload = new Message(statuscode, "", mimetype);
   response.connection = request.keepalive ? "Keep-Alive" : "Close";
   response.created = true;
   return(response);
 }
 
+bool setPayload(ref Response response, StatusCode code, string msg = "", in string mimetype = UNSUPPORTED_FILE) {
+  response.payload = new Message(code, msg, mimetype);
+  return(response.ready = true);
+}
+
 // send a redirect permanently response
 void redirect(ref Response response, in Request request, in string fqdn, bool isSecure = false) {
   trace("redirecting request to %s", fqdn);
-  response.payload = new Empty(StatusCode.MovedPermanently);
+  response.setPayload(StatusCode.MovedPermanently);
   response.customheader("Location", format("http%s://%s%s%s", isSecure? "s": "", fqdn, request.path, request.query));
   response.connection = "Close";
-  response.ready = true;
 }
 
 // serve a not modified response
-void notmodified(ref Response response, in Request request, in string mimetype = UNSUPPORTED_FILE) {
-  response.payload = new Empty(StatusCode.NotModified, mimetype);
-  response.ready = true;
+void notModified(ref Response response, in string mimetype = UNSUPPORTED_FILE) { 
+  response.setPayload(StatusCode.NotModified, "", mimetype);
 }
 
 // serve a 404 domain not found page
-void domainNotFound(ref Response response, in Request request) {
-  warning("requested domain '%s', was not found", request.shorthost());
-  response.payload = new Message(StatusCode.NotFound, "404 - No such domain is available\n");
-  response.ready = true;
-}
-
-// serve a 413 payload too large page
-void setPayloadTooLarge(ref DriverInterface driver, ref Response response) {
-  response.payload = new Message(StatusCode.PayloadTooLarge, "413 - Payload Too Large\n");
-  response.ready = true;
-  driver.send(response, driver.socket);
-}
-
-// serve a 431 request header fields too large page
-void setHeaderTooLarge(ref DriverInterface driver, ref Response response) {
-  response.payload = new Message(StatusCode.HeaderFieldsTooLarge, "431 - Request Header Fields Too Large\n");
-  response.ready = true;
-  driver.send(response, driver.socket);
-}
-
-// serve a 408 connection timed out page
-void setTimedOut(ref DriverInterface driver, ref Response response) {
-  if(response.payload && response.payload.type == PayloadType.Script){
-    CGI cgi = to!CGI(response.payload);
-    cgi.notifyovertime();
-  }
-  response.payload = new Message(StatusCode.TimedOut, "408 - Connection Timed Out\n");
-  response.ready = true;
-  driver.send(response, driver.socket);           // Send the response, hit multiple times, send what you can and return
+void domainNotFound(ref Response response) {
+  response.setPayload(StatusCode.NotFound, "404 - No such domain is available\n", "text/plain");
 }
 
 // serve a the output of an external script 
@@ -199,29 +175,22 @@ void serveDirectory(ref Response response, ref Request request, in WebConfig con
   trace("sending browse directory");
   string localroot = fs.localroot(request.shorthost());
   string localpath = config.localpath(localroot, request.path);
-  response.payload = new Message(StatusCode.Ok, browseDir(localroot, localpath), "text/html");
-  response.ready = true;
+  response.setPayload(StatusCode.Ok, browseDir(localroot, localpath), "text/html");
 }
 
 // serve a forbidden page
-void serveForbidden(ref Response response, in Request request) {
-  trace("resource is restricted from being accessed");
-  response.payload = new Message(StatusCode.Forbidden, "403 - Access to this resource has been restricted\n");
-  response.ready = true;
+void forbidden(ref Response response) {
+  response.setPayload(StatusCode.Forbidden, "403 - Access to this resource has been restricted\n", "text/plain");
 }
 
 // serve a 400 bad request 
-void serveBadRequest(ref Response response, in Request request) {
-  trace("Request was malformed");
-  response.payload = new Message(StatusCode.BadRequest, "400 - Bad Request\n");
-  response.ready = true;
+void badRequest(ref Response response) {
+  response.setPayload(StatusCode.BadRequest, "400 - Bad Request\n", "text/plain");
 }
 
 // serve a 404 not found page
 void notFound(ref Response response) {
-  trace("resource not found");
-  response.payload = new Message(StatusCode.NotFound, "404 - The requested path does not exists on disk\n");
-  response.ready = true;
+  response.setPayload(StatusCode.NotFound, "404 - The requested path does not exists on disk\n", "text/plain");
 }
 
 unittest {

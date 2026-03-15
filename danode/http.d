@@ -7,47 +7,34 @@ import danode.log : custom, warning, error;
 
 class HTTP : DriverInterface {
   public:
-    this(Socket socket, bool blocking = false) {
-      custom(3, "HTTP", "HTTP constructor");
-      this.socket = socket;
-      this.blocking = blocking;
-      this.systime = Clock.currTime(); // Time in ms since this process came alive
-      this.modtime = Clock.currTime(); // Time in ms since this process was modified
-    }
+    this(Socket socket, bool blocking = false) { super(socket, blocking); }
 
     // Open the connection by setting the socket to non blocking I/O, and registering the origin address
     override bool openConnection() {
       try {
-        socket.blocking = this.blocking;
-      } catch(Exception e) {
-        error("unable to accept socket: %s", e.msg);
-        return(false);
-      }
+        socket.blocking = blocking;
+      } catch(Exception e) { error("unable to accept socket: %s", e.msg); return(false); }
       try {
-        this.address = socket.remoteAddress();
-      } catch(Exception e) {
-        warning("unable to resolve requesting origin: %s", e.msg);
-      }
+        address = socket.remoteAddress();
+      } catch(Exception e) { warning("unable to resolve requesting origin: %s", e.msg); }
       return(true);
     }
 
     // Receive upto maxsize of bytes from the client into the input buffer
     override ptrdiff_t receive(Socket socket, ptrdiff_t maxsize = 4096) {
-      if(socket is null) return(-1);
-      if(!socket.isAlive()) return(-1);
+      if (!socketReady()) return(-1);
       ptrdiff_t received;
       char[] tmpbuffer = new char[](maxsize);
       if ((received = socket.receive(tmpbuffer)) > 0) {
-        inbuffer.put(tmpbuffer[0 .. received]); modtime = Clock.currTime();
+        inbuffer.put(tmpbuffer[0 .. received]); touch();
       }
       if(received > 0) custom(3, "HTTP", "received %d bytes of data", received);
       return(inbuffer.data.length);
     }
 
     // Send upto maxsize bytes from the response to the client
-    override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096) { synchronized {
-      if(socket is null) return;
-      if(!socket.isAlive()) return;
+    override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096) {
+      if (!socketReady()) return;
       // Wait until socket is writable before sending
       SocketSet writeSet = new SocketSet();
       writeSet.add(socket);
@@ -55,29 +42,20 @@ class HTTP : DriverInterface {
       ptrdiff_t send = socket.send(response.bytes(maxsize));
       custom(1, "HTTP", "send result=%d index=%d length=%d", send, response.index, response.length);
       if (send > 0) {
-        modtime = Clock.currTime();
+        touch();
         response.index += send;
         senddata[requests] += send;
         if(response.index >= response.length) response.completed = true;
       }
-    } }
-
-    // Close the connection, by shutting down the socket
-    override void closeConnection() nothrow {
-      if (socket !is null) {
-        try {
-          socket.shutdown(SocketShutdown.BOTH);
-          socket.close();
-        } catch(Exception e) {
-          warning("unable to close socket: %s", e.msg);
-        }
-      }
     }
 
-    // Is the connection alive ?, make sure we check for null
-    override bool isAlive() { 
-      if (socket !is null) return(socket.isAlive());
-      return false;
+    // Close the connection, by shutting down the socket
+    override void closeConnection() {
+      try {
+        if (socket !is null) { if (socket.isAlive()) { socket.shutdown(SocketShutdown.BOTH); }
+          socket.close();
+        }
+      } catch(Exception e) { warning("unable to close socket: %s", e.msg); }
     }
 
     @nogc override bool isSecure() const nothrow { return(false); }

@@ -11,149 +11,109 @@ version(SSL) {
   import danode.log : custom, warning, error;
   import danode.ssl;
 
+  immutable long HANDSHAKE_TIMEOUT = 5000;  // 5 seconds
+
   class HTTPS : DriverInterface {
     private:
       char[] pending;
       SSL* ssl = null;
 
     public:
-      this(Socket socket, bool blocking = false) {
-        custom(3, "HTTPS", "HTTPS constructor");
-        this.socket = socket;
-        this.blocking = blocking;
-        this.systime = Clock.currTime(); // Time in ms since this process came alive
-        this.modtime = Clock.currTime(); // Time in ms since this process was modified
-      }
+      this(Socket socket, bool blocking = false) { super(socket, blocking); }
 
       // Perform the SSL handshake
       bool performHandshake() {
         custom(2, "HTTPS", "performing handshake");
-        bool handshaked = false;
-        int ret_accept, ret_error;
-        while (!handshaked && starttime < 500) {
-          ret_accept = SSL_accept(ssl);
-          if (ret_accept == 1) {
-            handshaked = true;
-          } else {
-            ret_error = ssl.checkForError(socket, ret_accept);
-            if (ret_accept == 0) return(false);
-            if (ret_error == SSL_ERROR_SSL) return(false);
-            if (ret_error == SSL_ERROR_WANT_READ) Thread.sleep(5.msecs);
-            if (ret_error == SSL_ERROR_WANT_WRITE) Thread.sleep(5.msecs);
-          }
+        int rA, rE;
+        while (starttime < HANDSHAKE_TIMEOUT) {
+          rA = SSL_accept(ssl);
+          if (rA == 1) return(true);    // Success
+          if (rA == 0) return(false);   // Controlled failure: Not retryable
+
+          rE = ssl.checkForError(socket, rA);
+          if (rE == SSL_ERROR_SSL) return(false);
+          if (rE == SSL_ERROR_WANT_READ) Thread.sleep(5.msecs);
+          if (rE == SSL_ERROR_WANT_WRITE) Thread.sleep(5.msecs);
         }
-        custom(2, "HTTPS", "handshake: %s", handshaked);
-        return(handshaked);
+        custom(2, "HTTPS", "handshake timed out after %d msecs", starttime);
+        return(false);
       }
 
       // Open the connection by setting the socket to non blocking I/O, and registering the origin address
-      override bool openConnection() { synchronized {
+      override bool openConnection() {
         custom(1, "HTTPS", "Opening HTTPS connection");
         if (contexts.length > 0) {
           custom(1, "HTTPS", "Number of SSL contexts: %d", contexts.length);
           try {
-            if (this.socket is null) {
-              error("SSL was not given a valid socket (null)");
-              return(false);
-            }
+            if (!socket) { error("SSL was not given a valid socket (null)"); return(false); }
 
             custom(1, "HTTPS", "set the socket the blocking mode");
-            this.socket.blocking = this.blocking;
+            socket.blocking = blocking;
 
             custom(1, "HTTPS", "creating a new ssl connection from context[0]");
-            this.ssl = SSL_new(contexts[0].context);
+            ssl = SSL_new(contexts[0].context);
 
             custom(1, "HTTPS", "setting the socket handle I/O to SSL* object");
-            this.ssl.SSL_set_fd(to!int(socket.handle()));
+            ssl.SSL_set_fd(to!int(socket.handle()));
 
             custom(1, "HTTPS", "SSL_set_accept_state to server mode");
-            SSL_set_accept_state(this.ssl);
+            SSL_set_accept_state(ssl);
 
-            bool handshaked = performHandshake();
-            if (!handshaked) {
-              custom(2, "ERROR", "couldn't handshake SSL connection");
-              return(false);
-            }
-          } catch (Exception e) {
-            error("couldn't open SSL connection : %s", e.msg);
-            return(false);
+            if (!performHandshake()) { custom(2, "ERROR", "couldn't handshake SSL connection"); return(false); }
+          } catch (Exception e) { error("couldn't open SSL connection : %s", e.msg); return(false);
           }
           try {
-            if (this.socket !is null) {
-              this.address = this.socket.remoteAddress();
-            }
-          } catch (Exception e) {
-            warning("unable to resolve requesting origin: %s", e.msg);
-          }
+            address = socket.remoteAddress();
+          } catch (Exception e) { warning("unable to resolve requesting origin: %s", e.msg); }
           custom(1, "HTTPS", "HTTPS connection opened");
           return(true);
-        } else {
-          error("HTTPS driver failed, reason: Server has no certificates loaded");
         }
+        error("HTTPS driver failed: 'Server has no certificates loaded'");
         return(false);
-      } }
+      }
+
+      override bool socketReady() { return socket !is null && socket.isAlive() && ssl !is null; }
 
       // Close the connection, by shutting down the SSL and Socket object
-      override void closeConnection() { synchronized {
-        if (socket !is null) {
-          try {
-            if (socket.isAlive()) {
-              if (ssl) {
-                SSL_shutdown(ssl);
-                SSL_shutdown(ssl);
-              } else {
-                error("No SSL object to close, are certificates available?");
-              }
-            }
-            socket.shutdown(SocketShutdown.BOTH);
+      override void closeConnection() {
+        try {
+          if (socketReady()) { SSL_shutdown(ssl); SSL_shutdown(ssl); }
+        } catch(Exception e) { warning("Exception during SSL shutdown: %s", e.msg); }
+        try {
+          if (socket !is null) { if (socket.isAlive()) { socket.shutdown(SocketShutdown.BOTH); }
             socket.close();
-          } catch(Exception e) {
-            warning("unable to close socket: %s", e.msg);
           }
-        }
-      } }
-
-      // Is the connection alive ?, make sure we check for null
-      override bool isAlive() { 
-        if(socket !is null) return socket.isAlive();
-        return false;
+        } catch(Exception e) { warning("Exception closing socket: %s", e.msg); }
       }
 
       // Receive upto maxsize of bytes from the client into the input buffer
-      override ptrdiff_t receive(Socket socket, ptrdiff_t maxsize = 4096){ synchronized {
-        if(socket is null) return -1;
-        if(!socket.isAlive()) return -1;
-        if(ssl is null) return -1;
-
+      override ptrdiff_t receive(Socket socket, ptrdiff_t maxsize = 4096){
+        if (!socketReady()) return -1;
         ptrdiff_t received;
         char[] tmpbuffer = new char[](maxsize);
         if ((received = SSL_read(ssl, cast(void*) tmpbuffer, cast(int)maxsize)) > 0) {
-          inbuffer.put(tmpbuffer[0 .. received]); modtime = Clock.currTime();
+          inbuffer.put(tmpbuffer[0 .. received]); touch();
         }
         if(received > 0) custom(3, "HTTPS", "received %d bytes of data", received);
         return(inbuffer.data.length);
-      } }
+      }
 
       // Send upto maxsize bytes from the response to the client
-      override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096){ synchronized {
-        if(socket is null) return;
-        if(!socket.isAlive()) return;
-        if(ssl is null) return;
+      override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096){
+        if (!socketReady()) return;
         // SSL requires retrying with exact same buffer on WANT_WRITE
         if (pending.length == 0) pending = response.bytes(maxsize).dup;
         if (pending.length == 0) return;
         ptrdiff_t send = SSL_write(ssl, cast(void*) pending.ptr, cast(int) pending.length);
         custom(1, "HTTPS", "send result=%d index=%d length=%d", send, response.index, response.length);
         if (send > 0) {
-          modtime = Clock.currTime();
+          touch();
           response.index += send;
           senddata[requests] += send;
           if(response.index >= response.length) response.completed = true;
           pending = [];  // clear on success, fetch next chunk next call
         }
-        // on send <= 0: keep pending, retry same buffer next call
-        // modtime not updated — inactivity timeout still works for dead connections
-      } }
+      }
 
       @nogc override bool isSecure() const nothrow { return(true); }
   }
