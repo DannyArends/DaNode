@@ -3,6 +3,7 @@ module danode.acme;
 version(SSL) {
   import danode.imports;
   import danode.includes;
+
   import danode.log : info, warning, error;
   import danode.ssl : reloadSSL;
   import danode.functions : writeinfile;
@@ -12,10 +13,8 @@ version(SSL) {
 
   __gshared string[string] acmeChallenges; // Shared challenge store: token -> keyAuthorization
   __gshared Mutex acmeMutex;
-  Mutex getAcmeMutex() {
-    if (acmeMutex is null) acmeMutex = new Mutex();
-    return acmeMutex;
-  }
+
+  Mutex getAcmeMutex() { if (acmeMutex is null) { acmeMutex = new Mutex(); } return acmeMutex; }
 
   // POST a JWS request to an ACME URL and return parsed JSON response
   JSONValue acmePost(EVP_PKEY* pkey, JSONValue dir, string url, string kid, string payload,

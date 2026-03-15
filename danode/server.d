@@ -10,7 +10,7 @@ import danode.log;
 
 version(SSL) {
   import danode.acme : checkAndRenew;
-  import danode.ssl : initSSL, closeSSL;
+  import danode.ssl : generateKey, initSSL, closeSSL;
   import danode.https : HTTPS;
 }
 
@@ -191,6 +191,8 @@ void main(string[] args) {
 
     auto server = new Server(port, backlog, wwwRoot, certDir, keyFile, accountKey, verbose);
     version (SSL) {
+      keyFile.generateKey();
+      accountKey.generateKey();
       checkAndRenew(certDir, keyFile, accountKey);
       server.initSSL();  // Load SSL certificates, using the server key
     }

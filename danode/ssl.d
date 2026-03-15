@@ -1,12 +1,12 @@
 module danode.ssl;
 
-import danode.log : custom, warning, info;
-
 version(SSL) {
+  import danode.imports;
   import danode.includes;
 
   import danode.imports;
   import danode.client;
+  import danode.log : custom, warning, info, error;
   import danode.server : Server;
   import danode.response : Response;
 
@@ -29,14 +29,29 @@ version(SSL) {
     // C callback function to switch SSL contexts after hostname lookup
     static void switchContext(SSL* ssl, int *ad, void *arg) {
       string hostname = to!(string)(cast(const(char*)) SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name));
-      custom(1, "HTTPS", "looking for hostname: %s", hostname);
+      custom(1, "SSL", "looking for hostname: %s", hostname);
       if(hostname is null) { custom(1, "WARN", "Client no SNI support, using default: contexts[0]"); return; }
       ptrdiff_t idx = findContext(hostname);
       if (idx >= 0) { 
-        custom(1, "HTTPS", "switching SSL context to %s", hostname); 
+        custom(1, "SSL", "switching SSL context to %s", hostname); 
         SSL_set_SSL_CTX(ssl, contexts[idx].context);
       }else{ custom(1, "WARN", "callback failed to find certificate for %s", hostname); }
     }
+  }
+
+  void generateKey(string path, int bits = 4096) {
+    if (exists(path)) return;
+    custom(0, "SSL", "ACME: generating %d-bit RSA key at %s", bits, path);
+    EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new_id(6, null);  // 6 = EVP_PKEY_RSA
+    scope(exit) EVP_PKEY_CTX_free(ctx);
+    EVP_PKEY_keygen_init(ctx);
+    EVP_PKEY_CTX_ctrl(ctx, 6, 8, 1, bits, null);  // set_rsa_keygen_bits: op=KEYGEN(8), ctrl=KEYBITS(1)
+    EVP_PKEY* pkey;
+    if (EVP_PKEY_keygen(ctx, &pkey) <= 0) { error("ACME: keygen failed for %s", path); return; }
+    scope(exit) EVP_PKEY_free(pkey);
+    BIO* bio = BIO_new_file(toStringz(path), "w");
+    scope(exit) BIO_free(bio);
+    PEM_write_bio_PrivateKey(bio, pkey, null, null, 0, null, null);
   }
 
   ptrdiff_t findContext(string hostname) {
@@ -58,7 +73,7 @@ version(SSL) {
     SSL_CTX_set1_groups_list(ctx, "X25519:P-256:P-384");
 
     if (exists(chainFile) && isFile(chainFile)) {
-      custom(1, "HTTPS", "loading certificate+chain from file: %s", chainFile);
+      custom(1, "SSL", "loading certificate+chain from file: %s", chainFile);
       sslAssert(SSL_CTX_use_certificate_chain_file(ctx, cast(const char*) toStringz(chainFile)) > 0);
     } else {
       custom(1, "WARN", "No chain file for %s", chainFile);
@@ -72,35 +87,16 @@ version(SSL) {
   // Does the hostname requested have a certificate ?
   bool hasCertificate(string hostname) {
     bool found = (findContext(hostname) >= 0);
-    custom(2, "HTTPS", "'%s' certificate? %s", hostname, found);
+    custom(2, "SSL", "'%s' certificate? %s", hostname, found);
     return found;
   }
 
-  // Should be used after SSL_connect(), SSL_accept(), SSL_do_handshake(), 
-  // SSL_read_ex(), SSL_read(), SSL_peek_ex(), SSL_peek(), SSL_write_ex() 
-  // or SSL_write() on the ssl
+  // Should be used after all SSL class
   int checkForError(SSL* ssl, Socket socket, int retcode) {
     int err = SSL_get_error(ssl, retcode);
     switch (err) {
-      case SSL_ERROR_NONE:
-        /* warning("SSL_ERROR_NONE"); */ break;
-      case SSL_ERROR_SSL:
-        /* warning("SSL_ERROR_SSL"); */ break;
-      case SSL_ERROR_ZERO_RETURN:
-        /* warning("SSL_ERROR_ZERO_RETURN"); */ break;
-      case SSL_ERROR_WANT_READ:
-        /* warning("SSL_ERROR_WANT_READ"); */ break;
-      case SSL_ERROR_WANT_WRITE:
-        /* warning("SSL_ERROR_WANT_WRITE"); */ break;
-      case SSL_ERROR_WANT_CONNECT:
-        /* warning("SSL_ERROR_WANT_CONNECT"); */ break;
-      case SSL_ERROR_WANT_ACCEPT:
-        /* warning("SSL_ERROR_WANT_ACCEPT"); */ break;
-      case SSL_ERROR_WANT_X509_LOOKUP:
-        /* warning("SSL_ERROR_WANT_X509_LOOKUP"); */ break;
-      case SSL_ERROR_SYSCALL:
-        /* warning("[ERROR]  SSL_ERROR_SYSCALL: RETURN: %d", retcode); */ break;
-      default: /*  warning("[ERROR]  SSL_ERROR Error %d %d", err, retcode); */ break;
+      case SSL_ERROR_NONE: break;
+      default: custom(2, "SSL", "SSL_get_error %s %d", err, retcode); break;
     }
     return(err);
   }
@@ -111,21 +107,18 @@ version(SSL) {
     for(size_t x = 0; x < hostname.length; x++) { ctx.hostname[x] = hostname[x]; }
     ctx.hostname[hostname.length] = '\0';
     ctx.context = createCTX(chainFile, keyFile);
-    if (ctx.context is null) { warning("HTTPS: failed to create context for %s", hostname); return ctx; }
-    custom(1, "HTTPS", "context created for certificate: %s", to!string(ctx.hostname.ptr));
+    if (ctx.context is null) { warning("SSL: failed to create context for %s", hostname); return ctx; }
+    custom(1, "SSL", "context created for certificate: %s", fromStringz(ctx.hostname));
     SSL_CTX_callback_ctrl(ctx.context,SSL_CTRL_SET_TLSEXT_SERVERNAME_CB, cast(ExternC!(void function())) &switchContext);
     return(ctx);
   }
 
   // loads all chain files in the server.certDir, using server.keyFile
-  void initSSL(Server server, VERSION v = SSL23) {
-    custom(0, "HTTPS", "loading Deimos.openSSL, certDir: %s, keyFile: %s, SSL:%s", server.certDir, server.keyFile, v);
-    reloadSSL(server.certDir, server.keyFile);
-  }
+  void initSSL(Server server) { reloadSSL(server.certDir, server.keyFile); }
 
   // Reload all SSL contexts from certDir without restarting the server
   void reloadSSL(string certDir = ".ssl/", string keyFile = ".ssl/server.key") {
-    custom(0, "HTTPS", "(re)loading SSL certificates from: %s", certDir);
+    custom(0, "SSL", "loading Deimos.openSSL, certDir: %s, keyFile: %s", certDir, keyFile);
     if (!exists(certDir) || !isDir(certDir)) { warning("SSL cert dir '%s' not found", certDir); return; }
     if (!exists(keyFile) || !isFile(keyFile)) { warning("SSL key file '%s' not found", keyFile); return; }
 
@@ -154,15 +147,9 @@ version(SSL) {
     contexts = null;
   }
 
-  void sslAssert(bool ret) { 
-    if (!ret) { ERR_print_errors_fp(null); throw new Exception("SSL_ERROR"); }
-  }
+  void sslAssert(bool ret) { if (!ret) { ERR_print_errors_fp(null); throw new Exception("SSL_ERROR"); } }
 
   unittest {
     custom(0, "FILE", "%s", __FILE__);
-  }
-} else {// End version SSL
-  unittest {
-    custom(0, "WARN", "Skipping unittest for: '%s'", __FILE__);
   }
 }
