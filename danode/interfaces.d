@@ -45,12 +45,12 @@ abstract class DriverInterface {
       if (!socketReady()) return(-1);
       ptrdiff_t received;
       char[] tmpbuffer = new char[](maxsize);
-      if ((received = getData(tmpbuffer)) > 0) { inbuffer.put(tmpbuffer[0 .. received]); touch(); }
+      if ((received = receiveData(tmpbuffer)) > 0) { inbuffer.put(tmpbuffer[0 .. received]); touch(); }
       if(received > 0) log(Level.Trace, "Received %d bytes of data", received);
       return(inbuffer.data.length);
     }
 
-    long getData(ref char[] buffer);
+    long receiveData(ref char[] buffer);
     bool openConnection(); /// Open the connection
     void closeConnection(); /// Close the connection
     @nogc bool isSecure() const nothrow; /// Are we secure ?
@@ -99,16 +99,12 @@ abstract class DriverInterface {
 }
 
 class StringDriver : DriverInterface {
-    this(string input) {
-      super(null);
-      inbuffer ~= input;
-    }
+    this(string input) { super(null); inbuffer ~= input; }
     override bool openConnection() { return(true); }
     override void closeConnection() nothrow { }
     override bool isAlive() { return(true); }
     @nogc override bool isSecure() const nothrow { return(false); }
-    override long getData(ref char[] buffer) { buffer = inbuffer.data; return(buffer.length); }
-
+    override long receiveData(ref char[] buffer) { buffer = inbuffer.data; return(buffer.length); }
     override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096)  { 
       response.header();
       response.completed = true;

@@ -22,7 +22,7 @@ version(SSL) {
 
       // Perform the SSL handshake
       bool performHandshake() {
-        log(Level.Trace, "performing handshake");
+        log(Level.Trace, "Performing handshake");
         int rA, rE;
         while (starttime < HANDSHAKE_TIMEOUT) {
           rA = SSL_accept(ssl);
@@ -34,7 +34,7 @@ version(SSL) {
           if (rE == SSL_ERROR_WANT_READ) Thread.sleep(5.msecs);
           if (rE == SSL_ERROR_WANT_WRITE) Thread.sleep(5.msecs);
         }
-        log(Level.Trace, "handshake timed out after %d msecs", starttime);
+        log(Level.Trace, "Handshake timeout: %d msecs", starttime);
         return(false);
       }
 
@@ -46,24 +46,24 @@ version(SSL) {
           try {
             if (!socket) { error("SSL was not given a valid socket (null)"); return(false); }
 
-            log(Level.Trace, "set the socket the blocking mode");
+            log(Level.Trace, "Set the socket the blocking mode");
             socket.blocking = blocking;
 
-            log(Level.Trace, "creating a new ssl connection from context[0]");
+            log(Level.Trace, "Creating a new ssl connection from context[0]");
             ssl = SSL_new(contexts[0].context);
 
-            log(Level.Trace, "setting the socket handle I/O to SSL* object");
+            log(Level.Trace, "Setting the socket handle I/O to SSL* object");
             ssl.SSL_set_fd(to!int(socket.handle()));
 
             log(Level.Trace, "SSL_set_accept_state to server mode");
             SSL_set_accept_state(ssl);
 
             if (!performHandshake()) { log(Level.Verbose, "couldn't handshake SSL connection"); return(false); }
-          } catch (Exception e) { error("couldn't open SSL connection : %s", e.msg); return(false);
+          } catch (Exception e) { error("Couldn't open SSL connection : %s", e.msg); return(false);
           }
           try {
             address = socket.remoteAddress();
-          } catch (Exception e) { error("unable to resolve requesting origin: %s", e.msg); }
+          } catch (Exception e) { error("Unable to resolve requesting origin: %s", e.msg); }
           log(Level.Verbose, "HTTPS connection opened");
           return(true);
         }
@@ -81,7 +81,7 @@ version(SSL) {
         closeSocket();
       }
 
-      override long getData(ref char[] buffer) { return(SSL_read(ssl, cast(void*) buffer, cast(int)buffer.length)); }
+      override long receiveData(ref char[] buffer) { return(SSL_read(ssl, cast(void*) buffer, cast(int)buffer.length)); }
 
       // Send upto maxsize bytes from the response to the client
       override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096){
@@ -90,7 +90,7 @@ version(SSL) {
         if (pending.length == 0) pending = response.bytes(maxsize).dup;
         if (pending.length == 0) return;
         ptrdiff_t send = SSL_write(ssl, cast(void*) pending.ptr, cast(int) pending.length);
-        log(Level.Verbose, "send result=%d index=%d length=%d", send, response.index, response.length);
+        log(Level.Verbose, "Send result=%d index=%d length=%d", send, response.index, response.length);
         if (send > 0) {
           touch();
           response.index += send;
