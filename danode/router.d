@@ -104,7 +104,10 @@ class Router {
       }
 
       log(Level.Trace, "Router: [T] Redirect: %s %d", config.redirect, finalrewrite);
-      if(config.redirect && !finalrewrite) { return(this.redirectCanonical(request, response)); }
+      if(config.redirect && !finalrewrite) {
+        if (!config.allowcgi) return(response.notFound());
+        return(this.redirectCanonical(request, response));
+      }
       return(response.notFound());  // Request is not hosted on this server
     }
 
