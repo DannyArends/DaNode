@@ -31,8 +31,11 @@ abstract class DriverInterface {
     bool                blocking = false;    /// Blocking communication ?
     int                 verbose = NORMAL;    /// Verbose level
 
+    this(Socket socket, bool blocking = false) { this.socket = socket; this.blocking = blocking; systime = Clock.currTime(); touch(); }
     bool socketReady() { return socket !is null && socket.isAlive(); } /// Socket ready ?
     bool isAlive(){ return socket.isAlive(); }; /// Is the connection alive ?
+    final void touch() { modtime = Clock.currTime(); }
+
     bool openConnection(); /// Open the connection
     void closeConnection(); /// Close the connection
     @nogc bool isSecure() const nothrow; /// Are we secure ?
@@ -82,9 +85,7 @@ abstract class DriverInterface {
 
 class StringDriver : DriverInterface {
     this(string input) {
-      this.socket = new Socket(AddressFamily.INET, SocketType.STREAM, ProtocolType.TCP);
-      this.systime = Clock.currTime(); // Time in ms since this process came alive
-      this.modtime = Clock.currTime(); // Time in ms since this process was modified
+      super(new Socket(AddressFamily.INET, SocketType.STREAM, ProtocolType.TCP));
       inbuffer ~= input;
     }
     override bool openConnection() { return(true); }

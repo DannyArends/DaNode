@@ -11,39 +11,32 @@ version(SSL) {
   import danode.log : custom, warning, error;
   import danode.ssl;
 
+  immutable long HANDSHAKE_TIMEOUT = 5000;  // 5 seconds
+
   class HTTPS : DriverInterface {
     private:
       char[] pending;
       SSL* ssl = null;
 
     public:
-      this(Socket socket, bool blocking = false) {
-        custom(3, "HTTPS", "HTTPS constructor");
-        this.socket = socket;
-        this.blocking = blocking;
-        this.systime = Clock.currTime(); // Time in ms since this process came alive
-        this.modtime = Clock.currTime(); // Time in ms since this process was modified
-      }
+      this(Socket socket, bool blocking = false) { super(socket, blocking); }
 
       // Perform the SSL handshake
       bool performHandshake() {
         custom(2, "HTTPS", "performing handshake");
-        bool handshaked = false;
-        int ret_accept, ret_error;
-        while (!handshaked && starttime < 500) {
-          ret_accept = SSL_accept(ssl);
-          if (ret_accept == 1) {
-            handshaked = true;
-          } else {
-            ret_error = ssl.checkForError(socket, ret_accept);
-            if (ret_accept == 0) return(false);
-            if (ret_error == SSL_ERROR_SSL) return(false);
-            if (ret_error == SSL_ERROR_WANT_READ) Thread.sleep(5.msecs);
-            if (ret_error == SSL_ERROR_WANT_WRITE) Thread.sleep(5.msecs);
-          }
+        int rA, rE;
+        while (starttime < HANDSHAKE_TIMEOUT) {
+          rA = SSL_accept(ssl);
+          if (rA == 1) return(true);    // Success
+          if (rA == 0) return(false);   // Controlled failure: Not retryable
+
+          rE = ssl.checkForError(socket, rA);
+          if (rE == SSL_ERROR_SSL) return(false);
+          if (rE == SSL_ERROR_WANT_READ) Thread.sleep(5.msecs);
+          if (rE == SSL_ERROR_WANT_WRITE) Thread.sleep(5.msecs);
         }
-        custom(2, "HTTPS", "handshake: %s", handshaked);
-        return(handshaked);
+        custom(2, "HTTPS", "handshake timed out after %d msecs", starttime);
+        return(false);
       }
 
       // Open the connection by setting the socket to non blocking I/O, and registering the origin address
@@ -52,44 +45,30 @@ version(SSL) {
         if (contexts.length > 0) {
           custom(1, "HTTPS", "Number of SSL contexts: %d", contexts.length);
           try {
-            if (this.socket is null) {
-              error("SSL was not given a valid socket (null)");
-              return(false);
-            }
+            if (!socket) { error("SSL was not given a valid socket (null)"); return(false); }
 
             custom(1, "HTTPS", "set the socket the blocking mode");
-            this.socket.blocking = this.blocking;
+            socket.blocking = blocking;
 
             custom(1, "HTTPS", "creating a new ssl connection from context[0]");
-            this.ssl = SSL_new(contexts[0].context);
+            ssl = SSL_new(contexts[0].context);
 
             custom(1, "HTTPS", "setting the socket handle I/O to SSL* object");
-            this.ssl.SSL_set_fd(to!int(socket.handle()));
+            ssl.SSL_set_fd(to!int(socket.handle()));
 
             custom(1, "HTTPS", "SSL_set_accept_state to server mode");
-            SSL_set_accept_state(this.ssl);
+            SSL_set_accept_state(ssl);
 
-            bool handshaked = performHandshake();
-            if (!handshaked) {
-              custom(2, "ERROR", "couldn't handshake SSL connection");
-              return(false);
-            }
-          } catch (Exception e) {
-            error("couldn't open SSL connection : %s", e.msg);
-            return(false);
+            if (!performHandshake()) { custom(2, "ERROR", "couldn't handshake SSL connection"); return(false); }
+          } catch (Exception e) { error("couldn't open SSL connection : %s", e.msg); return(false);
           }
           try {
-            if (this.socket !is null) {
-              this.address = this.socket.remoteAddress();
-            }
-          } catch (Exception e) {
-            warning("unable to resolve requesting origin: %s", e.msg);
-          }
+            address = socket.remoteAddress();
+          } catch (Exception e) { warning("unable to resolve requesting origin: %s", e.msg); }
           custom(1, "HTTPS", "HTTPS connection opened");
           return(true);
-        } else {
-          error("HTTPS driver failed, reason: Server has no certificates loaded");
         }
+        error("HTTPS driver failed: 'Server has no certificates loaded'");
         return(false);
       } }
 
@@ -111,7 +90,7 @@ version(SSL) {
         ptrdiff_t received;
         char[] tmpbuffer = new char[](maxsize);
         if ((received = SSL_read(ssl, cast(void*) tmpbuffer, cast(int)maxsize)) > 0) {
-          inbuffer.put(tmpbuffer[0 .. received]); modtime = Clock.currTime();
+          inbuffer.put(tmpbuffer[0 .. received]); touch();
         }
         if(received > 0) custom(3, "HTTPS", "received %d bytes of data", received);
         return(inbuffer.data.length);
@@ -126,14 +105,12 @@ version(SSL) {
         ptrdiff_t send = SSL_write(ssl, cast(void*) pending.ptr, cast(int) pending.length);
         custom(1, "HTTPS", "send result=%d index=%d length=%d", send, response.index, response.length);
         if (send > 0) {
-          modtime = Clock.currTime();
+          touch();
           response.index += send;
           senddata[requests] += send;
           if(response.index >= response.length) response.completed = true;
           pending = [];  // clear on success, fetch next chunk next call
         }
-        // on send <= 0: keep pending, retry same buffer next call
-        // modtime not updated — inactivity timeout still works for dead connections
       } }
 
       @nogc override bool isSecure() const nothrow { return(true); }
