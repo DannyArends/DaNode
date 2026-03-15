@@ -46,7 +46,7 @@ class Client : Thread, ClientInterface {
           if (driver.receive(driver.socket) > 0) {     // We've received new data
             if (!driver.hasHeader()) {
               if (driver.inbuffer.data.length > MAX_HEADER_SIZE) {  // Check if we exceed the max header size
-                log(Level.Verbose, "CLIENT", "header too large from %s:%s", ip, port);
+                log(Level.Verbose, "header too large from %s:%s", ip, port);
                 driver.setHeaderTooLarge(response); stop(); continue;
               }
             } else {
