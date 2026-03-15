@@ -74,7 +74,6 @@ class Client : Thread, ClientInterface {
             response.destroy();                             // Clear the response structure
           }
           if (lastmodified >= maxtime) { // Client are not allowed to be silent for more than maxtime
-            log(Level.Trace, "timeout: index=%d length=%d completed=%s", response.index, response.length, response.completed);
             log(Level.Trace, "inactivity: %s > %s", lastmodified, maxtime);
             driver.setTimedOut(response);
             this.log(request, response);
