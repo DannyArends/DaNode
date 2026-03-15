@@ -9,7 +9,7 @@ import danode.request : Request;
 import danode.mimetypes : UNSUPPORTED_FILE;
 import danode.files : FileStream, FilePayload;
 import danode.payload : Payload, PayloadType, HeaderType, Message;
-import danode.log;
+import danode.log : tag, log, Level;
 import danode.webconfig;
 import danode.filesystem : FileSystem;
 import danode.post : serverAPI;
@@ -45,7 +45,7 @@ struct Response {
       CGI script = to!CGI(payload);
       string scriptheader = script.fullHeader();
       auto status = script.statuscode();
-      custom(1, "INFO", "script '%s', status (%s)", script.command, status);
+      log(Level.Verbose, "Script '%s', status (%s)", script.command, status);
       connection = script.getHeader("Connection", "No Request");
       long clength = script.getHeader("Content-Length", -1); // Is the content length provided ?
       foreach (line; scriptheader.split("\n")) {
@@ -63,15 +63,15 @@ struct Response {
         return(hdr.data);
       }
       if (connection != "No Request" && clength > -1) {
-        custom(0, "KEEP", "script '%s' in keepalive mode connection '%s' (%s, %d)", script.command, connection, script.headerType(), clength);
+        log(Level.Verbose, "Script '%s' in keepalive mode connection '%s' (%s, %d)", script.command, connection, script.headerType(), clength);
         hdr.put(scriptheader);
         return(hdr.data); // The script can communicate
       }
       if (connection != "Close") {
-        custom(1, "WARN", "script '%s', failed - headerType: %s, Content-Length: %d, connection: '%s', headerLength: %d, header: [%s]", 
+        log(Level.Verbose, "Script '%s', failed - headerType: %s, Content-Length: %d, connection: '%s', headerLength: %d, header: [%s]", 
                script.command, script.headerType(), clength, connection, scriptheader.length, scriptheader);
       }else{
-        custom(1, "INFO", "script '%s', header generation (%s, %d)", script.command, script.headerType(), clength);
+        log(Level.Verbose, "Script '%s', header generation (%s, %d)", script.command, script.headerType(), clength);
       }
       connection = "Close";
     }
@@ -103,7 +103,7 @@ struct Response {
     if (isRange) return StatusCode.PartialContent;
     return payload.statuscode;
   }
-  @property final bool keepalive() const { return(icmp(connection, "keep-alive") == 0); }
+  @property @nogc final bool keepalive() const nothrow { return(icmp(connection, "keep-alive") == 0); }
   @property final long length() {
     if (isRange) return header.length + (rangeEnd - rangeStart + 1);
     return header.length + payload.length;
@@ -140,7 +140,7 @@ bool setPayload(ref Response response, StatusCode code, string msg = "", in stri
 
 // send a redirect permanently response
 void redirect(ref Response response, in Request request, in string fqdn, bool isSecure = false) {
-  trace("redirecting request to %s", fqdn);
+  log(Level.Trace, "Redirecting request to %s", fqdn);
   response.setPayload(StatusCode.MovedPermanently);
   response.customheader("Location", format("http%s://%s%s%s", isSecure? "s": "", fqdn, request.path, request.query));
   response.connection = "Close";
@@ -158,13 +158,13 @@ void domainNotFound(ref Response response) {
 
 // serve a the output of an external script 
 void serveCGI(ref Response response, in Request request, in WebConfig config, in FileSystem fs, bool removeInput = true) {
-  trace("requested a cgi file, execution allowed");
+  log(Level.Trace, "Requested a cgi file, execution allowed");
   string localroot = fs.localroot(request.shorthost());
   string localpath = config.localpath(localroot, request.path);
   if (!response.routed) { // Store POST data (could fail multiple times)
-    trace("writing server variables");
+    log(Level.Trace, "Writing server variables");
     fs.serverAPI(config, request, response);
-    trace("creating CGI payload");
+    log(Level.Trace, "Creating CGI payload");
     response.payload = new CGI(request.command(localpath), request.inputfile(fs), request.environ(localpath), removeInput, request.maxtime-5);
     response.ready = true;
   }
@@ -172,7 +172,7 @@ void serveCGI(ref Response response, in Request request, in WebConfig config, in
 
 // serve a directory browsing request, via a message
 void serveDirectory(ref Response response, ref Request request, in WebConfig config, in FileSystem fs) {
-  trace("sending browse directory");
+  log(Level.Trace, "Sending browse directory");
   string localroot = fs.localroot(request.shorthost());
   string localpath = config.localpath(localroot, request.path);
   response.setPayload(StatusCode.Ok, browseDir(localroot, localpath), "text/html");
@@ -194,6 +194,6 @@ void notFound(ref Response response) {
 }
 
 unittest {
-  custom(0, "FILE", "%s", __FILE__);
+  tag(Level.Always, "FILE", "%s", __FILE__);
 }
 

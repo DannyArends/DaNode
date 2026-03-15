@@ -3,7 +3,7 @@ module danode.interfaces;
 import danode.imports;
 import danode.functions : Msecs, bodystart, endofheader, fullheader;
 import danode.response : Response;
-import danode.log : NORMAL, INFO, DEBUG;
+import danode.log : log, error, Level;
 
 /* Client interface used by the server */
 interface ClientInterface {
@@ -29,13 +29,28 @@ abstract class DriverInterface {
     SysTime             modtime;             /// Time in ms since this process was last modified
     Address             address;             /// Private address field
     bool                blocking = false;    /// Blocking communication ?
-    int                 verbose = NORMAL;    /// Verbose level
 
     this(Socket socket, bool blocking = false) { this.socket = socket; this.blocking = blocking; systime = Clock.currTime(); touch(); }
     bool socketReady() { return socket !is null && socket.isAlive(); } /// Socket ready ?
     bool isAlive(){ return socket.isAlive(); }; /// Is the connection alive ?
-    final void touch() { modtime = Clock.currTime(); }
+    void touch() { modtime = Clock.currTime(); }
+    void closeSocket() {
+      try {
+        if (socket !is null) { if (socket.isAlive()) { socket.shutdown(SocketShutdown.BOTH); } socket.close(); }
+      } catch(Exception e) { error("Exception closing socket: %s", e.msg); }
+    }
 
+    // Receive upto maxsize of bytes from the client into the input buffer
+    ptrdiff_t receive(Socket socket, ptrdiff_t maxsize = 4096) {
+      if (!socketReady()) return(-1);
+      ptrdiff_t received;
+      char[] tmpbuffer = new char[](maxsize);
+      if ((received = receiveData(tmpbuffer)) > 0) { inbuffer.put(tmpbuffer[0 .. received]); touch(); }
+      if(received > 0) log(Level.Trace, "Received %d bytes of data", received);
+      return(inbuffer.data.length);
+    }
+
+    long receiveData(ref char[] buffer);
     bool openConnection(); /// Open the connection
     void closeConnection(); /// Close the connection
     @nogc bool isSecure() const nothrow; /// Are we secure ?
@@ -84,15 +99,12 @@ abstract class DriverInterface {
 }
 
 class StringDriver : DriverInterface {
-    this(string input) {
-      super(null);
-      inbuffer ~= input;
-    }
+    this(string input) { super(null); inbuffer ~= input; }
     override bool openConnection() { return(true); }
     override void closeConnection() nothrow { }
     override bool isAlive() { return(true); }
     @nogc override bool isSecure() const nothrow { return(false); }
-    override ptrdiff_t receive(Socket socket, ptrdiff_t maxsize = 4096) { return(inbuffer.data.length); }
+    override long receiveData(ref char[] buffer) { buffer = inbuffer.data; return(buffer.length); }
     override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096)  { 
       response.header();
       response.completed = true;

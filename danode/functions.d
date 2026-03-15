@@ -1,7 +1,8 @@
 module danode.functions;
 
 import danode.imports;
-import danode.log : error, warning, trace, custom;
+
+import danode.log : log, tag, error, Level;
 import danode.mimetypes : CGI_FILE, mime, UNSUPPORTED_FILE;
 
 immutable string[int] months; 
@@ -22,15 +23,22 @@ SysTime parseHtmlDate(const string datestr) {
     try {
       ts = SysTime(DateTime(to!int(m.captures[3]), monthToIndex(m.captures[2]), to!int(m.captures[1]),      // 21 Apr 2014
                             to!int(m.captures[4]), to!int(m.captures[5]), to!int(m.captures[6])), UTC());   // 20:20:13
-    } catch(Exception e) {
-       warning("parseHtmlDate exception, could not parse '%s'", datestr);
-    }
+    } catch(Exception e) { error("parseHtmlDate exception, could not parse '%s'", datestr); }
   }
   return(ts);
 }
 
-pure string htmlEscape(string s) {
+pure string htmlEscape(string s) nothrow {
   return(s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&#39;"));
+}
+
+pure string resolve(string path) { return(buildNormalizedPath(absolutePath(path)).replace("\\", "/")); }
+
+string resolveFolder(string path) {
+  path = path.resolve();
+  path = (path.endsWith("/"))? path : path ~ "/";
+  if (!exists(path)) mkdirRecurse(path);
+  return(path);
 }
 
 // Returns null if path escapes root
@@ -40,7 +48,7 @@ string safePath(in string root, in string path) {
   string full = root ~ (path.startsWith("/") ? path : "/" ~ path);
   try {
     if (exists(full)) {
-      string resolved = buildNormalizedPath(absolutePath(full)).replace("\\", "/");
+      string resolved = full.resolve();
       string absroot  = root.endsWith("/") ? root : root ~ "/";
       if (resolved != absroot[0..$-1] && !resolved.startsWith(absroot)) return null;
     }
@@ -71,7 +79,7 @@ string[string] parseQueryString(const string query) {
       string key   = decodeComponent(i > 0 ? s[0 .. i]   : s);
       string value = decodeComponent(i > 0 ? s[i+1 .. $] : "");
       if (key.length > 0) params[key] = value;
-    } catch (Exception e) { warning("parseQueryString: failed to decode '%s'", param); }
+    } catch (Exception e) { error("parseQueryString: failed to decode '%s'", param); }
   }
   return params;
 }
@@ -82,13 +90,13 @@ string[string] parseQueryString(const string query) {
   return(*p);
 }
 
-void writeinfile(in string localpath, in string content) {
+void writeFile(in string localpath, in string content) {
   try {
     auto fp = File(localpath, "wb");
     fp.rawWrite(content);
     fp.close();
-    trace("writeinfile: %d bytes to: %s", content.length, localpath);
-  } catch(Exception e) { error("writeinfile: I/O exception '%s'", e.msg); }
+    log(Level.Trace, "writeFile: %d bytes to: %s", content.length, localpath);
+  } catch(Exception e) { error("writeFile: I/O exception '%s'", e.msg); }
 }
 
 string htmltime(in SysTime d = Clock.currTime()) {
@@ -168,16 +176,16 @@ int sISelect(SocketSet set, Socket socket, int timeout = 10) {
 }
 
 unittest {
-  custom(0, "FILE", "%s", __FILE__);
-  custom(0, "TEST", "monthToIndex('Feb') = %s", monthToIndex("Feb"));
-  custom(0, "TEST", "htmltime() = %s", htmltime());
-  custom(0, "TEST", "isFILE('danode/functions.d') = %s", isFILE("danode/functions.d"));
-  custom(0, "TEST", "isDIR('danode') = %s", isDIR("danode"));
-  custom(0, "TEST", "isCGI('www/localhost/dmd.d') = %s", isCGI("www/localhost/dmd.d"));
-  custom(0, "TEST", "isAllowed('www/localhost/data.ill') = %s", isAllowed("www/localhost/data.ill"));
-  custom(0, "TEST", "isAllowed('www/localhost/index.html') = %s", isAllowed("www/localhost/index.html"));
-  custom(0, "TEST", "interpreter('www/localhost/dmd.d') = %s", interpreter("www/localhost/dmd.d"));
-  custom(0, "TEST", "interpreter('www/localhost/php.php') = %s", interpreter("www/localhost/php.php"));
-  custom(0, "TEST", "browseDir('www', 'localhost') = %s", browseDir("www", "www/localhost"));
+  tag(Level.Always, "FILE", "%s", __FILE__);
+  tag(Level.Always, "TEST", "monthToIndex('Feb') = %s", monthToIndex("Feb"));
+  tag(Level.Always, "TEST", "htmltime() = %s", htmltime());
+  tag(Level.Always, "TEST", "isFILE('danode/functions.d') = %s", isFILE("danode/functions.d"));
+  tag(Level.Always, "TEST", "isDIR('danode') = %s", isDIR("danode"));
+  tag(Level.Always, "TEST", "isCGI('www/localhost/dmd.d') = %s", isCGI("www/localhost/dmd.d"));
+  tag(Level.Always, "TEST", "isAllowed('www/localhost/data.ill') = %s", isAllowed("www/localhost/data.ill"));
+  tag(Level.Always, "TEST", "isAllowed('www/localhost/index.html') = %s", isAllowed("www/localhost/index.html"));
+  tag(Level.Always, "TEST", "interpreter('www/localhost/dmd.d') = %s", interpreter("www/localhost/dmd.d"));
+  tag(Level.Always, "TEST", "interpreter('www/localhost/php.php') = %s", interpreter("www/localhost/php.php"));
+  tag(Level.Always, "TEST", "browseDir('www', 'localhost') = %s", browseDir("www", "www/localhost"));
 }
 

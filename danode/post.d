@@ -9,8 +9,8 @@ import danode.response : SERVERINFO, Response, redirect, create, setPayload;
 import danode.webconfig : WebConfig;
 import danode.mimetypes : mime;
 import danode.filesystem : FileSystem;
-import danode.functions : from, has, isCGI, isFILE, isDIR, writeinfile, parseQueryString;
-import danode.log : info, custom, trace, warning;
+import danode.functions : from, has, isCGI, isFILE, isDIR, writeFile, parseQueryString;
+import danode.log : log, error, Level;
 
 immutable string      MPHEADER         = "multipart/form-data";                     /// Multipart header id
 immutable string      XFORMHEADER      = "application/x-www-form-urlencoded";       /// X-form header id
@@ -29,41 +29,41 @@ struct PostItem {
 // Parse the POST request data from the client, or waits (returning false) for more data 
 // when the entire request body is not yet available. POST data supplied in Multipart 
 // and X-form post formats are currently supported
-final bool parsePost (ref Request request, ref Response response, in FileSystem filesystem) {
+final bool parsePost(ref Request request, ref Response response, in FileSystem filesystem) {
   if (response.havepost || request.method != RequestMethod.POST) { return(response.havepost = true); }
 
   long expectedlength = to!long(from(request.headers, "Content-Length", "0"));
   string content = request.body;
   if (expectedlength == 0) {
-    custom(2, "POST", "Content-Length was not specified or 0: real length: %s", content.length);
+    log(Level.Trace, "Post: [T] Content-Length not specified (or 0), length: %s", content.length);
     return(response.havepost = true); // When we don't receive any post data it is meaningless to scan for any content
   } else if (expectedlength > MAX_REQUEST_SIZE) {
-    warning("Upload too large: %d bytes from %s", expectedlength, request.ip);
+    log(Level.Verbose, "Post: [W] Upload too large: %d bytes from %s", expectedlength, request.ip);
     response.setPayload(StatusCode.PayloadTooLarge, "413 - Payload Too Large\n", "text/plain");
     return(response.havepost = true);
   }
-  custom(2, "POST", "received %s of %s", content.length, expectedlength);
+  log(Level.Trace, "Post: [T] Received %s of %s", content.length, expectedlength);
   if(content.length < expectedlength) return(false);
 
   string contenttype = from(request.headers, "Content-Type");
-  custom(2, "POST", "content type: %s", contenttype);
+  log(Level.Trace, "content type: %s", contenttype);
 
   if (contenttype.indexOf(XFORMHEADER) >= 0) {
-    custom(0, "XFORM", "parsing %d bytes", expectedlength);
+    log(Level.Verbose, "XFORM: [I] parsing %d bytes", expectedlength);
     request.parseXform(content);
-    custom(1, "XFORM", "# of items: %s", request.postinfo.length);
+    log(Level.Verbose, "XFORM: [T] # of items: %s", request.postinfo.length);
   } else if (contenttype.indexOf(MPHEADER) >= 0) {
     auto parts = split(contenttype, "boundary=");
     if (parts.length < 2) return response.havepost = true;
     string mpid = parts[1];
-    custom(1, "MPART", "header: %s, parsing %d bytes", mpid, expectedlength);
+    log(Level.Verbose, "MPART: [I] header: %s, parsing %d bytes", mpid, expectedlength);
     request.parseMultipart(filesystem, content, mpid);
-    custom(1, "MPART", "# of items: %s", request.postinfo.length);
+    log(Level.Verbose, "MPART: [I] # of items: %s", request.postinfo.length);
   } else if (contenttype.indexOf(JSON) >= 0) {
-    custom(0, "JSONP", "parsing %d bytes", expectedlength);
+    log(Level.Verbose, "JSON: [I] Parsing %d bytes", expectedlength);
     //request.postinfo["php://input"] = PostItem(PostType.File, "stdin", "php://input", content, JSON, content.length);
   } else {
-    warning("unsupported POST content type: %s [%s] -> %s", contenttype, expectedlength, content);
+    error("parsePost: Unsupported POST content type: %s [%s] -> %s", contenttype, expectedlength, content);
     request.parseXform(content);
   }
   response.havepost = true;
@@ -84,7 +84,7 @@ pure string extractQuoted(string s, string key) nothrow {
   return j > i ? s[i .. j] : "";
 }
 
-pure ptrdiff_t findBodyLine(in string[] lines) nothrow {
+@nogc pure ptrdiff_t findBodyLine(in string[] lines) nothrow {
   foreach (i, line; lines) { if (strip(line).length == 0) return i + 1; }
   return -1;
 }
@@ -94,7 +94,9 @@ final void parseMultipart(ref Request request, in FileSystem filesystem, const s
   int[string] keys;
   foreach (part; chomp(content).split(mpid)) {
     string[] elem = strip(part).split("\r\n");
-    if (elem.length < 2 || elem[0] == "--") { custom(1, "MPART", "ID element: %s", elem.length > 0 ? elem[0] : ""); continue; }
+    if (elem.length < 2 || elem[0] == "--") { 
+      log(Level.Verbose, "MPART: [I] ID element: %s", elem.length > 0 ? elem[0] : ""); continue; 
+    }
 
     string[] mphdr = elem[0].split("; ");
     if (mphdr.length < 2) continue;
@@ -109,10 +111,10 @@ final void parseMultipart(ref Request request, in FileSystem filesystem, const s
       request.postinfo[key] = PostItem(PostType.Input, key, "", join(elem[bodyLine .. ($-1)]));
     } else if (mphdr.length >= 3) {
       string fname = extractQuoted(elem[0], "filename");
-      custom(1, "MPART", "found on key %s file %s", key, fname);
+      log(Level.Verbose, "MPART: [I] found on key %s file %s", key, fname);
       bool isarraykey = key.length > 2 && key[($-2) .. $] == "[]";
       keys[key] = keys.get(key, -1) + 1;
-      custom(1, "MPART", "found on key %s #%d file %s", key, keys[key], fname);
+      log(Level.Verbose, "MPART: [I] found on key %s #%d file %s", key, keys[key], fname);
       if (fname != "") {
         string fkey      = isarraykey ? key ~ to!string(keys[key]) : key;
         string skey      = isarraykey ? key[0 .. $-2] : key;
@@ -121,8 +123,8 @@ final void parseMultipart(ref Request request, in FileSystem filesystem, const s
         auto mimeParts   = split(elem[bodyLine-1], ": ");
         string fileMime  = mimeParts.length >= 2 ? mimeParts[1] : "application/octet-stream";
         request.postinfo[fkey] = PostItem(PostType.File, skey, fname, localpath, fileMime, mpcontent.length);
-        writeinfile(localpath, mpcontent);
-        custom(1, "MPART", "wrote %d bytes to file %s", mpcontent.length, localpath);
+        localpath.writeFile(mpcontent);
+        log(Level.Verbose, "MPART: [I] Wrote %d bytes to file %s", mpcontent.length, localpath);
       } else { request.postinfo[key] = PostItem(PostType.Input, key, ""); }
     }
   }
@@ -141,7 +143,7 @@ final void serverAPI(in FileSystem filesystem, in WebConfig config, in Request r
   try{
     content.put(format("S=SERVER_NAME=%s\n", (response.address)? response.address.toHostNameString() : "localhost"));
   }catch(Exception e){
-    warning("Exception while trying to call: toHostNameString()");
+    error("Exception while trying to call: toHostNameString()");
     content.put("S=SERVER_NAME=localhost\n");
   }
   content.put(format("S=SERVER_ADDR=%s\n", (response.address)? response.address.toAddrString() : "127.0.0.1"));
@@ -160,8 +162,8 @@ final void serverAPI(in FileSystem filesystem, in WebConfig config, in Request r
     if(p.type == PostType.File)   content.put(format("F=%s=%s=%s=%s\n", p.name, p.filename, p.mime, p.value));
   }
 
-  string filename = request.inputfile(filesystem);
-  trace("[IN %s]\n%s[/IN %s]", filename, content.data, filename);
-  writeinfile(filename, content.data);
+  string fIn = request.inputfile(filesystem);
+  log(Level.Trace, "API: [T] [IN %s]\n%s[/IN %s]", fIn, content.data, fIn);
+  fIn.writeFile(content.data);
 }
 

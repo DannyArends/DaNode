@@ -2,6 +2,8 @@ module danode.statuscode;
 
 import danode.imports;
 
+import danode.log : tag, Level;
+
 struct StatusCodeT {
   size_t code;
   string reason;
@@ -64,9 +66,8 @@ enum StatusCode : StatusCodeT {
 };
 
 unittest {
-  import danode.log : custom;
-  custom(0, "FILE", "%s", __FILE__);
-  custom(0, "TEST", "statuscodes: %s", EnumMembers!StatusCode.length);
+  tag(Level.Always, "FILE", "%s", __FILE__);
+  tag(Level.Always, "TEST", "statuscodes: %s", EnumMembers!StatusCode.length);
   /*foreach (immutable v; EnumMembers!StatusCode) {
     custom(2, "TEST", "[%s] %s: \"%s\"", v.code, v, v.reason);
   }*/

@@ -2,10 +2,7 @@ module danode.process;
 
 import danode.imports;
 import danode.functions : Msecs;
-import danode.log : custom, warning, trace;
-version(Posix) {
-  import core.sys.posix.fcntl : fcntl, F_SETFL, O_NONBLOCK;
-}
+import danode.log : log, tag, error, Level;
 
 immutable size_t MAX_CGI_OUTPUT = 1024 * 1024 * 10; // 10MB script output limit
 
@@ -17,12 +14,14 @@ struct WaitResult {
 /* Set a filestream to nonblocking mode, if not Posix, use winbase.h */
 bool nonblocking(ref File file) {
   version(Posix) {
+    import core.sys.posix.fcntl : fcntl, F_SETFL, O_NONBLOCK;
+
     return(fcntl(fileno(file.getFP()), F_SETFL, O_NONBLOCK) != -1); 
   }else{
     import core.sys.windows.winbase;
+
     auto x = PIPE_NOWAIT;
-    auto res = SetNamedPipeHandleState(file.windowsHandle(), &x, null, null);
-    return(res != 0);
+    return(SetNamedPipeHandleState(file.windowsHandle(), &x, null, null) != 0);
   }
 }
 
@@ -76,47 +75,31 @@ class Process : Thread {
 
      // Query Output/Errors from 'from' to the end, if the outbuffer contains any output this will be served
      // from is checked to be in-range of the outbuffer/errbuffer, if not an empty array is returned
-    final @property const(char)[] output(ptrdiff_t from) const { 
-      synchronized {
-        if (outbuffer.data.length > 0 && from >= 0 && from <= outbuffer.data.length) {
-          return outbuffer.data[from .. $];
-        }
-        if (from >= 0 && from <= errbuffer.data.length) {
-          return errbuffer.data[from .. $]; 
-        }
-        return [];
-      }
-    }
+    final @property const(char)[] output(ptrdiff_t from) const { synchronized {
+      if (outbuffer.data.length > 0 && from >= 0 && from <= outbuffer.data.length) { return outbuffer.data[from .. $]; }
+      if (from >= 0 && from <= errbuffer.data.length) { return errbuffer.data[from .. $]; }
+      return [];
+    } }
 
     // Runtime of the thread in mseconds
-    final @property long time() const {
-      synchronized { return(Msecs(starttime)); }
-    }
+    final @property long time() const { synchronized { return(Msecs(starttime)); } }
 
     // Last time the process was modified (e.g. data on stdout/stderr)
-    final @property long lastmodified() const {
-      synchronized { return(Msecs(modified)); }
-    }
+    final @property long lastmodified() const { synchronized { return(Msecs(modified)); } }
 
     // Is the external process still running ?
-    final @property bool running() const { 
-      synchronized { return(!process.terminated); }
-    }
+    final @property bool running() const { synchronized { return(!process.terminated); } }
 
     // Did our internal thread finish processing the external process, etc ?
-    final @property bool finished() const { 
-      synchronized { return(this.completed); }
-    }
+    final @property bool finished() const { synchronized { return(this.completed); } }
 
     // Returns the 'flattened' exit status of the external process 
     // ( -1 = non-0 exit code, 0 = succes, 1 = still running )
-    final @property int status() const { 
-      synchronized { 
-        if (running) return 1;
-        if (process.status == 0) return 0;
-        return -1;
-      }
-    }
+    final @property int status() const { synchronized {
+      if (running) return 1;
+      if (process.status == 0) return 0;
+      return -1;
+    } }
 
     // Length of output, if the outbuffer contains any data, the outbuffer will be prefered (errors are silenced)
     final @property long length() const { synchronized { 
@@ -139,8 +122,8 @@ class Process : Thread {
             break;
           }
         }
-      } catch (Exception e) { warning("Exception during readpipe command: %s", e); file.close();
-      } catch(Error e) { warning("Error during readpipe command: %s", e); file.close();
+      } catch (Exception e) { error("Exception during readpipe command: %s", e); file.close();
+      } catch (Error e) { error("Error during readpipe command: %s", e); file.close();
       }
     }
 
@@ -157,22 +140,22 @@ class Process : Thread {
     final void run() {
       try {
         if( !exists(inputfile) ) {
-          warning("no input path: %s", inputfile);
+          log(Level.Verbose, "no input path: %s", inputfile);
           this.process.terminated = true;
           this.completed = true;
           return;
         }
         fStdIn = File(inputfile, "r");
         pStdOut = pipe(); pStdErr = pipe();
-        custom(1, "PROC", "command: %s < %s", command, inputfile);
+        log(Level.Verbose, "command: %s < %s", command, inputfile);
         import std.process : Config;
         auto cpid = spawnProcess(command, fStdIn, pStdOut.writeEnd, pStdErr.writeEnd, environ, Config.none, environ.get("PWD", "."));
 
         fStdOut = pStdOut.readEnd;
-        if(!nonblocking(fStdOut) && fStdOut.isOpen()) custom(2, "WARN", "unable to create nonblocking stdout pipe for command");
+        if(!nonblocking(fStdOut) && fStdOut.isOpen()) log(Level.Trace, "unable to create nonblocking stdout pipe for command");
 
         fStdErr = pStdErr.readEnd;
-        if(!nonblocking(fStdErr) && fStdErr.isOpen()) custom(2, "WARN", "unable to create nonblocking error pipe for command");
+        if(!nonblocking(fStdErr) && fStdErr.isOpen()) log(Level.Trace, "unable to create nonblocking error pipe for command");
 
         while (running && lastmodified < maxtime) {
           drainPipes();
@@ -180,33 +163,33 @@ class Process : Thread {
           Thread.sleep(msecs(1));
         }
         if (!process.terminated) {
-          warning("command: %s < %s did not finish in time [%s msecs]", command, inputfile, time()); 
+          log(Level.Verbose, "command: %s < %s did not finish in time [%s msecs]", command, inputfile, time()); 
           killProcess(cpid, 9);
           process = WaitResult(true, wait(cpid));
         }
-        trace("command finished %d after %s msecs", status(), time());
+        log(Level.Verbose, "command finished %d after %s msecs", status(), time());
         drainPipes();
 
-        trace("Output %d & %d processed after %s msecs", outbuffer.data.length, errbuffer.data.length, time());
-        if (errbuffer.data.length > 0) custom(1, "PROC", "stderr: %s", errbuffer.data);
+        log(Level.Trace, "Output %d & %d processed after %s msecs", outbuffer.data.length, errbuffer.data.length, time());
+        if (errbuffer.data.length > 0) log(Level.Verbose, "stderr: %s", errbuffer.data);
 
         // Close the file handles
         fStdIn.close(); fStdOut.close(); fStdErr.close();
 
-        trace("removing process input file %s ? %s", inputfile, removeInput);
+        log(Level.Trace, "removing process input file %s ? %s", inputfile, removeInput);
         if(removeInput) remove(inputfile);
-      } catch(Exception e) { warning("process.d, exception: '%s'", e.msg); }
+      } catch(Exception e) { error("process.d, exception: '%s'", e.msg); }
       this.completed = true;
     }
 }
 
 unittest {
-  custom(0, "FILE", "%s", __FILE__);
+  tag(Level.Always, "FILE", "%s", __FILE__);
   auto p = new Process(["rdmd", "www/localhost/dmd.d"], "test/dmd.in", null, false);
   p.start();
   while(!p.finished){ Thread.sleep(msecs(5)); }
-  custom(0, "TEST", "status of output: %s", p.status());
-  custom(0, "TEST", "length of output: %s", p.length());
-  custom(0, "TEST", "time of output: %s", p.time());
+  tag(Level.Always, "TEST", "status of output: %s", p.status());
+  tag(Level.Always, "TEST", "length of output: %s", p.length());
+  tag(Level.Always, "TEST", "time of output: %s", p.time());
 }
 

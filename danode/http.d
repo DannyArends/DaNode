@@ -3,7 +3,7 @@ module danode.http;
 import danode.imports;
 import danode.interfaces : DriverInterface;
 import danode.response : Response;
-import danode.log : custom, warning, error;
+import danode.log : log, tag, error, Level;
 
 class HTTP : DriverInterface {
   public:
@@ -13,24 +13,14 @@ class HTTP : DriverInterface {
     override bool openConnection() {
       try {
         socket.blocking = blocking;
-      } catch(Exception e) { error("unable to accept socket: %s", e.msg); return(false); }
+      } catch(Exception e) { error("Unable to accept socket: %s", e.msg); return(false); }
       try {
         address = socket.remoteAddress();
-      } catch(Exception e) { warning("unable to resolve requesting origin: %s", e.msg); }
+      } catch(Exception e) { error("Unable to resolve requesting origin: %s", e.msg); }
       return(true);
     }
 
-    // Receive upto maxsize of bytes from the client into the input buffer
-    override ptrdiff_t receive(Socket socket, ptrdiff_t maxsize = 4096) {
-      if (!socketReady()) return(-1);
-      ptrdiff_t received;
-      char[] tmpbuffer = new char[](maxsize);
-      if ((received = socket.receive(tmpbuffer)) > 0) {
-        inbuffer.put(tmpbuffer[0 .. received]); touch();
-      }
-      if(received > 0) custom(3, "HTTP", "received %d bytes of data", received);
-      return(inbuffer.data.length);
-    }
+    override long receiveData(ref char[] buffer) { return(socket.receive(buffer)); }
 
     // Send upto maxsize bytes from the response to the client
     override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096) {
@@ -40,7 +30,7 @@ class HTTP : DriverInterface {
       writeSet.add(socket);
       if (Socket.select(null, writeSet, null, dur!"msecs"(0)) <= 0) return;
       ptrdiff_t send = socket.send(response.bytes(maxsize));
-      custom(1, "HTTP", "send result=%d index=%d length=%d", send, response.index, response.length);
+      log(Level.Verbose, "Send result=%d index=%d length=%d", send, response.index, response.length);
       if (send > 0) {
         touch();
         response.index += send;
@@ -50,18 +40,12 @@ class HTTP : DriverInterface {
     }
 
     // Close the connection, by shutting down the socket
-    override void closeConnection() {
-      try {
-        if (socket !is null) { if (socket.isAlive()) { socket.shutdown(SocketShutdown.BOTH); }
-          socket.close();
-        }
-      } catch(Exception e) { warning("unable to close socket: %s", e.msg); }
-    }
+    override void closeConnection() { closeSocket(); }
 
     @nogc override bool isSecure() const nothrow { return(false); }
 }
 
 unittest {
-  custom(0, "FILE", "%s", __FILE__);
+  tag(Level.Always, "FILE", "%s", __FILE__);
 }
 
