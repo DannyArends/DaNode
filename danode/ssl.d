@@ -6,8 +6,7 @@ version(SSL) {
 
   import danode.imports;
   import danode.client;
-  import danode.log : log, error, Level;
-  import danode.server : Server;
+  import danode.log : log, tag, error, Level;
   import danode.response : Response;
 
   // SSL context structure, stored relation between hostname 
@@ -147,6 +146,6 @@ version(SSL) {
   void sslAssert(bool ret) { if (!ret) { ERR_print_errors_fp(null); throw new Exception("SSL_ERROR"); } }
 
   unittest {
-    custom(0, "FILE", "%s", __FILE__);
+    tag(Level.Always, "FILE", "%s", __FILE__);
   }
 }
