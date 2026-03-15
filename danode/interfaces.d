@@ -31,8 +31,7 @@ abstract class DriverInterface {
     bool                blocking = false;    /// Blocking communication ?
 
     this(Socket socket, bool blocking = false) { this.socket = socket; this.blocking = blocking; systime = Clock.currTime(); touch(); }
-    bool socketReady() { return socket !is null && socket.isAlive(); } /// Socket ready ?
-    bool isAlive(){ return socket.isAlive(); }; /// Is the connection alive ?
+    bool socketReady(){ if (socket !is null) { return socket.isAlive(); } return false; }; /// Is the connection alive ?
     void touch() { modtime = Clock.currTime(); }
     void closeSocket() {
       try {
@@ -99,7 +98,6 @@ class StringDriver : DriverInterface {
     this(string input) { super(null); inbuffer ~= input; }
     override bool openConnection() { return(true); }
     override void closeConnection() nothrow { }
-    override bool isAlive() { return(true); }
     @nogc override bool isSecure() const nothrow { return(false); }
     override long receiveData(ref char[] buffer) { buffer = inbuffer.data; return(buffer.length); }
     override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096)  { 

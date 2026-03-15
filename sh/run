@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 
 rm -rf server.log
-nohup authbind bin/server -k -b 100 -v 0 > server.log 2> error.log &
+nohup authbind bin/server -k -b 100 -v 2 >> server.log 2>> error.log &
 
