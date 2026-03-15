@@ -85,7 +85,7 @@ abstract class DriverInterface {
 
 class StringDriver : DriverInterface {
     this(string input) {
-      super(new Socket(AddressFamily.INET, SocketType.STREAM, ProtocolType.TCP));
+      super(null);
       inbuffer ~= input;
     }
     override bool openConnection() { return(true); }

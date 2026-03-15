@@ -33,7 +33,7 @@ class HTTP : DriverInterface {
     }
 
     // Send upto maxsize bytes from the response to the client
-    override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096) { synchronized {
+    override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096) {
       if (!socketReady()) return;
       // Wait until socket is writable before sending
       SocketSet writeSet = new SocketSet();
@@ -47,14 +47,14 @@ class HTTP : DriverInterface {
         senddata[requests] += send;
         if(response.index >= response.length) response.completed = true;
       }
-    } }
+    }
 
     // Close the connection, by shutting down the socket
     override void closeConnection() {
-      if (!socketReady()) return;
       try {
-        socket.shutdown(SocketShutdown.BOTH);
-        socket.close();
+        if (socket !is null) { if (socket.isAlive()) { socket.shutdown(SocketShutdown.BOTH); }
+          socket.close();
+        }
       } catch(Exception e) { warning("unable to close socket: %s", e.msg); }
     }
 

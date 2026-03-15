@@ -40,7 +40,7 @@ version(SSL) {
       }
 
       // Open the connection by setting the socket to non blocking I/O, and registering the origin address
-      override bool openConnection() { synchronized {
+      override bool openConnection() {
         custom(1, "HTTPS", "Opening HTTPS connection");
         if (contexts.length > 0) {
           custom(1, "HTTPS", "Number of SSL contexts: %d", contexts.length);
@@ -70,22 +70,24 @@ version(SSL) {
         }
         error("HTTPS driver failed: 'Server has no certificates loaded'");
         return(false);
-      } }
+      }
 
       override bool socketReady() { return socket !is null && socket.isAlive() && ssl !is null; }
 
       // Close the connection, by shutting down the SSL and Socket object
-      override void closeConnection() { synchronized {
+      override void closeConnection() {
         try {
-          if (socketReady()) { SSL_shutdown(ssl); SSL_shutdown(ssl);
-          } else { error("No SSL object to close, are certificates available?"); }
-          if (socket) socket.shutdown(SocketShutdown.BOTH);
-          if (socket) socket.close();
+          if (socketReady()) { SSL_shutdown(ssl); SSL_shutdown(ssl); }
+        } catch(Exception e) { warning("Exception during SSL shutdown: %s", e.msg); }
+        try {
+          if (socket !is null) { if (socket.isAlive()) { socket.shutdown(SocketShutdown.BOTH); }
+            socket.close();
+          }
         } catch(Exception e) { warning("Exception closing socket: %s", e.msg); }
-      } }
+      }
 
       // Receive upto maxsize of bytes from the client into the input buffer
-      override ptrdiff_t receive(Socket socket, ptrdiff_t maxsize = 4096){ synchronized {
+      override ptrdiff_t receive(Socket socket, ptrdiff_t maxsize = 4096){
         if (!socketReady()) return -1;
         ptrdiff_t received;
         char[] tmpbuffer = new char[](maxsize);
@@ -94,10 +96,10 @@ version(SSL) {
         }
         if(received > 0) custom(3, "HTTPS", "received %d bytes of data", received);
         return(inbuffer.data.length);
-      } }
+      }
 
       // Send upto maxsize bytes from the response to the client
-      override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096){ synchronized {
+      override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096){
         if (!socketReady()) return;
         // SSL requires retrying with exact same buffer on WANT_WRITE
         if (pending.length == 0) pending = response.bytes(maxsize).dup;
@@ -111,7 +113,7 @@ version(SSL) {
           if(response.index >= response.length) response.completed = true;
           pending = [];  // clear on success, fetch next chunk next call
         }
-      } }
+      }
 
       @nogc override bool isSecure() const nothrow { return(true); }
   }
