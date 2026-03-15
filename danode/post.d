@@ -5,7 +5,7 @@ import danode.cgi : CGI;
 import danode.client : MAX_REQUEST_SIZE;
 import danode.statuscode : StatusCode;
 import danode.request : Request, RequestMethod;
-import danode.response : SERVERINFO, Response, redirect, create;
+import danode.response : SERVERINFO, Response, redirect, create, setPayload;
 import danode.webconfig : WebConfig;
 import danode.payload : Message;
 import danode.mimetypes : mime;
@@ -40,8 +40,8 @@ final bool parsePost (ref Request request, ref Response response, in FileSystem 
     return(response.havepost = true); // When we don't receive any post data it is meaningless to scan for any content
   } else if (expectedlength > MAX_REQUEST_SIZE) {
     warning("Upload too large: %d bytes from %s", expectedlength, request.ip);
-    response.payload = new Message(StatusCode.PayloadTooLarge, "413 - Payload Too Large\n");
-    return(response.ready = response.havepost = true);
+    response.setPayload(StatusCode.PayloadTooLarge, "413 - Payload Too Large\n", "text/plain");
+    return(response.havepost = true);
   }
   custom(2, "POST", "received %s of %s", content.length, expectedlength);
   if(content.length < expectedlength) return(false);
