@@ -160,7 +160,7 @@ void main(string[] args) {
   int    backlog      = 100;
   int    verbose      = Level.Verbose;
   bool   keyoff       = false;
-  string logFolder    = "log/";
+  string logFolder    = "logs/";
   string wwwFolder    = "www/";
   string sslFolder    = ".ssl/";
   string sslKey       = "server.key";

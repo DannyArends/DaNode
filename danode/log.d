@@ -16,7 +16,7 @@ shared static this() {
   acmeFp    = stdout;
 }
 
-void initLogs(string dir = "logs/", int verbose) {
+void initLogs(string dir = "logs/", int verbose = Level.Always) {
   atomicStore(cv, verbose);
   serverFp = File(dir ~ "server.log", "a");
   requestFp = File(dir ~ "request.log", "a");
