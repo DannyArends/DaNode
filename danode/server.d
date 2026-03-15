@@ -6,7 +6,7 @@ import danode.client : Client;
 import danode.interfaces : DriverInterface;
 import danode.http : HTTP;
 import danode.router : Router;
-import danode.log : abort, log, tag, error, Level;
+import danode.log : cv, abort, log, tag, error, Level;
 
 version(SSL) {
   import danode.acme : checkAndRenew;
@@ -175,6 +175,7 @@ void main(string[] args) {
                "sslKey",      &sslKey,       // Server private key
                "accountKey",  &accountKey,   // Server Let's encrypt account key
                "verbose|v",   &verbose);     // Verbose level (via commandline)
+  atomicStore(cv, verbose);
   version (unittest) {
     // Do nothing, unittests will run
   } else {
