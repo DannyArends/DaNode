@@ -78,24 +78,10 @@ version(SSL) {
         try {
           if (socketReady()) { SSL_shutdown(ssl); SSL_shutdown(ssl); }
         } catch(Exception e) { error("Exception during SSL shutdown: %s", e.msg); }
-        try {
-          if (socket !is null) { if (socket.isAlive()) { socket.shutdown(SocketShutdown.BOTH); }
-            socket.close();
-          }
-        } catch(Exception e) { error("Exception closing socket: %s", e.msg); }
+        closeSocket();
       }
 
-      // Receive upto maxsize of bytes from the client into the input buffer
-      override ptrdiff_t receive(Socket socket, ptrdiff_t maxsize = 4096){
-        if (!socketReady()) return -1;
-        ptrdiff_t received;
-        char[] tmpbuffer = new char[](maxsize);
-        if ((received = SSL_read(ssl, cast(void*) tmpbuffer, cast(int)maxsize)) > 0) {
-          inbuffer.put(tmpbuffer[0 .. received]); touch();
-        }
-        if(received > 0) log(Level.Trace, "received %d bytes of data", received);
-        return(inbuffer.data.length);
-      }
+      override long getData(ref char[] buffer) { return(SSL_read(ssl, cast(void*) buffer, cast(int)buffer.length)); }
 
       // Send upto maxsize bytes from the response to the client
       override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096){

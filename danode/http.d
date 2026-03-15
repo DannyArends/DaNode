@@ -20,17 +20,7 @@ class HTTP : DriverInterface {
       return(true);
     }
 
-    // Receive upto maxsize of bytes from the client into the input buffer
-    override ptrdiff_t receive(Socket socket, ptrdiff_t maxsize = 4096) {
-      if (!socketReady()) return(-1);
-      ptrdiff_t received;
-      char[] tmpbuffer = new char[](maxsize);
-      if ((received = socket.receive(tmpbuffer)) > 0) {
-        inbuffer.put(tmpbuffer[0 .. received]); touch();
-      }
-      if(received > 0) log(Level.Trace, "received %d bytes of data", received);
-      return(inbuffer.data.length);
-    }
+    override long getData(ref char[] buffer) { return(socket.receive(buffer)); }
 
     // Send upto maxsize bytes from the response to the client
     override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096) {
@@ -50,13 +40,7 @@ class HTTP : DriverInterface {
     }
 
     // Close the connection, by shutting down the socket
-    override void closeConnection() {
-      try {
-        if (socket !is null) { if (socket.isAlive()) { socket.shutdown(SocketShutdown.BOTH); }
-          socket.close();
-        }
-      } catch(Exception e) { error("unable to close socket: %s", e.msg); }
-    }
+    override void closeConnection() { closeSocket(); }
 
     @nogc override bool isSecure() const nothrow { return(false); }
 }
