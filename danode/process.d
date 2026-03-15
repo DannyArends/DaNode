@@ -4,6 +4,10 @@ import danode.imports;
 import danode.functions : Msecs;
 import danode.log : log, tag, error, Level;
 
+version(Posix) {
+  import core.sys.posix.fcntl : fcntl, F_SETFL, O_NONBLOCK;
+}
+
 immutable size_t MAX_CGI_OUTPUT = 1024 * 1024 * 10; // 10MB script output limit
 
 struct WaitResult {
@@ -14,14 +18,12 @@ struct WaitResult {
 /* Set a filestream to nonblocking mode, if not Posix, use winbase.h */
 bool nonblocking(ref File file) {
   version(Posix) {
-    import core.sys.posix.fcntl : fcntl, F_SETFL, O_NONBLOCK;
-
     return(fcntl(fileno(file.getFP()), F_SETFL, O_NONBLOCK) != -1); 
   }else{
     import core.sys.windows.winbase;
-
     auto x = PIPE_NOWAIT;
-    return(SetNamedPipeHandleState(file.windowsHandle(), &x, null, null) != 0);
+    auto res = SetNamedPipeHandleState(file.windowsHandle(), &x, null, null);
+    return(res != 0);
   }
 }
 
@@ -41,6 +43,7 @@ class Process : Thread {
     string[]          command;              /// Command to execute
     string            inputfile;            /// Path of input file
     string[string]    environ;
+    bool              completed = false;
     bool              removeInput = true;
 
     File              fStdIn;               /// Input file stream
@@ -52,10 +55,8 @@ class Process : Thread {
 
     WaitResult        process;              /// Process try/wait results
     SysTime           starttime;            /// Time in ms since this process came alive
-
-    shared long       modified;             /// Time in ms since this process was modified
-    shared bool       completed = false;
-    shared long       maxtime;              /// Maximum time in ms before we kill the process
+    SysTime           modified;             /// Time in ms since this process was modified
+    long              maxtime;              /// Maximum time in ms before we kill the process
 
     Appender!(char[])  outbuffer;           /// Output appender buffer
     Appender!(char[])  errbuffer;           /// Error appender buffer
@@ -68,7 +69,7 @@ class Process : Thread {
       this.removeInput = removeInput;
       this.maxtime = maxtime;
       this.starttime = Clock.currTime();
-      atomicStore(modified, Clock.currTime().toUnixTime());
+      this.modified = Clock.currTime();
       this.outbuffer = appender!(char[])();
       this.errbuffer = appender!(char[])();
       super(&run);
@@ -77,40 +78,52 @@ class Process : Thread {
      // Query Output/Errors from 'from' to the end, if the outbuffer contains any output this will be served
      // from is checked to be in-range of the outbuffer/errbuffer, if not an empty array is returned
     final @property const(char)[] output(ptrdiff_t from) const { 
-      if (outbuffer.data.length > 0 && from >= 0 && from <= outbuffer.data.length) {
-        return outbuffer.data[from .. $];
+      synchronized {
+        if (outbuffer.data.length > 0 && from >= 0 && from <= outbuffer.data.length) {
+          return outbuffer.data[from .. $];
+        }
+        if (from >= 0 && from <= errbuffer.data.length) {
+          return errbuffer.data[from .. $]; 
+        }
+        return [];
       }
-      if (from >= 0 && from <= errbuffer.data.length) {
-        return errbuffer.data[from .. $]; 
-      }
-      return [];
     }
 
     // Runtime of the thread in mseconds
-    final @property long time() const { return(Msecs(starttime)); }
+    final @property long time() const {
+      synchronized { return(Msecs(starttime)); }
+    }
 
     // Last time the process was modified (e.g. data on stdout/stderr)
-    final @property long lastmodified() const { return Msecs(SysTime(atomicLoad(modified))); }
+    final @property long lastmodified() const {
+      synchronized { return(Msecs(modified)); }
+    }
 
     // Is the external process still running ?
-    final @property bool running() const { return(!process.terminated); }
+    final @property bool running() const { 
+      synchronized { return(!process.terminated); }
+    }
 
     // Did our internal thread finish processing the external process, etc ?
-    final @property bool finished() const { return atomicLoad(completed); }
+    final @property bool finished() const { 
+      synchronized { return(this.completed); }
+    }
 
     // Returns the 'flattened' exit status of the external process 
     // ( -1 = non-0 exit code, 0 = succes, 1 = still running )
     final @property int status() const { 
-      if (running) return 1;
-      if (process.status == 0) return 0;
-      return -1;
+      synchronized { 
+        if (running) return 1;
+        if (process.status == 0) return 0;
+        return -1;
+      }
     }
 
     // Length of output, if the outbuffer contains any data, the outbuffer will be prefered (errors are silenced)
-    final @property long length() const {
+    final @property long length() const { synchronized { 
       if (outbuffer.data.length > 0) { return(outbuffer.data.length); }
       return errbuffer.data.length; 
-    }
+    } }
 
     // Read a character from a filestream and append it to buffer
     void readpipe(ref File file, ref Appender!(char[]) buffer) {
@@ -121,7 +134,7 @@ class Process : Thread {
         while (lastmodified < maxtime && buffer.data.length < MAX_CGI_OUTPUT) {
           n = fread(tmp.ptr, 1, tmp.sizeof, fp);
           if (n > 0) {
-            atomicStore(modified, Clock.currTime().toUnixTime());
+            modified = Clock.currTime();
             buffer.put(tmp[0 .. n]);
           } else {
             break;
@@ -135,7 +148,7 @@ class Process : Thread {
     // Drain both stdout & stderr
     void drainPipes() { readpipe(fStdOut, outbuffer); readpipe(fStdErr, errbuffer); }
 
-    @property void notifyovertime() { atomicStore(maxtime, -1L); }
+    @property void notifyovertime() { maxtime = -1; }
 
     // Execute the process
     // check the input path, and create a pipe:StdIn to the input file
@@ -184,7 +197,7 @@ class Process : Thread {
         log(Level.Trace, "removing process input file %s ? %s", inputfile, removeInput);
         if(removeInput) remove(inputfile);
       } catch(Exception e) { error("process.d, exception: '%s'", e.msg); }
-      atomicStore(completed, true);
+      this.completed = true;
     }
 }
 
