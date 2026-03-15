@@ -7,7 +7,6 @@ import danode.statuscode : StatusCode;
 import danode.request : Request, RequestMethod;
 import danode.response : SERVERINFO, Response, redirect, create, setPayload;
 import danode.webconfig : WebConfig;
-import danode.payload : Message;
 import danode.mimetypes : mime;
 import danode.filesystem : FileSystem;
 import danode.functions : from, has, isCGI, isFILE, isDIR, writeinfile, parseQueryString;
