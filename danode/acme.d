@@ -4,7 +4,7 @@ version(SSL) {
   import danode.imports;
   import danode.includes;
 
-  import danode.log : acme, acmeError, Level;
+  import danode.log : log, error, Level;
   import danode.ssl : loadSSL, generateKey;
   import danode.functions : writeFile;
 
@@ -33,25 +33,25 @@ version(SSL) {
       };
     }
     http.perform();
-    acme(Level.Trace, "ACME: POST %s -> %s", url, cast(string) response);
+    log(Level.Trace, "ACME: POST %s -> %s", url, cast(string) response);
     return parseJSON(response);
   }
 
   // Full ACME renewal flow
   bool renewCert(string domain, string email, string csrPath, string chainPath, string accountKey, bool staging) {
-    acme(Level.Always, "ACME: starting renewal for %s", domain);
+    log(Level.Always, "ACME: starting renewal for %s", domain);
 
     EVP_PKEY* pkey = loadAccountKey(accountKey);
     if (pkey is null) return false;
 
     JSONValue dir = acmeDirectory(staging);
     string kid = acmeAccountURL(dir, pkey, email);
-    if (kid.length == 0) { acmeError("ACME: failed to get account URL"); return false; }
-    acme(Level.Verbose, "Account URL: %s", kid);
+    if (kid.length == 0) { error("ACME: failed to get account URL"); return false; }
+    log(Level.Verbose, "Account URL: %s", kid);
 
     string orderURL;
     JSONValue order = newOrder(dir, pkey, kid, domain, orderURL);
-    acme(Level.Verbose, "ACME: order: %s, orderURL: %s", order.toString(), orderURL);
+    log(Level.Verbose, "ACME: order: %s, orderURL: %s", order.toString(), orderURL);
     string[] tokens;
     foreach (authURL; order["authorizations"].array) {
       JSONValue challenge = getHTTP01Challenge(authURL.str, dir, pkey, kid);
@@ -67,7 +67,7 @@ version(SSL) {
     foreach (t; tokens) synchronized(getAcmeMutex()) { acmeChallenges.remove(t); }
 
     JSONValue finalized = finalizeOrder(order, dir, pkey, kid, csrPath);
-    acme(Level.Verbose, "ACME: order status: %s, finalized: %s", finalized["status"].str, finalized.toString());
+    log(Level.Verbose, "ACME: order status: %s, finalized: %s", finalized["status"].str, finalized.toString());
 
     foreach (i; 0 .. 10) { // Poll until certificate is ready
       if (finalized["status"].str == "valid") break;
@@ -82,13 +82,13 @@ version(SSL) {
     if (!exists(accountKey) || !isFile(accountKey)) { accountKey.generateKey(); }
     new Thread({
       try {
-        acme(Level.Always, "checkAndRenew called on '%s' with key '%s'", certDir, accountKey);
+        log(Level.Always, "checkAndRenew called on '%s' with key '%s'", certDir, accountKey);
         foreach (DirEntry d; dirEntries(certDir, SpanMode.shallow)) {
           if (!d.name.endsWith(".csr")) continue;
           string domain = baseName(d.name, ".csr");
           string chainPath = certDir ~ domain ~ ".chain";
 
-          if (!exists(chainPath)) { acme(Level.Always, "ACME: no chain found for %s, bootstrapping", domain);
+          if (!exists(chainPath)) { log(Level.Always, "ACME: no chain found for %s, bootstrapping", domain);
             if (renewCert(domain, "Danny.Arends@gmail.com", d.name, chainPath, accountKey, staging)) { loadSSL(certDir, keyFile); }
             continue;
           }
@@ -103,14 +103,14 @@ version(SSL) {
           ASN1_TIME_diff(&days, &secs, null, notAfter);
           X509_free(cert);
 
-          acme(Level.Verbose, "ACME: chain %s expires in %d days", domain, days);
-          if (days < 30) { acme(Level.Verbose, "ACME: renewing chain for %s", domain);
+          log(Level.Verbose, "ACME: chain %s expires in %d days", domain, days);
+          if (days < 30) { log(Level.Verbose, "ACME: renewing chain for %s", domain);
             if (renewCert(domain, "Danny.Arends@gmail.com", d.name, chainPath, accountKey, staging)) { loadSSL(certDir, keyFile); }
           }
         }
       }
-      catch (Exception e) { acmeError("ACME: checkAndRenew exception: %s", e.msg); }
-      catch (Error e) { acmeError("ACME: checkAndRenew error: %s", e.msg); }
+      catch (Exception e) { error("ACME: checkAndRenew exception: %s", e.msg); }
+      catch (Error e) { error("ACME: checkAndRenew error: %s", e.msg); }
     }).start();
   }
 
@@ -125,7 +125,7 @@ version(SSL) {
     string token = challenge["token"].str;
     string keyAuth = token ~ "." ~ jwkThumbprint(pkey);
     synchronized(getAcmeMutex()) { acmeChallenges[token] = keyAuth; }
-    acme(Level.Trace, "ACME: challenge token: %s", token);
+    log(Level.Trace, "ACME: challenge token: %s", token);
     return token;
   }
 
@@ -134,7 +134,7 @@ version(SSL) {
     // Load CSR from file
     BIO* bio = BIO_new_file(toStringz(csrPath), "r");
     X509_REQ* req = PEM_read_bio_X509_REQ(bio, null, null, null);
-    if (req is null) { acmeError("ACME: failed to load CSR from %s", csrPath); return JSONValue.init; }
+    if (req is null) { error("ACME: failed to load CSR from %s", csrPath); return JSONValue.init; }
     BIO_free(bio);
 
     // Convert CSR to DER
@@ -162,7 +162,7 @@ version(SSL) {
     http.perform();
 
     certPath.writeFile(cast(string) response);
-    acme(Level.Verbose, "ACME: certificate saved to %s", certPath);
+    log(Level.Verbose, "ACME: certificate saved to %s", certPath);
     return true;
   }
 
@@ -179,13 +179,13 @@ version(SSL) {
       foreach (authURL; order["authorizations"].array) {
         JSONValue auth = acmePost(pkey, dir, authURL.str, kid, "");
         string status = auth["status"].str;
-        acme(Level.Verbose, "ACME: authorization status for %s: %s", authURL.str, status);
-        if (status == "invalid") { acmeError("ACME: authorization failed"); return false; }
+        log(Level.Verbose, "ACME: authorization status for %s: %s", authURL.str, status);
+        if (status == "invalid") { error("ACME: authorization failed"); return false; }
         if (status != "valid") allValid = false;
       }
       if (allValid) return true;
     }
-    acmeError("ACME: authorization timed out");
+    error("ACME: authorization timed out");
     return false;
   }
 
@@ -198,7 +198,7 @@ version(SSL) {
   JSONValue getHTTP01Challenge(string authURL, JSONValue dir, EVP_PKEY* pkey, string kid) {
     JSONValue auth = acmePost(pkey, dir, authURL, kid, "");
     foreach (challenge; auth["challenges"].array) { if (challenge["type"].str == "http-01") return challenge; }
-    acmeError("ACME: no HTTP-01 challenge found");
+    error("ACME: no HTTP-01 challenge found");
     return JSONValue.init;
   }
 
@@ -245,7 +245,7 @@ version(SSL) {
   string acmeAccountURL(JSONValue dir, EVP_PKEY* pkey, string email) {
     string kid;
     acmePost(pkey, dir, dir["newAccount"].str, "", `{"termsOfServiceAgreed":true,"onlyReturnExisting":true,"contact":["mailto:` ~ email ~ `"]}`, &kid);
-    acme(Level.Verbose, "ACME: kid: %s", kid);
+    log(Level.Verbose, "ACME: kid: %s", kid);
     return kid;
   }
 
@@ -273,15 +273,15 @@ version(SSL) {
   // Sign data with RS256 using the account key
   ubyte[] signRS256(EVP_PKEY* pkey, const(ubyte)[] data) {
     EVP_MD_CTX* ctx = EVP_MD_CTX_new();
-    if (ctx is null) { acmeError("ACME: EVP_MD_CTX_new failed"); return null; }
+    if (ctx is null) { error("ACME: EVP_MD_CTX_new failed"); return null; }
     scope(exit) EVP_MD_CTX_free(ctx);
 
-    if (EVP_DigestSignInit(ctx, null, EVP_sha256(), null, pkey) <= 0) { acmeError("ACME: EVP_DigestSignInit failed"); return null; }
-    if (EVP_DigestSignUpdate(ctx, data.ptr, data.length) <= 0) { acmeError("ACME: EVP_DigestSignUpdate failed"); return null; }
+    if (EVP_DigestSignInit(ctx, null, EVP_sha256(), null, pkey) <= 0) { error("ACME: EVP_DigestSignInit failed"); return null; }
+    if (EVP_DigestSignUpdate(ctx, data.ptr, data.length) <= 0) { error("ACME: EVP_DigestSignUpdate failed"); return null; }
     size_t siglen;
-    if (EVP_DigestSignFinal(ctx, null, &siglen) <= 0) { acmeError("ACME: EVP_DigestSignFinal (len) failed"); return null; }
+    if (EVP_DigestSignFinal(ctx, null, &siglen) <= 0) { error("ACME: EVP_DigestSignFinal (len) failed"); return null; }
     ubyte[] sig = new ubyte[](siglen);
-    if (EVP_DigestSignFinal(ctx, sig.ptr, &siglen) <= 0) { acmeError("ACME: EVP_DigestSignFinal failed"); return null; }
+    if (EVP_DigestSignFinal(ctx, sig.ptr, &siglen) <= 0) { error("ACME: EVP_DigestSignFinal failed"); return null; }
     return sig[0 .. siglen];
   }
 
@@ -302,11 +302,11 @@ version(SSL) {
 
   EVP_PKEY* loadAccountKey(string path = ".ssl/account.key") {
     BIO* bio = BIO_new_file(toStringz(path), "r");
-    if (bio is null) { acmeError("ACME: cannot open account key: %s", path); return null; }
+    if (bio is null) { error("ACME: cannot open account key: %s", path); return null; }
     EVP_PKEY* pkey = PEM_read_bio_PrivateKey(bio, null, null, null);
     BIO_free(bio);
-    if (pkey is null) { acmeError("ACME: failed to parse account key"); return null; }
-    acme(Level.Always, "ACME: account key loaded from %s", path);
+    if (pkey is null) { error("ACME: failed to parse account key"); return null; }
+    log(Level.Always, "ACME: account key loaded from %s", path);
     return pkey;
   }
 }

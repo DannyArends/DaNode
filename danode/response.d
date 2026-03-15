@@ -118,7 +118,8 @@ struct Response {
     return(payload.bytes(index-hsize, maxsize, isRange, rangeStart, rangeEnd)); // Header completed, just stream bytes from the payload
   }
 
-  @property final bool ready(bool r = false){ if(r){ routed = r; } return(routed && payload.ready()); }
+  @property final bool ready(bool r = false){ 
+    if(r){ routed = r; } return(routed && payload !is null && payload.ready()); }
 }
 
 // create a standard response

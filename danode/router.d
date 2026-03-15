@@ -94,14 +94,20 @@ class Router {
         if (pathIsDIR && config.dirAllowed(localroot, localpath)) {
           log(Level.Trace, "Router: [T] localpath %s is a directory [%s,%s]", localpath, config.redirectdir(), config.index());
           if (config.redirectdir() && !finalrewrite) { return(redirectDirectory(request, response)); }
-          if (config.redirect() && exists(localpath ~ "/" ~ config.index()) && !finalrewrite) { return(redirectCanonical(request, response)); }
+          if (config.redirect() && exists(localpath ~ "/" ~ config.index()) && !finalrewrite) {
+            if (!config.allowcgi) return(response.notFound());
+            return(redirectCanonical(request, response));
+          }
           return(response.serveDirectory(request, config, filesystem));
         }
         return(response.forbidden());
       }
 
       log(Level.Trace, "Router: [T] Redirect: %s %d", config.redirect, finalrewrite);
-      if(config.redirect && !finalrewrite) { return(this.redirectCanonical(request, response)); }
+      if(config.redirect && !finalrewrite) {
+        if (!config.allowcgi) return(response.notFound());
+        return(this.redirectCanonical(request, response));
+      }
       return(response.notFound());  // Request is not hosted on this server
     }
 
