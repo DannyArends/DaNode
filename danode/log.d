@@ -21,7 +21,5 @@ void tag(A...)(Level lvl, const string tag, const string fmt, auto ref A args) {
 }
 
 void error(A...)(const string fmt, auto ref A args) { stderr.logTo("ERR", fmt, args); }
-void acmeError(A...)(const string fmt, auto ref A args) { stdout.logTo("SSL", fmt, args); }
-
 void abort(in string s, int exitcode = -1) { error(s); exit(exitcode); }
 void expect(A...)(bool cond, string msg, auto ref A args) { if (!cond) abort(format(msg, args)); }
