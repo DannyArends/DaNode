@@ -5,7 +5,7 @@ import danode.client : Client;
 import danode.interfaces : ClientInterface, DriverInterface, StringDriver;
 import danode.statuscode : StatusCode;
 import danode.request : Request;
-import danode.response : Response, Message, setPayload, create, badRequest, domainNotFound, forbidden, redirect, serveCGI, serveDirectory, notFound;
+import danode.response : Response, setPayload, create, badRequest, domainNotFound, forbidden, redirect, serveCGI, serveDirectory, notFound;
 import danode.payload : Message;
 import danode.files : serveStaticFile;
 import danode.webconfig : WebConfig;
