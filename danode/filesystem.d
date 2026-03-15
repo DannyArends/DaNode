@@ -6,7 +6,7 @@ import danode.mimetypes : mime;
 import danode.payload : Payload, PayloadType;
 import danode.files : FilePayload, FileStream;
 import danode.functions : has, isCGI;
-import danode.log : log, error, Level;
+import danode.log : log, tag, error, Level;
 
 /* Domain name structure containing files in that domain
    Domains are loaded by the FileSystem from the -wwwRoot variable (set to www/ by default)
