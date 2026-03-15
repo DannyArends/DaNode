@@ -7,6 +7,6 @@ if pgrep -f 'bin/server' >/dev/null 2>&1
      echo "Down, restarting"
      cd /home/danny/Github/DaNode/
      nohup authbind bin/server -k -b 100 -v 1 >> server.log 2>> error.log &
-     date >> /home/danny/Github/DaNode/restarts.txt
+     date >> /home/danny/Github/DaNode/restarts.log
 fi
 
