@@ -7,7 +7,7 @@ import danode.payload : Payload, PayloadType, Message;
 import danode.log : custom, info, warning, trace, cverbose, DEBUG;
 import danode.functions : isCGI;
 import danode.request : Request;
-import danode.response : Response, notmodified;
+import danode.response : Response, notModified;
 import danode.filesystem : FileSystem;
 
 /* Per-client streaming wrapper around a shared FilePayload.
@@ -172,9 +172,9 @@ void serveStaticFile(ref Response response, in Request request, FileSystem fs) {
   if (request.hasRange) { response.serveRangeFile(request, reqFile); return; }
 
   if (!reqFile.deflate) response.customheader("Accept-Ranges", "bytes");
-  if (request.ifModified >= response.payload.mtime()) {                                        // Non modified static content
+  if (request.ifModified >= response.payload.mtime()) {
     trace("static file has not changed, sending notmodified");
-    response.notmodified(request, response.payload.mimetype);
+    response.notModified(response.payload.mimetype);
   }
   response.ready = true;
 }
@@ -186,7 +186,7 @@ void serveRangeFile(ref Response response, in Request request, FilePayload reqFi
   long start = r[0];
   long end = r[1] < 0 ? total - 1 : r[1];
   if (start >= total || end >= total || start > end) {
-    response.payload = new Message(StatusCode.RangeNotSatisfiable, "");
+    response.payload = new Message(StatusCode.RangeNotSatisfiable);
     response.customheader("Content-Range", format("bytes */%d", total));
   } else {
     response.customheader("Content-Range", format("bytes %d-%d/%d", start, end, total));

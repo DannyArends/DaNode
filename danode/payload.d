@@ -21,14 +21,6 @@ interface Payload {
     const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 4096, bool isRange = false, long rangeStart = 0, long rangeEnd = -1);
 }
 
-/* Implementation of the Payload interface, by using an empty string message */
-class Empty : Message {
-  public:
-    this(StatusCode status, string mime = UNSUPPORTED_FILE) {
-      super(status, "", mime);
-    }
-}
-
 /* Implementation of the Payload interface, by using an underlying string buffer */
 class Message : Payload {
   private:
@@ -37,7 +29,7 @@ class Message : Payload {
     string mime;
 
   public:
-    this(StatusCode status, string message, string mime = "text/plain") {
+    this(StatusCode status, string message = "", string mime = UNSUPPORTED_FILE) {
       this.status = status;
       this.message = message;
       this.mime = mime;

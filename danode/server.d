@@ -122,7 +122,6 @@ class Server : Thread {
     final @property int verbose(string verbose = "") { return(router.verbose(verbose)); } // Verbose level
 
     final void run() {
-      int select;
       Appender!(Client[]) persistent;
       SysTime lastScan = Clock.currTime();
       while(running) {

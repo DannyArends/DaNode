@@ -5,7 +5,7 @@ import danode.cgi : CGI;
 import danode.client : MAX_REQUEST_SIZE;
 import danode.statuscode : StatusCode;
 import danode.request : Request, RequestMethod;
-import danode.response : SERVERINFO, Response, redirect, create, notmodified;
+import danode.response : SERVERINFO, Response, redirect, create;
 import danode.webconfig : WebConfig;
 import danode.payload : Message;
 import danode.mimetypes : mime;
