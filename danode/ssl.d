@@ -30,23 +30,20 @@ version(SSL) {
     static void switchContext(SSL* ssl, int *ad, void *arg) {
       string hostname = to!(string)(cast(const(char*)) SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name));
       custom(1, "HTTPS", "looking for hostname: %s", hostname);
-      if(hostname is null) {
-        custom(1, "WARN", "client does not support Server Name Indication (SNI), using default: contexts[0]");
-        return;
-      }
-      string s;
-      for(int x = 0; x < contexts.length; x++) {
-        s = to!string(contexts[x].hostname.ptr);
-        custom(1, "HTTPS", "context: %s %s", hostname, s);
-        if(hostname.endsWith(s)) {
-          custom(1, "HTTPS", "switching SSL context to %s", hostname);
-          SSL_set_SSL_CTX(ssl, contexts[x].context);
-          return;
-        }
-      }
-      custom(1, "WARN", "callback failed to find certificate for %s", hostname);
-      return;
+      if(hostname is null) { custom(1, "WARN", "Client no SNI support, using default: contexts[0]"); return; }
+      ptrdiff_t idx = findContext(hostname);
+      if (idx >= 0) { 
+        custom(1, "HTTPS", "switching SSL context to %s", hostname); 
+        SSL_set_SSL_CTX(ssl, contexts[idx].context);
+      }else{ custom(1, "WARN", "callback failed to find certificate for %s", hostname); }
     }
+  }
+
+  ptrdiff_t findContext(string hostname) {
+    for (size_t x = 0; x < contexts.length; x++) {
+      if (hostname.endsWith(to!string(contexts[x].hostname.ptr))) return(x);
+    }
+    return(-1);
   }
 
   // Create a new SSL context pointer using a certificate, chain and privateKey file
@@ -74,16 +71,9 @@ version(SSL) {
 
   // Does the hostname requested have a certificate ?
   bool hasCertificate(string hostname) {
-    custom(1, "HTTPS", "'%s' certificate?", hostname);
-    string s;
-    for(size_t x = 0; x < contexts.length; x++) {
-      s = to!string(contexts[x].hostname.ptr);
-      if(hostname.endsWith(s)) {
-        custom(1, "HTTPS", "'%s' certificate found", hostname);
-        return true;
-      }
-    }
-    return false;
+    bool found = (findContext(hostname) >= 0);
+    custom(2, "HTTPS", "'%s' certificate? %s", hostname, found);
+    return found;
   }
 
   // Should be used after SSL_connect(), SSL_accept(), SSL_do_handshake(), 
