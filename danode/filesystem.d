@@ -6,7 +6,7 @@ import danode.mimetypes : mime;
 import danode.payload : Payload, PayloadType;
 import danode.files : FilePayload, FileStream;
 import danode.functions : has, isCGI;
-import danode.log : custom, info, Log, warning, trace, cverbose, NOTSET, NORMAL, DEBUG;
+import danode.log : tag, log, error, Level;
 
 /* Domain name structure containing files in that domain
    Domains are loaded by the FileSystem from the -wwwRoot variable (set to www/ by default)
@@ -26,12 +26,10 @@ class FileSystem {
   private:
     string         root;
     Domain[string] domains;
-    Log            logger;
     size_t         maxsize;
 
   public:
-    this(Log logger, string root = "./www/", size_t maxsize = 1024 * 512){
-      this.logger   = logger;
+    this(string root = "./www/", size_t maxsize = 1024 * 512){
       this.root = buildNormalizedPath(absolutePath(root)).replace("\\", "/");
       if (!this.root.endsWith("/")) this.root ~= "/";
       this.maxsize  = maxsize;
@@ -54,7 +52,7 @@ class FileSystem {
         if (f.isFile()) {
           string shortname = replace(f.name[dname.length .. $], "\\", "/");
           if (shortname.endsWith(".in") || shortname.endsWith(".up")) continue;
-          custom(2, "SCAN", "file: %s -> %s", f.name, shortname);
+          log(Level.Trace, "file: %s -> %s", f.name, shortname);
           if (!domain.files.has(shortname)) {
             domain.files[shortname] = new FilePayload(f.name, maxsize);
             domain.entries++;
@@ -68,8 +66,8 @@ class FileSystem {
       // Remove files that no longer exist on disk
       foreach (k; domain.files.keys) { if (!exists(dname ~ k)) { domain.files.remove(k); } }
 
-      custom(1, "SCAN", "domain: %s, files %s|%s", dname, domain.buffered, domain.entries);
-      custom(1, "SCAN", "%s = size: %.2f/%.2f kB", dname, domain.buffersize / 1024.0, domain.size / 1024.0);
+      log(Level.Verbose, "domain: %s, files %s|%s", dname, domain.buffered, domain.entries);
+      log(Level.Verbose, "%s = size: %.2f/%.2f kB", dname, domain.buffersize / 1024.0, domain.size / 1024.0);
       return(domain);
     } }
 
@@ -79,11 +77,11 @@ class FileSystem {
     /* Get the FilePayload at path from the localroot, with update check on buffers */
     final FilePayload file(string localroot, string path){ synchronized {
       if (!(localroot in domains)) {
-        warning("file(): unknown domain '%s'", localroot);
+        log(Level.Verbose, "file(): unknown domain '%s'", localroot);
         return new FilePayload("", maxsize);
       }
       if (!domains[localroot].files.has(path) && exists(format("%s%s", localroot, path))) {
-        custom(1, "SCAN", "New file %s, rescanning index: %s", path, localroot);
+        log(Level.Verbose, "New file %s, rescanning index: %s", path, localroot);
         domains[localroot] = scan(localroot);
       }
       // File exists, buffer the individual file if modified after buffer date
@@ -91,7 +89,7 @@ class FileSystem {
         if (domains[localroot].files[path].needsupdate) domains[localroot].files[path].buffer();
         return(domains[localroot].files[path]);
       }
-      custom(0, "SCAN", "should not be here not in index, but exists %s, %s", path, localroot);
+      error("should not be here not in index, but exists %s, %s", path, localroot);
       return new FilePayload("", maxsize);
     } }
 
@@ -106,22 +104,21 @@ class FileSystem {
 
 /* Basic unit-tests should be extended */
 unittest {
-  custom(0, "FILE", "%s", __FILE__);
-  Log logger = new Log(NORMAL);
-  FileSystem filesystem = new FileSystem(logger, "./www/");
-  custom(0, "TEST", "./www/localhost/dmd.d (6 bytes) = %s", filesystem.file(filesystem.localroot("localhost"), "/dmd.d").bytes(0,6));
-  custom(0, "TEST", "filesystem.localroot('localhost') = %s", filesystem.localroot("localhost"));
+  tag(Level.Always, "FILE", "%s", __FILE__);
+  FileSystem filesystem = new FileSystem("./www/");
+  tag(Level.Always, "TEST", "./www/localhost/dmd.d (6 bytes) = %s", filesystem.file(filesystem.localroot("localhost"), "/dmd.d").bytes(0,6));
+  tag(Level.Always, "TEST", "filesystem.localroot('localhost') = %s", filesystem.localroot("localhost"));
   Domain localhost = filesystem.scan("www/localhost");
-  custom(0, "TEST", "localhost.buffersize() = %s", localhost.buffersize());
-  custom(0, "TEST", "localhost.size() = %s", localhost.size());
+  tag(Level.Always, "TEST", "localhost.buffersize() = %s", localhost.buffersize());
+  tag(Level.Always, "TEST", "localhost.size() = %s", localhost.size());
   auto file = filesystem.file(filesystem.localroot("localhost"), "/dmd.d");
   auto stream = new FileStream(file);
-  custom(0, "TEST", "FileStream.bytes(0) = %s", stream.bytes(0, 6));
-  custom(0, "TEST", "file.statuscode() = %s", file.statuscode());
-  custom(0, "TEST", "file.mimetype() = %s", file.mimetype());
-  custom(0, "TEST", "file.mtime() = %s", file.mtime());
-  custom(0, "TEST", "file.ready() = %s", file.ready());
-  custom(0, "TEST", "file.type() = %s", file.type());
-  custom(0, "TEST", "file.content() = %s", file.content());
+  tag(Level.Always, "TEST", "FileStream.bytes(0) = %s", stream.bytes(0, 6));
+  tag(Level.Always, "TEST", "file.statuscode() = %s", file.statuscode());
+  tag(Level.Always, "TEST", "file.mimetype() = %s", file.mimetype());
+  tag(Level.Always, "TEST", "file.mtime() = %s", file.mtime());
+  tag(Level.Always, "TEST", "file.ready() = %s", file.ready());
+  tag(Level.Always, "TEST", "file.type() = %s", file.type());
+  tag(Level.Always, "TEST", "file.content() = %s", file.content());
 }
 

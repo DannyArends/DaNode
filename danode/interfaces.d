@@ -3,7 +3,7 @@ module danode.interfaces;
 import danode.imports;
 import danode.functions : Msecs, bodystart, endofheader, fullheader;
 import danode.response : Response;
-import danode.log : NORMAL, INFO, DEBUG;
+import danode.log : log, error, Level;
 
 /* Client interface used by the server */
 interface ClientInterface {
@@ -29,7 +29,6 @@ abstract class DriverInterface {
     SysTime             modtime;             /// Time in ms since this process was last modified
     Address             address;             /// Private address field
     bool                blocking = false;    /// Blocking communication ?
-    int                 verbose = NORMAL;    /// Verbose level
 
     this(Socket socket, bool blocking = false) { this.socket = socket; this.blocking = blocking; systime = Clock.currTime(); touch(); }
     bool socketReady() { return socket !is null && socket.isAlive(); } /// Socket ready ?

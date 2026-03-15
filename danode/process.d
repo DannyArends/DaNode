@@ -2,7 +2,8 @@ module danode.process;
 
 import danode.imports;
 import danode.functions : Msecs;
-import danode.log : custom, warning, trace;
+import danode.log : log, tag, error, Level;
+
 version(Posix) {
   import core.sys.posix.fcntl : fcntl, F_SETFL, O_NONBLOCK;
 }
@@ -139,8 +140,8 @@ class Process : Thread {
             break;
           }
         }
-      } catch (Exception e) { warning("Exception during readpipe command: %s", e); file.close();
-      } catch(Error e) { warning("Error during readpipe command: %s", e); file.close();
+      } catch (Exception e) { error("Exception during readpipe command: %s", e); file.close();
+      } catch(Error e) { error("Error during readpipe command: %s", e); file.close();
       }
     }
 
@@ -157,22 +158,22 @@ class Process : Thread {
     final void run() {
       try {
         if( !exists(inputfile) ) {
-          warning("no input path: %s", inputfile);
+          log(Level.Verbose, "no input path: %s", inputfile);
           this.process.terminated = true;
           this.completed = true;
           return;
         }
         fStdIn = File(inputfile, "r");
         pStdOut = pipe(); pStdErr = pipe();
-        custom(1, "PROC", "command: %s < %s", command, inputfile);
+        log(Level.Verbose, "command: %s < %s", command, inputfile);
         import std.process : Config;
         auto cpid = spawnProcess(command, fStdIn, pStdOut.writeEnd, pStdErr.writeEnd, environ, Config.none, environ.get("PWD", "."));
 
         fStdOut = pStdOut.readEnd;
-        if(!nonblocking(fStdOut) && fStdOut.isOpen()) custom(2, "WARN", "unable to create nonblocking stdout pipe for command");
+        if(!nonblocking(fStdOut) && fStdOut.isOpen()) log(Level.Trace, "unable to create nonblocking stdout pipe for command");
 
         fStdErr = pStdErr.readEnd;
-        if(!nonblocking(fStdErr) && fStdErr.isOpen()) custom(2, "WARN", "unable to create nonblocking error pipe for command");
+        if(!nonblocking(fStdErr) && fStdErr.isOpen()) log(Level.Trace, "unable to create nonblocking error pipe for command");
 
         while (running && lastmodified < maxtime) {
           drainPipes();
@@ -180,33 +181,33 @@ class Process : Thread {
           Thread.sleep(msecs(1));
         }
         if (!process.terminated) {
-          warning("command: %s < %s did not finish in time [%s msecs]", command, inputfile, time()); 
+          log(Level.Verbose, "command: %s < %s did not finish in time [%s msecs]", command, inputfile, time()); 
           killProcess(cpid, 9);
           process = WaitResult(true, wait(cpid));
         }
-        trace("command finished %d after %s msecs", status(), time());
+        log(Level.Verbose, "command finished %d after %s msecs", status(), time());
         drainPipes();
 
-        trace("Output %d & %d processed after %s msecs", outbuffer.data.length, errbuffer.data.length, time());
-        if (errbuffer.data.length > 0) custom(1, "PROC", "stderr: %s", errbuffer.data);
+        log(Level.Trace, "Output %d & %d processed after %s msecs", outbuffer.data.length, errbuffer.data.length, time());
+        if (errbuffer.data.length > 0) log(Level.Verbose, "stderr: %s", errbuffer.data);
 
         // Close the file handles
         fStdIn.close(); fStdOut.close(); fStdErr.close();
 
-        trace("removing process input file %s ? %s", inputfile, removeInput);
+        log(Level.Trace, "removing process input file %s ? %s", inputfile, removeInput);
         if(removeInput) remove(inputfile);
-      } catch(Exception e) { warning("process.d, exception: '%s'", e.msg); }
+      } catch(Exception e) { error("process.d, exception: '%s'", e.msg); }
       this.completed = true;
     }
 }
 
 unittest {
-  custom(0, "FILE", "%s", __FILE__);
+  tag(Level.Always, "FILE", "%s", __FILE__);
   auto p = new Process(["rdmd", "www/localhost/dmd.d"], "test/dmd.in", null, false);
   p.start();
   while(!p.finished){ Thread.sleep(msecs(5)); }
-  custom(0, "TEST", "status of output: %s", p.status());
-  custom(0, "TEST", "length of output: %s", p.length());
-  custom(0, "TEST", "time of output: %s", p.time());
+  tag(Level.Always, "TEST", "status of output: %s", p.status());
+  tag(Level.Always, "TEST", "length of output: %s", p.length());
+  tag(Level.Always, "TEST", "time of output: %s", p.time());
 }
 

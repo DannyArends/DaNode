@@ -6,9 +6,8 @@ version(SSL) {
   import danode.imports;
   import danode.functions : Msecs;
   import danode.response : Response;
-  import danode.log : NORMAL, INFO, DEBUG;
+  import danode.log : log, error, Level;
   import danode.interfaces : DriverInterface;
-  import danode.log : custom, warning, error;
   import danode.ssl;
 
   immutable long HANDSHAKE_TIMEOUT = 5000;  // 5 seconds
@@ -23,7 +22,7 @@ version(SSL) {
 
       // Perform the SSL handshake
       bool performHandshake() {
-        custom(2, "HTTPS", "performing handshake");
+        log(Level.Trace, "performing handshake");
         int rA, rE;
         while (starttime < HANDSHAKE_TIMEOUT) {
           rA = SSL_accept(ssl);
@@ -35,37 +34,37 @@ version(SSL) {
           if (rE == SSL_ERROR_WANT_READ) Thread.sleep(5.msecs);
           if (rE == SSL_ERROR_WANT_WRITE) Thread.sleep(5.msecs);
         }
-        custom(2, "HTTPS", "handshake timed out after %d msecs", starttime);
+        log(Level.Trace, "handshake timed out after %d msecs", starttime);
         return(false);
       }
 
       // Open the connection by setting the socket to non blocking I/O, and registering the origin address
       override bool openConnection() {
-        custom(1, "HTTPS", "Opening HTTPS connection");
+        log(Level.Verbose, "Opening HTTPS connection");
         if (contexts.length > 0) {
-          custom(1, "HTTPS", "Number of SSL contexts: %d", contexts.length);
+          log(Level.Trace, "Number of SSL contexts: %d", contexts.length);
           try {
             if (!socket) { error("SSL was not given a valid socket (null)"); return(false); }
 
-            custom(1, "HTTPS", "set the socket the blocking mode");
+            log(Level.Trace, "set the socket the blocking mode");
             socket.blocking = blocking;
 
-            custom(1, "HTTPS", "creating a new ssl connection from context[0]");
+            log(Level.Trace, "creating a new ssl connection from context[0]");
             ssl = SSL_new(contexts[0].context);
 
-            custom(1, "HTTPS", "setting the socket handle I/O to SSL* object");
+            log(Level.Trace, "setting the socket handle I/O to SSL* object");
             ssl.SSL_set_fd(to!int(socket.handle()));
 
-            custom(1, "HTTPS", "SSL_set_accept_state to server mode");
+            log(Level.Trace, "SSL_set_accept_state to server mode");
             SSL_set_accept_state(ssl);
 
-            if (!performHandshake()) { custom(2, "ERROR", "couldn't handshake SSL connection"); return(false); }
+            if (!performHandshake()) { log(Level.Verbose, "couldn't handshake SSL connection"); return(false); }
           } catch (Exception e) { error("couldn't open SSL connection : %s", e.msg); return(false);
           }
           try {
             address = socket.remoteAddress();
-          } catch (Exception e) { warning("unable to resolve requesting origin: %s", e.msg); }
-          custom(1, "HTTPS", "HTTPS connection opened");
+          } catch (Exception e) { error("unable to resolve requesting origin: %s", e.msg); }
+          log(Level.Verbose, "HTTPS connection opened");
           return(true);
         }
         error("HTTPS driver failed: 'Server has no certificates loaded'");
@@ -78,12 +77,12 @@ version(SSL) {
       override void closeConnection() {
         try {
           if (socketReady()) { SSL_shutdown(ssl); SSL_shutdown(ssl); }
-        } catch(Exception e) { warning("Exception during SSL shutdown: %s", e.msg); }
+        } catch(Exception e) { error("Exception during SSL shutdown: %s", e.msg); }
         try {
           if (socket !is null) { if (socket.isAlive()) { socket.shutdown(SocketShutdown.BOTH); }
             socket.close();
           }
-        } catch(Exception e) { warning("Exception closing socket: %s", e.msg); }
+        } catch(Exception e) { error("Exception closing socket: %s", e.msg); }
       }
 
       // Receive upto maxsize of bytes from the client into the input buffer
@@ -94,7 +93,7 @@ version(SSL) {
         if ((received = SSL_read(ssl, cast(void*) tmpbuffer, cast(int)maxsize)) > 0) {
           inbuffer.put(tmpbuffer[0 .. received]); touch();
         }
-        if(received > 0) custom(3, "HTTPS", "received %d bytes of data", received);
+        if(received > 0) log(Level.Trace, "received %d bytes of data", received);
         return(inbuffer.data.length);
       }
 
@@ -105,7 +104,7 @@ version(SSL) {
         if (pending.length == 0) pending = response.bytes(maxsize).dup;
         if (pending.length == 0) return;
         ptrdiff_t send = SSL_write(ssl, cast(void*) pending.ptr, cast(int) pending.length);
-        custom(1, "HTTPS", "send result=%d index=%d length=%d", send, response.index, response.length);
+        log(Level.Verbose, "send result=%d index=%d length=%d", send, response.index, response.length);
         if (send > 0) {
           touch();
           response.index += send;

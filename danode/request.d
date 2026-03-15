@@ -6,7 +6,7 @@ import danode.interfaces : ClientInterface, DriverInterface;
 import danode.functions : interpreter, from, parseHtmlDate, parseQueryString;
 import danode.webconfig : WebConfig;
 import danode.post : PostItem, PostType;
-import danode.log : custom, info, trace, warning;
+import danode.log : log, tag, error, Level;
 
 // The Request-Method indicates which method is to be performed on the specified resource
 enum RequestMethod : string {
@@ -15,16 +15,12 @@ enum RequestMethod : string {
 }
 
 // The HTTP-Version indicates which protocol version is requested to obtain the specified resource
-enum HTTPVersion : string {
-  v09 = "HTTP/0.9", v10 = "HTTP/1.0", v11 = "HTTP/1.1", v20 = "HTTP/2", v30 = "HTTP/3"
-}
+enum HTTPVersion : string { v09 = "HTTP/0.9", v10 = "HTTP/1.0", v11 = "HTTP/1.1", v20 = "HTTP/2", v30 = "HTTP/3" }
 
 // Parse the HTTP-Version, throw an error if it cannot be parsed
-pure HTTPVersion parseHTTPVersion(const string line) {
-  foreach (immutable v; EnumMembers!HTTPVersion) {
-    if (v == line) return(v);
-  }
-  throw new Exception(format("invalid HTTP-Version requested: %s", line));
+@nogc pure HTTPVersion parseHTTPVersion(const string line) nothrow {
+  foreach (immutable v; EnumMembers!HTTPVersion) { if (v == line) return(v); }
+  return(HTTPVersion.v09);
 }
 
 // Parse the Request-Line: "method uri protocol"
@@ -65,8 +61,8 @@ struct Request {
     this.maxtime = maxtime;
     this.id = md5UUID(format("%s:%d-%s", driver.ip, driver.port, starttime));
     this.isValid = this.parseHeader(driver.header);
-    info("request: %s to %s from %s:%d - %s", method, uri, this.ip, this.port, this.id);
-    trace("request header: %s", driver.header);
+    log(Level.Verbose, "request: %s to %s from %s:%d - %s", method, uri, this.ip, this.port, this.id);
+    log(Level.Trace, "request header: %s", driver.header);
   }
 
   // Parse the HTTP request header (method, uri, protocol) as well as the supplemental headers
@@ -80,12 +76,9 @@ struct Request {
           if (parts.length > 1) this.headers[strip(parts[0])] = strip(join(parts[1 .. $], ":"));
         }
       }
-    } catch (Exception e) {
-      warning("parseHeader exception: %s", e.msg);
-      return(false);
-    }
-    trace("headers received: %s", this.headers);
-    trace("parseHeader %s %s %s, nParams: %d", this.method, this.uri, this.protocol, this.headers.length);
+    } catch (Exception e) { error("parseHeader exception: %s", e.msg); return(false); }
+    log(Level.Trace, "headers received: %s", this.headers);
+    log(Level.Trace, "parseHeader %s %s %s, nParams: %d", this.method, this.uri, this.protocol, this.headers.length);
     return(true);
   }
 
@@ -102,23 +95,19 @@ struct Request {
     return [start, end];
   }
 
-  final @property bool hasRange() const { return headers.from("Range").startsWith("bytes="); }
+  final @property @nogc bool hasRange() const nothrow { return headers.from("Range").startsWith("bytes="); }
 
   // The Host header requested in the request
-  final @property string host() const { 
+  final @property @nogc string host() const nothrow { 
     ptrdiff_t i = headers.from("Host").indexOf(":");
-    if (i > 0) {
-      return(headers.from("Host")[0 .. i]);
-    }
+    if (i > 0) { return(headers.from("Host")[0 .. i]); }
     return(headers.from("Host")); 
   }
 
   // The Port from the Host header in the request
   final @property ushort serverport() const {
     ptrdiff_t i = headers.from("Host").indexOf(":");
-    if (i > 0) { 
-      return( to!ushort(headers.from("Host")[(i+1) .. $]));
-    }
+    if (i > 0) { return( to!ushort(headers.from("Host")[(i+1) .. $])); }
     return(isSecure ? to!ushort(443) : to!ushort(80)); // return the default ports
   }
 
@@ -145,20 +134,20 @@ struct Request {
   }
 
   // decoded path component of url (post-rewrite)
-  final @property string path() const { ptrdiff_t i = url.indexOf("?"); if(i > 0){ return(url[0 .. i]); }else{ return(url); } }
+  final @property @nogc string path() const nothrow { ptrdiff_t i = url.indexOf("?"); if(i > 0){ return(url[0 .. i]); }else{ return(url); } }
 
   // query string component of uri (pre-rewrite)
-  final @property string query() const { ptrdiff_t i = uri.indexOf("?"); if(i > 0){ return(uri[i .. $]); }else{ return("?"); } }
+  final @property @nogc string query() const nothrow { ptrdiff_t i = uri.indexOf("?"); if(i > 0){ return(uri[i .. $]); }else{ return("?"); } }
 
   // path component of uri (pre-rewrite, used for canonical redirects)
-  final @property string uripath() const { ptrdiff_t i = uri.indexOf("?"); if(i > 0){ return(uri[0 .. i]); }else{ return(uri); } }
-  final @property bool keepalive() const { return(icmp(headers.from("Connection"), "keep-alive") == 0); }
+  final @property @nogc string uripath() const nothrow { ptrdiff_t i = uri.indexOf("?"); if(i > 0){ return(uri[0 .. i]); }else{ return(uri); } }
+  final @property @nogc bool keepalive() const nothrow { return(icmp(headers.from("Connection"), "keep-alive") == 0); }
   final @property SysTime ifModified() const { return(parseHtmlDate(headers.from("If-Modified-Since"))); }
-  final @property bool acceptsEncoding(string encoding = "deflate") const { return(headers.from("Accept-Encoding").canFind(encoding)); }
-  final @property bool track() const { return(  headers.from("DNT","0") == "0"); }
-  final @property string cookies() const { return(headers.from("Cookie")); }
-  final @property string useragent() const { return(headers.from("User-Agent", "Unknown")); }
-  final string shorthost() const { return host.startsWith("www.") ? host[4 .. $] : host; }
+  final @property @nogc bool acceptsEncoding(string encoding = "deflate") const nothrow { return(headers.from("Accept-Encoding").canFind(encoding)); }
+  final @property @nogc bool track() const nothrow { return(  headers.from("DNT","0") == "0"); }
+  final @property @nogc string cookies() const nothrow { return(headers.from("Cookie")); }
+  final @property @nogc string useragent() const nothrow { return(headers.from("User-Agent", "Unknown")); }
+  final @nogc string shorthost() const nothrow { return host.startsWith("www.") ? host[4 .. $] : host; }
   final string[] command(string localpath) const {
     import std.path : dirName;
     string interp = localpath.interpreter();
@@ -197,12 +186,12 @@ struct Request {
   // Clear all files uploaded by the user after the Request is done
   final void clearUploadFiles() const {
     foreach(f; postfiles) { if(exists(f)) {
-      trace("removing uploaded file at %s", f); 
+      log(Level.Verbose, "Removing uploaded file at %s", f); 
       remove(f);
     } }
   }
 }
 
 unittest {
-  custom(0, "FILE", "%s", __FILE__);
+  tag(Level.Always, "FILE", "%s", __FILE__);
 }

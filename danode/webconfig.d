@@ -4,7 +4,7 @@ import danode.imports;
 import danode.functions : has, from;
 import danode.files : FilePayload;
 import danode.request : Request;
-import danode.log : trace;
+import danode.log : log, error, Level;
 
 struct WebConfig {
   string[string]  data;
@@ -57,12 +57,12 @@ struct WebConfig {
 
   // Is the directory allowed to be viewed ?
   @property bool dirAllowed(in string localroot, in string path) const {
-    trace("dirAllowed: %s %s", localroot, path);
+    log(Level.Trace, "dirAllowed: %s %s", localroot, path);
     if (path.length <= localroot.length + 1) return true; // root dir always allowed
     string npath = path[(localroot.length + 1) .. $];
-    trace("npath: %s", npath);
+    log(Level.Trace, "npath: %s", npath);
     foreach (d; allowdirs) {
-      trace("%s in allowdirs: %s %s", npath, d, npath.indexOf(d));
+      log(Level.Trace, "%s in allowdirs: %s %s", npath, d, npath.indexOf(d));
       if (indexOf(strip(npath), strip(d)) == 0) return true;
     }
     return false;

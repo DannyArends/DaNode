@@ -4,7 +4,7 @@ import danode.imports;
 import danode.statuscode : StatusCode;
 import danode.mimetypes : mime;
 import danode.payload : Payload, PayloadType, Message;
-import danode.log : custom, info, warning, trace, cverbose, DEBUG;
+import danode.log : log, error, Level;
 import danode.functions : isCGI;
 import danode.request : Request;
 import danode.response : Response, notModified;
@@ -23,7 +23,7 @@ class FileStream : Payload {
       this.payload = payload;
       if (payload.realfile) {
         try { handle = File(payload.filePath(), "rb"); }
-        catch (Exception e) { warning("FileStream: failed to open '%s': %s", payload.filePath(), e.msg); }
+        catch (Exception e) { log(Level.Verbose, "FileStream: failed to open '%s': %s", payload.filePath(), e.msg); }
       }
     }
 
@@ -44,7 +44,7 @@ class FileStream : Payload {
         char[] tmpbuf = new char[](r[1]);
         handle.seek(r[0]);
         return handle.rawRead!char(tmpbuf).dup;
-      } catch (Exception e) { warning("FileStream.bytes exception '%s': %s", payload.filePath(), e.msg); return []; }
+      } catch (Exception e) { log(Level.Verbose, "FileStream.bytes exception '%s': %s", payload.filePath(), e.msg); return []; }
     }
 }
 
@@ -72,10 +72,10 @@ class FilePayload : Payload {
     final bool needsupdate() {
       if (!isStaticFile()) return false; // CGI files are never buffered, since they are executed
       if (fileSize() > 0 && fileSize() < buffermaxsize) { //
-        if (!buffered) { trace("need to buffer file record: %s", path); return true; }
-        if (mtime > btime) { trace("re-buffer stale file record: %s", path); return true; }
+        if (!buffered) { log(Level.Trace, "need to buffer file record: %s", path); return true; }
+        if (mtime > btime) { log(Level.Trace, "re-buffer stale file record: %s", path); return true; }
       }else{
-        info("file %s does not fit into the buffer (%d)", path, buffermaxsize);
+        log(Level.Verbose, "file %s does not fit into the buffer (%d)", path, buffermaxsize);
       }
       return false;
     }
@@ -90,14 +90,12 @@ class FilePayload : Payload {
         auto f = File(path, "rb");
         f.rawRead(buf);
         f.close();
-      } catch (Exception e) { warning("exception during buffering '%s': %s", path, e.msg); return; }
+      } catch (Exception e) { log(Level.Verbose, "exception during buffering '%s': %s", path, e.msg); return; }
       try {
         encbuf = cast(char[])( compress(buf, 9) );
-      } catch (Exception e) {
-        warning("exception during compressing '%s': %s", path, e.msg);
-      }
+      } catch (Exception e) { log(Level.Verbose, "exception during compressing '%s': %s", path, e.msg); }
       btime = Clock.currTime();
-      trace("buffered %s: %d|%d bytes", path, fileSize(), encbuf.length);
+      log(Level.Trace, "buffered %s: %d|%d bytes", path, fileSize(), encbuf.length);
       buffered = true;
     } }
 
@@ -138,15 +136,15 @@ class FilePayload : Payload {
     /* Get bytes in a lockfree manner from the correct underlying buffer */
     final const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 4096, bool isRange = false, long start = 0, long end = -1) { synchronized {
       if (!realfile) { return []; }
-      if (needsupdate) { buffer();  if (!buffered) { warning("FilePayload.bytes() failed to buffer '%s'", path); return([]); } }
+      if (needsupdate) { buffer();  if (!buffered) { log(Level.Verbose, "FilePayload.bytes() failed to buffer '%s'", path); return([]); } }
       auto r = rangeCalc(from, maxsize, isRange, start, end);
-      trace("bytes: isRange=%s start=%d end=%d from=%d offset=%d sz=%d", isRange, start, end, from, r[0], r[1]);
+      log(Level.Trace, "bytes: isRange=%s start=%d end=%d from=%d offset=%d sz=%d", isRange, start, end, from, r[0], r[1]);
       if(hasEncodedVersion && deflate) {
         if(r[0] < encbuf.length) return( encbuf[r[0] .. to!ptrdiff_t(min(r[0]+r[1], $))] );
       } else {
         if(r[0] < buf.length) return( buf[r[0] .. to!ptrdiff_t(min(r[0]+r[1], $))] );
       }
-      warning("FilePayload.bytes() called on unbuffered file '%s', this should not happen", path);
+      log(Level.Verbose, "FilePayload.bytes() called on unbuffered file '%s', this should not happen", path);
       return([]);
     } }
 }
@@ -161,11 +159,11 @@ class FilePayload : Payload {
 
 // Serve a static file from the disc, send encrypted when requested and available
 void serveStaticFile(ref Response response, in Request request, FileSystem fs) {
-  trace("serving a static file");
+  log(Level.Trace, "serving a static file");
   string localroot = fs.localroot(request.shorthost());
   FilePayload reqFile = fs.file(localroot, request.path);
   if (request.acceptsEncoding("deflate") && reqFile.hasEncodedVersion && !request.hasRange) {
-    info("will serve %s with deflate encoding", request.path);
+    log(Level.Verbose, "will serve %s with deflate encoding", request.path);
     reqFile.deflate = true;
     response.customheader("Content-Encoding","deflate");
   }
@@ -175,7 +173,7 @@ void serveStaticFile(ref Response response, in Request request, FileSystem fs) {
 
   if (!reqFile.deflate) response.customheader("Accept-Ranges", "bytes");
   if (request.ifModified >= response.payload.mtime()) {
-    trace("static file has not changed, sending notmodified");
+    log(Level.Trace, "static file has not changed, sending notmodified");
     response.notModified(response.payload.mimetype);
   }
   response.ready = true;
@@ -197,7 +195,7 @@ void serveRangeFile(ref Response response, in Request request, FilePayload reqFi
     response.rangeEnd = end;
     response.isRange = true;
     response.payload = new FileStream(reqFile);
-    trace("serveRangeFile: serving %d bytes", end - start + 1);
+    log(Level.Trace, "serveRangeFile: serving %d bytes", end - start + 1);
   }
   response.ready = true;
 }

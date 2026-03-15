@@ -4,11 +4,12 @@ import danode.imports;
 import danode.cgi : CGI;
 import danode.router : Router, runRequest;
 import danode.statuscode : StatusCode;
+import danode.functions: htmltime, Msecs;
 import danode.interfaces : DriverInterface, ClientInterface, StringDriver;
 import danode.response : Response, setPayload;
 import danode.request : Request;
 import danode.payload : Message, PayloadType;
-import danode.log : custom, info, trace, warning, NOTSET, NORMAL;
+import danode.log : log, req, tag, error, Level;
 
 immutable size_t MAX_HEADER_SIZE  = 1024 * 32;          //  32KB Header
 immutable size_t MAX_REQUEST_SIZE = 1024 * 1024 * 2;    //   2MB Body
@@ -23,7 +24,7 @@ class Client : Thread, ClientInterface {
 
   public:
     this(Router router, DriverInterface driver, long maxtime = 5000) {
-      custom(3, "CLIENT", "client constructor");
+      log(Level.Trace, "client constructor");
       this.router = router;
       this.driver = driver;
       this.maxtime = maxtime;
@@ -31,9 +32,9 @@ class Client : Thread, ClientInterface {
     }
 
    final void run() {
-      trace("new connection established %s:%d", ip(), port() );
+      log(Level.Trace, "New connection established %s:%d", ip(), port() );
       try {
-        if (driver.openConnection() == false) { custom(2, "WARN", "new connection aborted: unable to open connection"); stop(); }
+        if (driver.openConnection() == false) { log(Level.Verbose, "WARN: Unable to open connection"); stop(); }
         Request request;
         Response response;
         scope (exit) {
@@ -45,28 +46,26 @@ class Client : Thread, ClientInterface {
           if (driver.receive(driver.socket) > 0) {     // We've received new data
             if (!driver.hasHeader()) {
               if (driver.inbuffer.data.length > MAX_HEADER_SIZE) {  // Check if we exceed the max header size
-                custom(2, "CLIENT", "header too large from %s:%s", ip, port);
+                log(Level.Verbose, "CLIENT", "header too large from %s:%s", ip, port);
                 driver.setHeaderTooLarge(response); stop(); continue;
               }
             } else {
               size_t limit  = (driver.header.indexOf("multipart/") >= 0) ? MAX_UPLOAD_SIZE : MAX_REQUEST_SIZE;
               if (driver.inbuffer.data.length > limit) {
-                custom(2, "CLIENT", "request too large from %s:%s", ip, port);
+                log(Level.Verbose, "request too large from %s:%s", ip, port);
                 driver.setPayloadTooLarge(response); stop(); continue;
               }
             }
-            if (!response.ready) {                            // If we're not ready to respond yet
-              // Parse the data and try to create a response (Could fail multiple times)
-              router.route(driver, request, response, maxtime);
-            }
+            // Parse the data and try to create a response (Could fail multiple times)
+            if (!response.ready) { router.route(driver, request, response, maxtime); }
           }
           if (response.ready && !response.completed) {      // We know what to respond, but haven't send all of it yet
-            //custom(1, "CLIENT", "sending: index=%d length=%d isRange=%s", response.index, response.length, response.isRange);
+            log(Level.Trace, "sending: index=%d length=%d isRange=%s", response.index, response.length, response.isRange);
             driver.send(response, driver.socket);           // Send the response, hit multiple times, send what you can and return
           }
           if (response.ready && response.completed) {       // We've completed the request, response cycle
-            //custom(1, "CLIENT", "completed: index=%d length=%d", response.index, response.length);
-            router.logRequest(this, request, response);     // Log the response to the request
+            req(this, request, response);
+            log(Level.Trace, "completed: index=%d length=%d", response.index, response.length);
             request.clearUploadFiles();                     // Clean uploaded files
             request.destroy();                              // Clear the request structure
             driver.inbuffer.destroy();                      // Clear the input buffer
@@ -75,27 +74,21 @@ class Client : Thread, ClientInterface {
             response.destroy();                             // Clear the response structure
           }
           if (lastmodified >= maxtime) { // Client are not allowed to be silent for more than maxtime
-            //custom(1, "CLIENT", "timeout: index=%d length=%d completed=%s", response.index, response.length, response.completed);
-            custom(2, "CLIENT", "inactivity: %s > %s", lastmodified, maxtime);
-            if (!response.ready && request !is Request.init) { // We have an unhandled request
-              driver.setTimedOut(response);
-              router.logRequest(this, request, response);     // Log the response to the request
-            }
+            log(Level.Trace, "timeout: index=%d length=%d completed=%s", response.index, response.length, response.completed);
+            log(Level.Trace, "inactivity: %s > %s", lastmodified, maxtime);
+            driver.setTimedOut(response);
+            req(this, request, response);
             stop(); continue;
           }
-          custom(3, "CLIENT", "connection %s:%s (%s msecs) %s", ip, port, starttime, to!string(driver.inbuffer.data));
+          log(Level.Trace, "Connection %s:%s (%s msecs) %s", ip, port, starttime, to!string(driver.inbuffer.data));
           Thread.sleep(dur!"msecs"(2));
         }
-      } catch(Exception e) { 
-        warning("Unknown Client Exception: %s", e);
-        stop();
-      } catch(Error e) {
-        warning("Unknown Client Error: %s", e);
-        stop();
-      }
-      custom(1, "CLIENT", "connection %s:%s (%s) closed after %d requests %s (%s msecs)", ip, port, (driver.isSecure() ? "SSL" : "HTTP"), 
-                                                                                          driver.requests, driver.senddata, starttime);
-      driver.destroy();                                               // Clear the response structure
+      } catch(Exception e) { log(Level.Verbose, "Unknown Client Exception: %s", e); stop();
+      } catch(Error e) { log(Level.Verbose, "Unknown Client Error: %s", e); stop(); }
+
+      log(Level.Verbose, "Connection %s:%s (%s) closed. %d requests %s (%s msecs)", ip, port, (driver.isSecure() ? "SSL" : "HTTP"), 
+                                                                                    driver.requests, driver.senddata, starttime);
+      driver.destroy();
     }
 
     // Is the client still running, if the socket was gone it's not otherwise check the terminated flag
@@ -106,7 +99,7 @@ class Client : Thread, ClientInterface {
 
     // Stop the client by setting the terminated flag
     final @property void stop() {
-      trace("connection %s:%s stop called", ip, port);
+      log(Level.Trace, "connection %s:%s stop called", ip, port);
       atomicStore(terminated, true);
     }
 
@@ -118,6 +111,13 @@ class Client : Thread, ClientInterface {
     final @property long port() const { return(driver.port()); } 
     // ip address of the client
     final @property string ip() const { return(driver.ip()); } 
+}
+
+void req(in ClientInterface cl, in Request rq, in Response rs) {
+  string uri;
+  try { uri = decodeComponent(rq.uri); } catch (Exception e) { uri = rq.uri; }
+  long bytes = rs.isRange ? (rs.rangeEnd - rs.rangeStart + 1) : rs.payload.length;
+  req(format("%d", rs.statuscode), "%s %s:%s %s%s %s %s", htmltime(), cl.ip, cl.port, rq.shorthost, uri.replace("%", "%%"), Msecs(rq.starttime), bytes);
 }
 
 // serve a 408 connection timed out page
@@ -140,8 +140,8 @@ void setPayloadTooLarge(ref DriverInterface driver, ref Response response) {
 }
 
 unittest {
-  custom(0, "FILE", "%s", __FILE__);
-  auto router = new Router("./www/", Address.init, NORMAL);
+  tag(Level.Always, "FILE", "%s", __FILE__);
+  auto router = new Router("./www/", Address.init);
 
   router.runRequest("GET /test.pdf HTTP/1.1\nHost: localhost\nRange: bytes=0-65535\n\n");
   router.runRequest("GET /test.pdf HTTP/1.1\nHost: localhost\nRange: bytes=32517-\n\n");

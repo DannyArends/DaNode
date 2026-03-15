@@ -6,7 +6,7 @@ version(SSL) {
 
   import danode.imports;
   import danode.client;
-  import danode.log : custom, warning, info, error;
+  import danode.log : log, error, Level;
   import danode.server : Server;
   import danode.response : Response;
 
@@ -29,19 +29,19 @@ version(SSL) {
     // C callback function to switch SSL contexts after hostname lookup
     static void switchContext(SSL* ssl, int *ad, void *arg) {
       string hostname = to!(string)(cast(const(char*)) SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name));
-      custom(1, "SSL", "looking for hostname: %s", hostname);
-      if(hostname is null) { custom(1, "WARN", "Client no SNI support, using default: contexts[0]"); return; }
+      log(Level.Verbose, "looking for hostname: %s", hostname);
+      if(hostname is null) { log(Level.Verbose, "Client no SNI support, using default: contexts[0]"); return; }
       ptrdiff_t idx = findContext(hostname);
       if (idx >= 0) { 
-        custom(1, "SSL", "switching SSL context to %s", hostname); 
+        log(Level.Verbose, "switching SSL context to %s", hostname); 
         SSL_set_SSL_CTX(ssl, contexts[idx].context);
-      }else{ custom(1, "WARN", "callback failed to find certificate for %s", hostname); }
+      }else{ error("callback failed to find certificate for %s", hostname); }
     }
   }
 
   void generateKey(string path, int bits = 4096) {
     if (exists(path)) return;
-    custom(0, "SSL", "ACME: generating %d-bit RSA key at %s", bits, path);
+    log(Level.Always, "ACME: generating %d-bit RSA key at %s", bits, path);
     EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new_id(6, null);  // 6 = EVP_PKEY_RSA
     scope(exit) EVP_PKEY_CTX_free(ctx);
     EVP_PKEY_keygen_init(ctx);
@@ -73,10 +73,10 @@ version(SSL) {
     SSL_CTX_set1_groups_list(ctx, "X25519:P-256:P-384");
 
     if (exists(chainFile) && isFile(chainFile)) {
-      custom(1, "SSL", "loading certificate+chain from file: %s", chainFile);
+      log(Level.Verbose, "loading certificate+chain from file: %s", chainFile);
       sslAssert(SSL_CTX_use_certificate_chain_file(ctx, cast(const char*) toStringz(chainFile)) > 0);
     } else {
-      custom(1, "WARN", "No chain file for %s", chainFile);
+      log(Level.Verbose, "Warning: No chain file for %s", chainFile);
       return(null);
     }
     sslAssert(SSL_CTX_use_PrivateKey_file(ctx, cast(const char*) toStringz(keyFile), 1) > 0);
@@ -87,7 +87,7 @@ version(SSL) {
   // Does the hostname requested have a certificate ?
   bool hasCertificate(string hostname) {
     bool found = (findContext(hostname) >= 0);
-    custom(2, "SSL", "'%s' certificate? %s", hostname, found);
+    log(Level.Trace, "'%s' certificate? %s", hostname, found);
     return found;
   }
 
@@ -96,7 +96,7 @@ version(SSL) {
     int err = SSL_get_error(ssl, retcode);
     switch (err) {
       case SSL_ERROR_NONE: break;
-      default: custom(2, "SSL", "SSL_get_error %s %d", err, retcode); break;
+      default: error("SSL_get_error %s %d", err, retcode); break;
     }
     return(err);
   }
@@ -107,20 +107,17 @@ version(SSL) {
     for(size_t x = 0; x < hostname.length; x++) { ctx.hostname[x] = hostname[x]; }
     ctx.hostname[hostname.length] = '\0';
     ctx.context = createCTX(chainFile, keyFile);
-    if (ctx.context is null) { warning("SSL: failed to create context for %s", hostname); return ctx; }
-    custom(1, "SSL", "context created for certificate: %s", fromStringz(ctx.hostname));
+    if (ctx.context is null) { error("SSL: failed to create context for %s", hostname); return ctx; }
+    log(Level.Verbose, "context created for certificate: %s", fromStringz(ctx.hostname));
     SSL_CTX_callback_ctrl(ctx.context,SSL_CTRL_SET_TLSEXT_SERVERNAME_CB, cast(ExternC!(void function())) &switchContext);
     return(ctx);
   }
 
-  // loads all chain files in the server.certDir, using server.keyFile
-  void initSSL(Server server) { reloadSSL(server.certDir, server.keyFile); }
-
   // Reload all SSL contexts from certDir without restarting the server
-  void reloadSSL(string certDir = ".ssl/", string keyFile = ".ssl/server.key") {
-    custom(0, "SSL", "loading Deimos.openSSL, certDir: %s, keyFile: %s", certDir, keyFile);
-    if (!exists(certDir) || !isDir(certDir)) { warning("SSL cert dir '%s' not found", certDir); return; }
-    if (!exists(keyFile) || !isFile(keyFile)) { warning("SSL key file '%s' not found", keyFile); return; }
+  void loadSSL(string certDir = ".ssl/", string sslKey = ".ssl/server.key") {
+    log(Level.Verbose, "loading Deimos.openSSL, certDir: %s, sslKey: %s", certDir, sslKey);
+    if (!exists(certDir) || !isDir(certDir)) { error("SSL cert dir '%s' not found", certDir); return; }
+    if (!exists(sslKey) || !isFile(sslKey)) { sslKey.generateKey(); }
 
     SSLcontext[] localContexts;
     foreach (DirEntry d; dirEntries(certDir, SpanMode.shallow)) {
@@ -128,21 +125,21 @@ version(SSL) {
         string hostname = baseName(d.name, ".chain");
         if (hostname.length < 255) {
           string chainFile = d.name;
-          info("reloading certificate at: '%s'", chainFile);
-          auto lc = loadContext(chainFile, hostname, keyFile);
+          log(Level.Verbose, "reloading certificate at: '%s'", chainFile);
+          auto lc = loadContext(chainFile, hostname, sslKey);
           if (lc.context !is null) localContexts ~= lc;
         }
       }
     }
     contexts = localContexts;  // atomic single assignment
-    custom(0, "HTTPS", "(re)loaded %s SSL certificates", contexts.length);
+    log(Level.Always, "(re)loaded %s SSL certificates", contexts.length);
   }
 
   // Close the server SSL socket, and clean up the different contexts
   void closeSSL(Socket socket) {
-    custom(1, "HTTPS", "closing server SSL socket");
+    log(Level.Verbose, "closing server SSL socket");
     socket.close();
-    custom(1, "HTTPS", "cleaning up %d HTTPS contexts", contexts.length);
+    log(Level.Verbose, "cleaning up %d HTTPS contexts", contexts.length);
     foreach (ref ctx; contexts) { SSL_CTX_free(ctx.context); }
     contexts = null;
   }
