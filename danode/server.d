@@ -113,8 +113,10 @@ class Server : Thread {
     
     // Hostname of the server
     final @property string hostname() { return(socket.hostName()); }
-    final @property string sslKey() { return(sslPath ~ ssl); }
-    final @property string accountKey() { return(sslPath ~ account); }
+    version(SSL) {
+      final @property string sslKey() { return(sslPath ~ ssl); }
+      final @property string accountKey() { return(sslPath ~ account); }
+    }
 
     // Number of alive connections
     final @property long nAlive() {
