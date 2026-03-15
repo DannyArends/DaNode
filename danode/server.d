@@ -67,26 +67,20 @@ class Server : Thread {
     }
 
     // Accept an incoming connection and create a client object
-    final Client accept(Socket socket, bool secure = false) {
-      if (set.isSet(socket)) {
-        try {
+    final void accept(ref Appender!(Client[]) persistent, Socket socket, bool secure = false) {
+      if (set.sISelect(socket) <= 0 || nAlive() >= MAX_CLIENTS) return;
+      custom(3, "SERVER", "accepting %s request", secure ? "HTTPs" : "HTTP");
+      try {
           DriverInterface driver = null;
-          if(!secure) driver = new HTTP(socket.accept(), false);
-          version(SSL) {
-            if(secure) driver = new HTTPS(socket.accept(), false);
-          }
-          if(driver is null) return(null);
+          if (!secure) driver = new HTTP(socket.accept(), false);
+          version(SSL) { if (secure) driver = new HTTPS(socket.accept(), false); }
+          if (driver is null) return;
           Client client = new Client(router, driver);
           client.start();
-          //Thread.sleep(dur!"msecs"(1));
-          return(client);
-        } catch(Exception e) {
-          error("unable to accept connection: %s", e.msg);
-        }
-      } else {
-        error("socket is not in the socketset");
-      }
-      return(null);
+          if (nAliveFromIP(client.ip) <= MAX_CLIENTS_PER_IP) {
+            persistent.put(client);
+          } else { warning("rate limit exceeded for %s", client.ip); client.stop(); }
+      } catch(Exception e) { error("unable to accept connection: %s", e.msg); }
     }
 
     // is the server still running ?
@@ -135,26 +129,8 @@ class Server : Thread {
         try {
           Client[] previous = clients;                            // Slice reference
           persistent.clear();                                     // Clear the Appender
-          if ((select = set.sISelect(socket)) > 0 && nAlive() < MAX_CLIENTS) {
-            custom(3, "SERVER", "accepting HTTP request");
-            Client client = this.accept(socket);
-            if (client !is null) {
-              if(nAliveFromIP(client.ip) <= MAX_CLIENTS_PER_IP) {
-                persistent.put(client);
-              } else { warning("rate limit exceeded for %s", client.ip); client.stop(); }
-            }
-          }
-          version (SSL) {
-            if ((select = set.sISelect(sslsocket)) > 0 && nAlive() < MAX_CLIENTS) {
-              custom(3, "SERVER", "accepting HTTPs request");
-              Client client = this.accept(sslsocket, true);
-              if(client !is null){
-                if(nAliveFromIP(client.ip) <= MAX_CLIENTS_PER_IP) {
-                  persistent.put(client);
-                } else { warning("rate limit exceeded for %s", client.ip); client.stop(); }
-              }
-            }
-          }
+          accept(persistent, socket);
+          version (SSL) { accept(persistent, sslsocket, true); }
           foreach (Client client; previous) {   // Foreach through the Slice reference
             if(client.running) persistent.put(client);          // Add the backlog of persistent clients
             else if(!client.isRunning) client.join();           // join finished threads
