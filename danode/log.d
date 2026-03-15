@@ -10,7 +10,7 @@ private __gshared Mutex logM;
 shared static this() { logM  = new Mutex(); }
 
 private void logTo(A...)(ref File fp, string tag, const string fmt, auto ref A args) {
-  synchronized(logM) { fp.writeln(format("[%s] %s", tag, format(fmt, args))); }
+  synchronized(logM) { fp.writeln(format("[%s] %s", tag, format(fmt, args))); fp.flush(); }
 }
 
 void log(A...)(Level lvl, const string fmt, auto ref A args) {

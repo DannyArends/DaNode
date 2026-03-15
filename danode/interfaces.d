@@ -55,9 +55,6 @@ abstract class DriverInterface {
     void closeConnection(); /// Close the connection
     @nogc bool isSecure() const nothrow; /// Are we secure ?
 
-    // Receive upto maxsize of bytes from the client into the input buffer
-    ptrdiff_t receive(Socket conn, ptrdiff_t maxsize = 4096);
-
     // Send upto maxsize bytes from the response to the client
     void send(ref Response response, Socket conn, ptrdiff_t maxsize = 4096);
 
