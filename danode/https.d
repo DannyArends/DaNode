@@ -93,38 +93,21 @@ version(SSL) {
         return(false);
       } }
 
+      override bool socketReady() { return socket !is null && socket.isAlive() && ssl !is null; }
+
       // Close the connection, by shutting down the SSL and Socket object
       override void closeConnection() { synchronized {
-        if (socket !is null) {
-          try {
-            if (socket.isAlive()) {
-              if (ssl) {
-                SSL_shutdown(ssl);
-                SSL_shutdown(ssl);
-              } else {
-                error("No SSL object to close, are certificates available?");
-              }
-            }
-            socket.shutdown(SocketShutdown.BOTH);
-            socket.close();
-          } catch(Exception e) {
-            warning("unable to close socket: %s", e.msg);
-          }
-        }
+        try {
+          if (socketReady()) { SSL_shutdown(ssl); SSL_shutdown(ssl);
+          } else { error("No SSL object to close, are certificates available?"); }
+          if (socket) socket.shutdown(SocketShutdown.BOTH);
+          if (socket) socket.close();
+        } catch(Exception e) { warning("Exception closing socket: %s", e.msg); }
       } }
-
-      // Is the connection alive ?, make sure we check for null
-      override bool isAlive() { 
-        if(socket !is null) return socket.isAlive();
-        return false;
-      }
 
       // Receive upto maxsize of bytes from the client into the input buffer
       override ptrdiff_t receive(Socket socket, ptrdiff_t maxsize = 4096){ synchronized {
-        if(socket is null) return -1;
-        if(!socket.isAlive()) return -1;
-        if(ssl is null) return -1;
-
+        if (!socketReady()) return -1;
         ptrdiff_t received;
         char[] tmpbuffer = new char[](maxsize);
         if ((received = SSL_read(ssl, cast(void*) tmpbuffer, cast(int)maxsize)) > 0) {
@@ -136,9 +119,7 @@ version(SSL) {
 
       // Send upto maxsize bytes from the response to the client
       override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096){ synchronized {
-        if(socket is null) return;
-        if(!socket.isAlive()) return;
-        if(ssl is null) return;
+        if (!socketReady()) return;
         // SSL requires retrying with exact same buffer on WANT_WRITE
         if (pending.length == 0) pending = response.bytes(maxsize).dup;
         if (pending.length == 0) return;

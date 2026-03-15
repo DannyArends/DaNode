@@ -33,8 +33,7 @@ class HTTP : DriverInterface {
 
     // Receive upto maxsize of bytes from the client into the input buffer
     override ptrdiff_t receive(Socket socket, ptrdiff_t maxsize = 4096) {
-      if(socket is null) return(-1);
-      if(!socket.isAlive()) return(-1);
+      if (!socketReady()) return(-1);
       ptrdiff_t received;
       char[] tmpbuffer = new char[](maxsize);
       if ((received = socket.receive(tmpbuffer)) > 0) {
@@ -46,8 +45,7 @@ class HTTP : DriverInterface {
 
     // Send upto maxsize bytes from the response to the client
     override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096) { synchronized {
-      if(socket is null) return;
-      if(!socket.isAlive()) return;
+      if (!socketReady()) return;
       // Wait until socket is writable before sending
       SocketSet writeSet = new SocketSet();
       writeSet.add(socket);
@@ -63,21 +61,12 @@ class HTTP : DriverInterface {
     } }
 
     // Close the connection, by shutting down the socket
-    override void closeConnection() nothrow {
-      if (socket !is null) {
-        try {
-          socket.shutdown(SocketShutdown.BOTH);
-          socket.close();
-        } catch(Exception e) {
-          warning("unable to close socket: %s", e.msg);
-        }
-      }
-    }
-
-    // Is the connection alive ?, make sure we check for null
-    override bool isAlive() { 
-      if (socket !is null) return(socket.isAlive());
-      return false;
+    override void closeConnection() {
+      if (!socketReady()) return;
+      try {
+        socket.shutdown(SocketShutdown.BOTH);
+        socket.close();
+      } catch(Exception e) { warning("unable to close socket: %s", e.msg); }
     }
 
     @nogc override bool isSecure() const nothrow { return(false); }

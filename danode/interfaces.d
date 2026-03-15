@@ -31,9 +31,10 @@ abstract class DriverInterface {
     bool                blocking = false;    /// Blocking communication ?
     int                 verbose = NORMAL;    /// Verbose level
 
+    bool socketReady() { return socket !is null && socket.isAlive(); } /// Socket ready ?
+    bool isAlive(){ return socket.isAlive(); }; /// Is the connection alive ?
     bool openConnection(); /// Open the connection
     void closeConnection(); /// Close the connection
-    bool isAlive(); /// Is the connection alive ?
     @nogc bool isSecure() const nothrow; /// Are we secure ?
 
     // Receive upto maxsize of bytes from the client into the input buffer
