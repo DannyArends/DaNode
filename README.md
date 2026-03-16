@@ -16,9 +16,9 @@ different universities. owever, shortly after I wanted to use other programming 
 encrypted homepage, why not [brainfuck](https://en.wikipedia.org/wiki/Brainfuck)? However, more common languages such as 
 [Ada](https://en.wikipedia.org/wiki/Ada), [R](https://www.r-project.org) or [PHP](https://en.wikipedia.org/wiki/PHP) are also fine.
 
-### Main features:
+### Main features
 
-- Support server side web applications written in **ANY** programming language
+- Build your website in **ANY** programming language that can output to *stdout*
 - SSL/HTTPs support by [openSSL 3.0](https://www.openssl.org/) through [ImportC](https://dlang.org/spec/importc.html)
 - [Server Name Identification](https://en.wikipedia.org/wiki/Server_Name_Indication) by using free [Let's encrypt](https://letsencrypt.org/) certificates
 - Automatic certificate renewal via the [ACME protocol](https://en.wikipedia.org/wiki/Automatic_Certificate_Management_Environment)
@@ -30,9 +30,7 @@ encrypted homepage, why not [brainfuck](https://en.wikipedia.org/wiki/Brainfuck)
 
 ### Get DaNode
 
-Install the DMD compiler from [https://dlang.org/](https://dlang.org/download.html)
-
-Clone the source code from Github
+Install the DMD compiler from [https://dlang.org/](https://dlang.org/download.html) and clone the source code from Github
 
 ```
 git clone --recursive https://github.com/DannyArends/DaNode.git
