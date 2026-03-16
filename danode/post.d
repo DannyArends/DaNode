@@ -4,13 +4,15 @@ import danode.imports;
 import danode.cgi : CGI;
 import danode.client : MAX_REQUEST_SIZE;
 import danode.statuscode : StatusCode;
+import danode.interfaces : StringDriver;
 import danode.request : Request, RequestMethod;
 import danode.response : SERVERINFO, Response, redirect, create, setPayload;
 import danode.webconfig : WebConfig;
 import danode.mimetypes : mime;
+import danode.router : Router, runRequest;
 import danode.filesystem : FileSystem;
 import danode.functions : from, has, isCGI, isFILE, isDIR, writeFile, parseQueryString;
-import danode.log : log, error, Level;
+import danode.log : log, tag, error, Level;
 
 immutable string      MPHEADER         = "multipart/form-data";                     /// Multipart header id
 immutable string      XFORMHEADER      = "application/x-www-form-urlencoded";       /// X-form header id
@@ -167,3 +169,34 @@ final void serverAPI(in FileSystem filesystem, in WebConfig config, in Request r
   fIn.writeFile(content.data);
 }
 
+unittest {
+  tag(Level.Always, "FILE", "%s", __FILE__);
+  import danode.filesystem : FileSystem;
+
+  FileSystem fs = new FileSystem("./www/");
+
+  // extractQuoted
+  assert(extractQuoted("name=\"hello\"", "name") == "hello",            "extractQuoted must get name");
+  assert(extractQuoted("filename=\"test.txt\"", "filename") == "test.txt", "extractQuoted must get filename");
+  assert(extractQuoted("name=\"\"", "name") == "",                      "extractQuoted empty value");
+  assert(extractQuoted("nothing here", "name") == "",                   "extractQuoted missing key");
+
+  // findBodyLine
+  assert(findBodyLine(["Content-Disposition: form-data", "", "value"]) == 2, "findBodyLine must find blank line");
+  assert(findBodyLine(["Content-Disposition: form-data"]) == -1,             "findBodyLine no blank must return -1");
+
+  // parseXform via runRequest
+  auto router = new Router("./www/", Address.init);
+  StringDriver res;
+
+  // POST with xform body
+  string fmtXform = "POST /dmd.d HTTP/1.1\nHost: localhost\nContent-Type: application/x-www-form-urlencoded\nContent-Length: %d\n\n%s";
+  string smallbody = "name=danny&age=42&city=amsterdam";
+  res = router.runRequest(format(fmtXform, smallbody.length, smallbody));
+  assert(res.lastStatus == StatusCode.Ok, format("POST xform expected 200, got %d", res.lastStatus.code));
+
+  // POST too large
+  string bigbody = "x".replicate(1024 * 1024 * 3); // 3MB
+  res = router.runRequest(format(fmtXform, bigbody.length, bigbody));
+  assert(res.lastStatus == StatusCode.PayloadTooLarge, format("POST too large expected 413, got %d", res.lastStatus.code));
+}

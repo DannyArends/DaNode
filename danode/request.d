@@ -194,9 +194,68 @@ struct Request {
 
 unittest {
   tag(Level.Always, "FILE", "%s", __FILE__);
+
+  // parseHTTPVersion
   assert(parseHTTPVersion("HTTP/1.1") == HTTPVersion.v11, "HTTP/1.1 must parse");
   assert(parseHTTPVersion("HTTP/1.0") == HTTPVersion.v10, "HTTP/1.0 must parse");
   assert(parseHTTPVersion("HTTP/2")   == HTTPVersion.v20, "HTTP/2 must parse");
   assert(parseHTTPVersion("garbage")  == HTTPVersion.v09, "invalid must return v09");
   assert(parseHTTPVersion("")         == HTTPVersion.v09, "empty must return v09");
+
+  // parseRequestLine
+  Request r;
+  assert(parseRequestLine(r, "GET /index.html HTTP/1.1"), "valid request line must parse");
+  assert(r.method == RequestMethod.GET, "method must be GET");
+  assert(r.uri == "/index.html", "uri must be /index.html");
+  assert(r.protocol == HTTPVersion.v11, "protocol must be HTTP/1.1");
+
+  // uri with query string
+  Request r2;
+  assert(parseRequestLine(r2, "GET /search?q=hello HTTP/1.1"), "uri with query must parse");
+  assert(r2.uri == "/search?q=hello", "uri must include query string");
+  assert(r2.path == "/search", "path must strip query string");
+  assert(r2.query == "?q=hello", "query must include ?");
+
+  // shorthost
+  Request r3;
+  r3.headers["Host"] = "www.example.com";
+  assert(r3.shorthost() == "example.com", "www. must be stripped");
+  assert(r3.host == "www.example.com", "host must strip www.");
+
+  Request r4;
+  r4.headers["Host"] = "example.com";
+  assert(r4.shorthost() == "example.com", "shorthost without www. must be unchanged");
+
+  // host with port
+  Request r5;
+  r5.headers["Host"] = "example.com:8080";
+  assert(r5.host == "example.com", "host must strip port");
+  assert(r5.serverport() == 8080, "serverport must return 8080");
+
+  // range parsing
+  Request r6;
+  r6.headers["Range"] = "bytes=0-1023";
+  assert(r6.hasRange, "hasRange must be true");
+  assert(r6.range()[0] == 0, "range start must be 0");
+  assert(r6.range()[1] == 1023, "range end must be 1023");
+
+  Request r7;
+  r7.headers["Range"] = "bytes=512-";
+  assert(r7.range()[0] == 512, "open range start must be 512");
+  assert(r7.range()[1] == -1, "open range end must be -1");
+
+  // keepalive
+  Request r8;
+  r8.headers["Connection"] = "keep-alive";
+  assert(r8.keepalive, "keep-alive must be detected");
+
+  Request r9;
+  r9.headers["Connection"] = "Close";
+  assert(!r9.keepalive, "Close must not be keepalive");
+
+  // acceptsEncoding
+  Request r10;
+  r10.headers["Accept-Encoding"] = "gzip, deflate";
+  assert(r10.acceptsEncoding("deflate"), "deflate must be accepted");
+  assert(!r10.acceptsEncoding("br"), "br must not be accepted");
 }
