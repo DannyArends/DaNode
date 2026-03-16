@@ -49,7 +49,8 @@ string safePath(in string root, in string path) {
   try {
     if (exists(full)) {
       string resolved = full.resolve();
-      string absroot  = root.endsWith("/") ? root : root ~ "/";
+      string absroot = root.resolve();
+      if (!absroot.endsWith("/")) absroot ~= "/";
       if (resolved != absroot[0..$-1] && !resolved.startsWith(absroot)) return null;
     }
   } catch (Exception e) { return null; }
@@ -77,7 +78,7 @@ string[string] parseQueryString(const string query) {
       string s     = strip(param);
       ptrdiff_t i  = s.indexOf("=");
       string key   = decodeComponent(i > 0 ? s[0 .. i]   : s);
-      string value = decodeComponent(i > 0 ? s[i+1 .. $] : "");
+      string value = decodeComponent((i > 0 ? s[i+1 .. $] : "").replace("+", " "));
       if (key.length > 0) params[key] = value;
     } catch (Exception e) { error("parseQueryString: failed to decode '%s'", param); }
   }
