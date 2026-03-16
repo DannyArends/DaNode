@@ -58,7 +58,7 @@ class Client : Thread, ClientInterface {
             driver.send(response, driver.socket);           // Send the response, hit multiple times, send what you can and return
           }
           if (response.ready && response.completed) {       // We've completed the request, response cycle
-            this.log(request, response); // log broken/timed out
+            this.log(request, response);
             driver.requests++;
             request.clearUploadFiles();                     // Clean uploaded files
             driver.inbuffer.clear();                        // Clear the input buffer
