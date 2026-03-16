@@ -58,8 +58,8 @@ class Client : Thread, ClientInterface {
             driver.send(response, driver.socket);           // Send the response, hit multiple times, send what you can and return
           }
           if (response.ready && response.completed) {       // We've completed the request, response cycle
-            this.log(request, response);
             driver.requests++;
+            this.log(request, response);
             request.clearUploadFiles();                     // Clean uploaded files
             driver.inbuffer.clear();                        // Clear the input buffer
             if(!response.keepalive){ stop(); continue; }    // No keep alive, then stop this client
