@@ -112,7 +112,7 @@ class CGI : Payload {
       if (endOfHeader < 0) return false;
       ptrdiff_t actual = to!ptrdiff_t(external.length) - bodyStart;
       ptrdiff_t claimed = getHeader!ptrdiff_t("Content-Length", -1);
-      log(Level.Always, "DEBUG contentLengthValid: actual=%d claimed=%d", actual, claimed);
+      //log(Level.Always, "DEBUG contentLengthValid: actual=%d claimed=%d", actual, claimed);
       return claimed == actual;
     }
 

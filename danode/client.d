@@ -58,12 +58,13 @@ class Client : Thread, ClientInterface {
             driver.send(response, driver.socket);           // Send the response, hit multiple times, send what you can and return
           }
           if (response.ready && response.completed) {       // We've completed the request, response cycle
+            this.log(request, response); // log broken/timed out
             driver.requests++;
             request.clearUploadFiles();                     // Clean uploaded files
             driver.inbuffer.clear();                        // Clear the input buffer
+            if(!response.keepalive){ stop(); continue; }    // No keep alive, then stop this client
             request = Request.init;                         // Reset request for next request cycle
             response = Response.init;                       // Reset response for next request cycle
-            if(!response.keepalive){ stop(); continue; }    // No keep alive, then stop this client
           }
           if (lastmodified >= maxtime) { // Client are not allowed to be silent for more than maxtime
             log(Level.Trace, "inactivity: %s > %s", lastmodified, maxtime);
