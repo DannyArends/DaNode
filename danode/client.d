@@ -44,12 +44,11 @@ class Client : Thread, ClientInterface {
         }
         while (running) {
           if (driver.receive(driver.socket) > 0) {     // We've received new data
-            if (!driver.hasHeader()) {
-              if (driver.inbuffer.data.length > MAX_HEADER_SIZE) {  // Check if we exceed the max header size
-                log(Level.Verbose, "header too large from %s:%s", ip, port);
-                driver.setHeaderTooLarge(response); stop(); continue;
-              }
-            } else {
+            if (driver.inbuffer.data.length > MAX_HEADER_SIZE) {  // Check if we exceed the max header size
+              log(Level.Verbose, "header too large from %s:%s", ip, port);
+              driver.setHeaderTooLarge(response); stop(); continue;
+            }
+            if (driver.hasHeader()) {
               size_t limit  = (driver.header.indexOf("multipart/") >= 0) ? MAX_UPLOAD_SIZE : MAX_REQUEST_SIZE;
               if (driver.inbuffer.data.length > limit) {
                 log(Level.Verbose, "request too large from %s:%s", ip, port);
@@ -148,6 +147,10 @@ unittest {
   assert(res.lastStatus == StatusCode.PartialContent, format("Range 32517- expected 206, got %d", res.lastStatus.code));
   assert(res.lastMime == "application/pdf", format("Range expected application/pdf, got %s", res.lastMime));
 
+  // 416 - Range not satisfiable (beyond file size)
+  res = router.runRequest("GET /test.pdf HTTP/1.1\nHost: localhost\nRange: bytes=999999999-\n\n");
+  assert(res.lastStatus == StatusCode.RangeNotSatisfiable, format("Expected 416, got %d", res.lastStatus.code));
+
   // \r\n\r\n header terminator
   res = router.runRequest("GET /dmd.d HTTP/1.1\r\nHost: localhost\r\n\r\n");
   assert(res.lastStatus == StatusCode.Ok, format("CRLF expected 200, got %d", res.lastStatus.code));
@@ -189,5 +192,18 @@ unittest {
   // OPTIONS (no host required)
   res = router.runRequest("OPTIONS * HTTP/1.1\n\n");
   assert(res.lastStatus == StatusCode.NotFound, format("OPTIONS expected 404, got %d", res.lastStatus.code));
+
+  // 431 - Header too large (>32KB header)
+  res = router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\n" ~ "X-Pad: " ~ "x".replicate(33000) ~ "\n\n");
+  assert(res.lastStatus == StatusCode.HeaderFieldsTooLarge, format("Expected 431, got %d", res.lastStatus.code));
+
+  // 413 - Payload too large (>2MB body)
+  res = router.runRequest("POST /dmd.d HTTP/1.1\nHost: localhost\nContent-Length: 2097153\n\n" ~ "x".replicate(2097153));
+  assert(res.lastStatus == StatusCode.PayloadTooLarge, format("Expected 413, got %d", res.lastStatus.code));
+
+  // 304 - Not modified (future date)
+  res = router.runRequest("GET /test.txt HTTP/1.1\nHost: localhost\nIf-Modified-Since: " ~ htmltime(Clock.currTime + 1.hours) ~ "\n\n");
+  assert(res.lastStatus == StatusCode.NotModified, format("Expected 304, got %d", res.lastStatus.code));
+
 }
 
