@@ -147,7 +147,7 @@ class Router {
 }
 
 // Helper function used to make calls during a unittest, setup a driver, a client and run the request
-StringDriver runRequest(Router router, string request = "GET /dmd.d HTTP/1.1\nHost: localhost\n\n", long maxtime = 2500) {
+StringDriver runRequest(Router router, string request = "GET /dmd.d HTTP/1.1\nHost: localhost\n\n", long maxtime = 1000) {
   tag(Level.Verbose, "runRequest", "%s", request);
   auto driver = new StringDriver(request);
   auto client = new Client(router, driver, maxtime);

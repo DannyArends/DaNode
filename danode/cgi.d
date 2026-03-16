@@ -135,8 +135,17 @@ unittest {
   tag(Level.Always, "FILE", "%s", __FILE__);
 
   auto router = new Router("./www/", Address.init);
-  StringDriver res;
 
+  // Warmup - ensure rdmd cache is hot before timed tests
+  tag(Level.Always, "WARMUP", "compiling CGI scripts...");
+  router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\n\n", 5000);
+  router.runRequest("GET /keepalive.d HTTP/1.1\nHost: localhost\n\n", 5000);
+  router.runRequest("GET /ISE1.d HTTP/1.1\nHost: localhost\n\n", 5000);
+  router.runRequest("GET /ISE2.d HTTP/1.1\nHost: localhost\n\n", 5000);
+  router.runRequest("GET /ISE3.d HTTP/1.1\nHost: localhost\n\n", 5000);
+  tag(Level.Always, "WARMUP", "done");
+
+  StringDriver res;
   // dmd.d has wrong Content-Length - must force Close
   res = router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\nConnection: keep-alive\n\n");
   assert(res.lastStatus == StatusCode.Ok, format("dmd.d expected 200, got %d", res.lastStatus.code));
