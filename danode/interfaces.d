@@ -13,6 +13,7 @@ interface ClientInterface {
   @property long    lastmodified();     /// When was the client last modified
   @property void    stop();             /// Stop the client
 
+  @property long requests() const;      /// Number of requests served
   @property string  ip() const;         /// IP location of the client
   @property long    port() const;       /// Port at which the client is connected
 

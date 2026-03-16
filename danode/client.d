@@ -43,7 +43,7 @@ class Client : Thread, ClientInterface {
           response.kill();                                      // kill any running CGI process
         }
         while (running) {
-          if (driver.receive(driver.socket) > 0) {     // We've received new data
+          if (driver.receive(driver.socket) > 0) { // We've received new data
             if (!driver.hasHeader()) {
               if (driver.inbuffer.data.length > MAX_HEADER_SIZE) { driver.setHeaderTooLarge(response); stop(); continue; }
             } else {
@@ -59,6 +59,7 @@ class Client : Thread, ClientInterface {
             driver.send(response, driver.socket);           // Send the response, hit multiple times, send what you can and return
           }
           if (response.ready && response.completed) {       // We've completed the request, response cycle
+            this.log(request, response);                    // Log the request
             request.clearUploadFiles();                     // Clean uploaded files
             driver.inbuffer.clear();                        // Clear the input buffer
             driver.requests++;
@@ -74,7 +75,7 @@ class Client : Thread, ClientInterface {
           log(Level.Trace, "Connection %s:%s (%s msecs) %s", ip, port, starttime, to!string(driver.inbuffer.data));
           Thread.sleep(dur!"msecs"(2));
         }
-        this.log(request, response);
+        if (!response.completed) this.log(request, response); // log broken/timed out
       } catch(Exception e) { log(Level.Verbose, "Unknown Client Exception: %s", e); stop();
       } catch(Error e) { log(Level.Verbose, "Unknown Client Error: %s", e); stop(); }
 
@@ -91,6 +92,8 @@ class Client : Thread, ClientInterface {
       atomicStore(terminated, true);
     }
 
+    // Number of requests served
+    final @property long requests() const { return(driver ? driver.requests : 0); }
     // Start time of the client in mseconds (stored in the connection driver)
     final @property long starttime() const { return(driver.starttime); }
     // When was the client last modified in mseconds (stored in the connection driver)
@@ -108,7 +111,7 @@ void log(in ClientInterface cl, in Request rq, in Response rs) {
   int code = cast(int)(rs.payload ? rs.statuscode.code : 0);
   long ms = rq.starttime == SysTime.init ? -1 : Msecs(rq.starttime);
   tag(Level.Always, format("%d", code),
-      "%s %s:%s %s%s %s %skb", htmltime(), cl.ip, cl.port, rq.shorthost, uri.replace("%", "%%"), ms, bytes/1024);
+      "%s %s:%s %s%s [%d] %s %skb", htmltime(), cl.ip, cl.port, rq.shorthost, uri.replace("%", "%%"), cl.requests, ms, bytes/1024);
 }
 
 // serve a 408 connection timed out page
