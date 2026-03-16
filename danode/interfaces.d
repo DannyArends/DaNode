@@ -101,13 +101,23 @@ class StringDriver : DriverInterface {
     string        lastMime;
     const(char)[] lastBody;
 
+  private:
+    bool consumed = false;
+
+  public:
     this(string input) { super(null); inbuffer ~= input; }
     override bool openConnection() { return(true); }
     override void closeConnection() nothrow { }
     override bool socketReady() const { return(true); }
     @nogc override bool isSecure() const nothrow { return(false); }
-    override long receiveData(ref char[] buffer) { buffer = inbuffer.data; return(buffer.length); }
-    override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096)  { 
+    override long receiveData(ref char[] buffer) { return(0); }  // unused - overriding receive() directly
+    override ptrdiff_t receive(Socket socket, ptrdiff_t maxsize = 4096) {
+      if (consumed) return(0);
+      consumed = true;
+      touch();
+      return(inbuffer.data.length);
+    }
+    override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096) {
       lastStatus = response.statuscode;
       lastMime   = response.payload.mimetype.idup;
       lastBody   = response.payload.bytes(0, cast(ptrdiff_t) response.payload.length);
