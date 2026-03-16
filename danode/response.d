@@ -59,13 +59,21 @@ struct Response {
         }
         hdr.put(scriptheader);
         if (!hdr.data.endsWith("\r\n\r\n")) hdr.put("\r\n");
-        if (clength == -1) connection = "Close";
+        if (clength == -1 || !script.contentLengthValid){
+          log(Level.Always, "Script '%s' Content-Length mismatch, forcing Close", script.command);
+          connection = "Close";
+        }
         return(hdr.data);
       }
       if (connection != "No Request" && clength > -1) {
-        log(Level.Verbose, "Script '%s' in keepalive mode connection '%s' (%s, %d)", script.command, connection, script.headerType(), clength);
-        hdr.put(scriptheader);
-        return(hdr.data); // The script can communicate
+        if (!script.contentLengthValid) {
+          log(Level.Always, "Script '%s' Content-Length mismatch, forcing Close", script.command);
+          connection = "Close";
+        } else {
+          log(Level.Always, "Script '%s' in keepalive mode connection '%s' (%s, %d)", script.command, connection, script.headerType(), clength);
+          hdr.put(scriptheader);
+          return(hdr.data);
+        }
       }
       if (connection != "Close") {
         log(Level.Verbose, "Script '%s', failed - headerType: %s, Content-Length: %d, connection: '%s', headerLength: %d, header: [%s]", 
@@ -111,11 +119,13 @@ struct Response {
   // Stream of bytes (header + stream of bytes)
   @property final const(char)[] bytes(in ptrdiff_t maxsize = 4096) {
     ptrdiff_t hsize = header.length;
-    if(index <= hsize) {  // We haven't completed the header yet
+    if(index < hsize) {  // We haven't completed the header yet
       ptrdiff_t remaining = maxsize - hsize;
       return(header[index .. hsize] ~ payload.bytes(0, remaining > 0 ? remaining : 0, isRange, rangeStart, rangeEnd));
     }
-    return(payload.bytes(index-hsize, maxsize, isRange, rangeStart, rangeEnd)); // Header completed, just stream bytes from the payload
+auto pb = payload.bytes(index-hsize, maxsize, isRange, rangeStart, rangeEnd);
+//  log(Level.Always, "DEBUG response.bytes: index=%d hsize=%d from=%d pb.length=%d", index, hsize, index-hsize, pb.length);
+return pb;
   }
 
   @property final bool ready(bool r = false){ 

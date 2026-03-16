@@ -55,17 +55,15 @@ class Client : Thread, ClientInterface {
             if (!response.ready) { router.route(driver, request, response, maxtime); }
           }
           if (response.ready && !response.completed) {      // We know what to respond, but haven't send all of it yet
-            log(Level.Trace, "sending: index=%d length=%d isRange=%s", response.index, response.length, response.isRange);
             driver.send(response, driver.socket);           // Send the response, hit multiple times, send what you can and return
           }
           if (response.ready && response.completed) {       // We've completed the request, response cycle
-            this.log(request, response);                    // Log the request
+            driver.requests++;
             request.clearUploadFiles();                     // Clean uploaded files
             driver.inbuffer.clear();                        // Clear the input buffer
-            driver.requests++;
-            if(!response.keepalive){ stop(); continue; }    // No keep alive, then stop this client
             request = Request.init;                         // Reset request for next request cycle
             response = Response.init;                       // Reset response for next request cycle
+            if(!response.keepalive){ stop(); continue; }    // No keep alive, then stop this client
           }
           if (lastmodified >= maxtime) { // Client are not allowed to be silent for more than maxtime
             log(Level.Trace, "inactivity: %s > %s", lastmodified, maxtime);
@@ -75,12 +73,12 @@ class Client : Thread, ClientInterface {
           log(Level.Trace, "Connection %s:%s (%s msecs) %s", ip, port, starttime, to!string(driver.inbuffer.data));
           Thread.sleep(dur!"msecs"(2));
         }
-        if (!response.completed) this.log(request, response); // log broken/timed out
+        this.log(request, response); // log broken/timed out
       } catch(Exception e) { log(Level.Verbose, "Unknown Client Exception: %s", e); stop();
       } catch(Error e) { log(Level.Verbose, "Unknown Client Error: %s", e); stop(); }
 
       log(Level.Verbose, "Connection %s:%s (%s) closed. %d requests %s (%s msecs)", ip, port, (driver.isSecure() ? "SSL" : "HTTP"), 
-                                                                                    driver.requests, driver.senddata, starttime);
+                                                                                      driver.requests, driver.senddata, starttime);
     }
 
     // Is the client still running, if the socket was gone it's not otherwise check the terminated flag

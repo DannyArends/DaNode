@@ -11,7 +11,6 @@ import danode.payload : HeaderType, Payload, PayloadType;
 class CGI : Payload {
   private:
     Process external;
-    shared const(char)[] cachedOutput;
 
   public:
     string command;
@@ -62,8 +61,7 @@ class CGI : Payload {
     }
 
     private const(char)[] rawOutput() const {
-      if (cachedOutput.length == 0) { atomicStore(cachedOutput, cast(shared) external.output(0)); }
-      return cast(const(char)[]) atomicLoad(cachedOutput);
+      return cast(const(char)[]) external.output(0);
     }
 
     // Type of header returned by the script: FastCGI, HTTP10, HTTP11
@@ -110,11 +108,20 @@ class CGI : Payload {
       return(s);
     }
 
+    @property bool contentLengthValid() const {
+      if (endOfHeader < 0) return false;
+      ptrdiff_t actual = to!ptrdiff_t(external.length) - bodyStart;
+      ptrdiff_t claimed = getHeader!ptrdiff_t("Content-Length", -1);
+      log(Level.Always, "DEBUG contentLengthValid: actual=%d claimed=%d", actual, claimed);
+      return claimed == actual;
+    }
+
     // Stream of message bytes, skips the script generated header since the webserver 
     // parses the header and generates it's own
     final const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 4096, bool isRange = false, long rangeStart = 0, long rangeEnd = -1) {
       auto o = rawOutput();
       ptrdiff_t start = endofheader(o) > 0 ? bodystart(o) : 0;
+//log(Level.Always, "DEBUG CGI.bytes: o.length=%d from_raw=%d", o.length, from + start);
       from += start;
       return o[from .. to!ptrdiff_t(min(from+maxsize, $))];
     }

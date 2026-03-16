@@ -46,6 +46,6 @@ void main(string[] args){
   writefln("X-Powered-By: %s %s.%s\n", std.compiler.name, version_major, version_minor);
 
   // Write html output
-  writeln(htmlpage.data);
+  write(htmlpage.data);
 }
 

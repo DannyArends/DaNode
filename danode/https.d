@@ -90,8 +90,8 @@ version(SSL) {
         if (pending.length == 0) pending = response.bytes(maxsize).dup;
         if (pending.length == 0) return;
         ptrdiff_t send = SSL_write(ssl, cast(void*) pending.ptr, cast(int) pending.length);
-        log(Level.Verbose, "Send result=%d index=%d length=%d", send, response.index, response.length);
         if (send > 0) {
+          log(Level.Trace, "Send result=%d index=%d length=%d", send, response.index, response.length);
           touch();
           response.index += send;
           senddata[requests] += send;

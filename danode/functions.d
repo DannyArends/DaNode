@@ -138,7 +138,7 @@ pure bool isAllowed(in string path) { return(mime(path) != UNSUPPORTED_FILE); }
 @nogc pure ptrdiff_t bodystart(T)(const(T) buffer) nothrow {
   ptrdiff_t i = endofheader(buffer);
   if (i < 0) return -1;
-  return((i + 3 < buffer.length && buffer[i+1] == '\n') ? i + 4 : i + 2);   // \r\n\r\n = 4 bytes, \n\n = 2 bytes
+  return((i + 3 < buffer.length && buffer[i] == '\r' && buffer[i+1] == '\n') ? i + 4 : i + 2);
 }
 
 // get the HTTP header contained in the buffer (including the \r\n\r\n)
