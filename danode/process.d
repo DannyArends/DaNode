@@ -190,8 +190,8 @@ unittest {
   auto p = new Process(["rdmd", "www/localhost/dmd.d"], "test/dmd.in", null, false);
   p.start();
   while(!p.finished){ Thread.sleep(msecs(5)); }
-  tag(Level.Always, "TEST", "status of output: %s", p.status());
-  tag(Level.Always, "TEST", "length of output: %s", p.length());
-  tag(Level.Always, "TEST", "time of output: %s", p.time());
+  assert(p.status() == 0, "dmd.d process must exit 0");
+  assert(p.length() > 0, "process must produce output");
+  assert(p.time() > 0,   "process must have run time");
 }
 

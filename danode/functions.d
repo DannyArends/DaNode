@@ -232,5 +232,20 @@ unittest {
   assert(endofheader("GET / HTTP/1.1\nHost: x\n\n") >= 0, "\\n\\n header must be found");
   assert(endofheader("incomplete header") == -1, "no terminator must return -1");
   assert(bodystart("GET / HTTP/1.1\nHost: x\n\nbody") > 0, "bodystart must be positive");
+
+  // endofheader - \r\n\r\n &  \n\n
+  assert(endofheader("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\nbody content") == 42, "\\r\\n\\r\\n position must be 42");
+  assert(endofheader("HTTP/1.1 200 OK\nContent-Type: text/html\n\nbody content") == 40, "\\n\\n position must be 40");
+
+  // endofheader - no terminator
+  assert(endofheader("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n") == -1, "incomplete must return -1");
+  assert(endofheader("") == -1, "empty must return -1");
+
+  // bodystart - \r\n\r\n & \n\n
+  assert(bodystart("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\nbody content") == 46, "\\r\\n\\r\\n bodystart must be 46");
+  assert(bodystart("HTTP/1.1 200 OK\nContent-Type: text/html\n\nbody content") == 42, "\\n\\n bodystart must be 42");
+
+  // bodystart - no body
+  assert(bodystart("incomplete") == -1, "no terminator must return -1");
 }
 
