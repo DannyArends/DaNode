@@ -6,7 +6,7 @@ version(SSL) {
   import danode.imports;
   import danode.functions : Msecs;
   import danode.response : Response;
-  import danode.log : log, error, Level;
+  import danode.log : tag, log, error, Level;
   import danode.interfaces : DriverInterface;
   import danode.ssl;
 
@@ -71,7 +71,7 @@ version(SSL) {
         return(false);
       }
 
-      override bool socketReady() { return socket !is null && socket.isAlive() && ssl !is null; }
+      override bool socketReady() const { return socket !is null && socket.isAlive() && ssl !is null; }
 
       // Close the connection, by shutting down the SSL and Socket object
       override void closeConnection() {
@@ -90,8 +90,8 @@ version(SSL) {
         if (pending.length == 0) pending = response.bytes(maxsize).dup;
         if (pending.length == 0) return;
         ptrdiff_t send = SSL_write(ssl, cast(void*) pending.ptr, cast(int) pending.length);
-        log(Level.Verbose, "Send result=%d index=%d length=%d", send, response.index, response.length);
         if (send > 0) {
+          log(Level.Trace, "Send result=%d index=%d length=%d", send, response.index, response.length);
           touch();
           response.index += send;
           senddata[requests] += send;
@@ -104,7 +104,7 @@ version(SSL) {
   }
 
   unittest {
-    log(Level.Always, "%s", __FILE__);
+    tag(Level.Always, "FILE", "%s", __FILE__);
   }
 }
 

@@ -105,20 +105,20 @@ class FileSystem {
 /* Basic unit-tests should be extended */
 unittest {
   tag(Level.Always, "FILE", "%s", __FILE__);
-  FileSystem filesystem = new FileSystem("./www/");
-  tag(Level.Always, "TEST", "./www/localhost/dmd.d (6 bytes) = %s", filesystem.file(filesystem.localroot("localhost"), "/dmd.d").bytes(0,6));
-  tag(Level.Always, "TEST", "filesystem.localroot('localhost') = %s", filesystem.localroot("localhost"));
-  Domain localhost = filesystem.scan("www/localhost");
-  tag(Level.Always, "TEST", "localhost.buffersize() = %s", localhost.buffersize());
-  tag(Level.Always, "TEST", "localhost.size() = %s", localhost.size());
-  auto file = filesystem.file(filesystem.localroot("localhost"), "/dmd.d");
-  auto stream = new FileStream(file);
-  tag(Level.Always, "TEST", "FileStream.bytes(0) = %s", stream.bytes(0, 6));
-  tag(Level.Always, "TEST", "file.statuscode() = %s", file.statuscode());
-  tag(Level.Always, "TEST", "file.mimetype() = %s", file.mimetype());
-  tag(Level.Always, "TEST", "file.mtime() = %s", file.mtime());
-  tag(Level.Always, "TEST", "file.ready() = %s", file.ready());
-  tag(Level.Always, "TEST", "file.type() = %s", file.type());
-  tag(Level.Always, "TEST", "file.content() = %s", file.content());
+  FileSystem fs = new FileSystem("./www/");
+
+  assert(fs.localroot("localhost").length > 0, "localroot must resolve");
+
+  Domain localdomain = fs.scan("www/localhost");
+  assert(localdomain.buffersize() > 0, "buffersize must be positive");
+  assert(localdomain.size() > 0,       "size must be positive");
+
+  auto fp = fs.file(fs.localroot("localhost"), "/dmd.d");
+  auto stream = new FileStream(fp);
+  assert(stream.bytes(0, 6).length == 6,    "FileStream must read 6 bytes");
+  assert(fp.statuscode() == StatusCode.Ok,  "file statuscode must be Ok");
+  assert(fp.mimetype().length > 0,          "file must have mimetype");
+  assert(fp.type() == PayloadType.File,     "type must be File");
+  assert(fp.ready() > 0,                    "file must be ready");
 }
 

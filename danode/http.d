@@ -30,8 +30,8 @@ class HTTP : DriverInterface {
       writeSet.add(socket);
       if (Socket.select(null, writeSet, null, dur!"msecs"(0)) <= 0) return;
       ptrdiff_t send = socket.send(response.bytes(maxsize));
-      log(Level.Verbose, "Send result=%d index=%d length=%d", send, response.index, response.length);
       if (send > 0) {
+        log(Level.Trace, "Send result=%d index=%d length=%d", send, response.index, response.length);
         touch();
         response.index += send;
         senddata[requests] += send;

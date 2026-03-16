@@ -1,8 +1,10 @@
 module danode.cgi;
 
 import danode.imports;
-import danode.functions : bodystart, endofheader, fullheader;
-import danode.log;
+import danode.functions : Msecs, bodystart, endofheader, fullheader;
+import danode.log : log, tag, error, Level;
+import danode.router : Router, runRequest;
+import danode.interfaces : StringDriver;
 import danode.process : Process;
 import danode.statuscode : StatusCode;
 import danode.payload : HeaderType, Payload, PayloadType;
@@ -11,7 +13,6 @@ import danode.payload : HeaderType, Payload, PayloadType;
 class CGI : Payload {
   private:
     Process external;
-    shared const(char)[] cachedOutput;
 
   public:
     string command;
@@ -62,8 +63,7 @@ class CGI : Payload {
     }
 
     private const(char)[] rawOutput() const {
-      if (cachedOutput.length == 0) { atomicStore(cachedOutput, cast(shared) external.output(0)); }
-      return cast(const(char)[]) atomicLoad(cachedOutput);
+      return cast(const(char)[]) external.output(0);
     }
 
     // Type of header returned by the script: FastCGI, HTTP10, HTTP11
@@ -91,23 +91,28 @@ class CGI : Payload {
     @property final StatusCode statuscode() const {
       string status = "";
       auto htype = headerType();
-      if (htype == HeaderType.FastCGI) {
-        status = getHeader!string("Status", "");
-        status = status.split(" ")[0];
-      }
+      if (htype == HeaderType.FastCGI) { status = getHeader!string("Status", "").split(" ")[0]; }
       if (htype == HeaderType.HTTP10 || htype == HeaderType.HTTP11) {
         string[] values = firstHeaderLine().split(" ");
         if(values.length >= 3) status = values[1];
       }
-      if (status == "") { return((external.status == 0)? StatusCode.Ok : StatusCode.ISE); }
-      StatusCode s = StatusCode.ISE;
+      if (status == "") {
+        if (external.status == 0) return StatusCode.Ok;
+        if (!external.running && external.timedOut()) return StatusCode.TimedOut;
+        return StatusCode.ISE;
+      }
       try {
         int code = to!int(status);
-        foreach (immutable v; EnumMembers!StatusCode) {
-          if (v.code == code) return v;
-        }
-      } catch (Exception e){ error("unable to get statuscode from script"); }
-      return(s);
+        foreach (immutable v; EnumMembers!StatusCode) { if (v.code == code) return v; }
+      } catch (Exception e) { error("unable to get statuscode from script"); }
+      return StatusCode.ISE;
+    }
+
+    @property bool contentLengthValid() const {
+      if (endOfHeader < 0) return false;
+      ptrdiff_t actual = to!ptrdiff_t(external.length) - bodyStart;
+      ptrdiff_t claimed = getHeader!ptrdiff_t("Content-Length", -1);
+      return claimed == actual;
     }
 
     // Stream of message bytes, skips the script generated header since the webserver 
@@ -125,3 +130,29 @@ class CGI : Payload {
     @property final ptrdiff_t bodyStart() const { return(bodystart(rawOutput())); }
 }
 
+
+unittest {
+  tag(Level.Always, "FILE", "%s", __FILE__);
+
+  auto router = new Router("./www/", Address.init);
+
+  // Warmup - ensure rdmd cache is hot before timed tests
+  tag(Level.Always, "WARMUP", "compiling CGI scripts...");
+  router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\n\n", 5000);
+  router.runRequest("GET /keepalive.d HTTP/1.1\nHost: localhost\n\n", 5000);
+  router.runRequest("GET /ISE1.d HTTP/1.1\nHost: localhost\n\n", 5000);
+  router.runRequest("GET /ISE2.d HTTP/1.1\nHost: localhost\n\n", 5000);
+  router.runRequest("GET /ISE3.d HTTP/1.1\nHost: localhost\n\n", 5000);
+  tag(Level.Always, "WARMUP", "done");
+
+  StringDriver res;
+  // dmd.d has wrong Content-Length - must force Close
+  res = router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\nConnection: keep-alive\n\n");
+  assert(res.lastStatus == StatusCode.Ok, format("dmd.d expected 200, got %d", res.lastStatus.code));
+  assert(icmp(res.lastConnection, "close") == 0, format("dmd.d must force Close, got %s", res.lastConnection));
+
+  // keepalive.d has correct Content-Length - must honour keep-alive
+  res = router.runRequest("GET /keepalive.d HTTP/1.1\nHost: localhost\nConnection: keep-alive\n\n");
+  assert(res.lastStatus == StatusCode.Ok, format("keepalive.d expected 200, got %d", res.lastStatus.code));
+  assert(icmp(res.lastConnection, "keep-alive") == 0, format("keepalive.d must keep-alive, got %s", res.lastConnection));
+}

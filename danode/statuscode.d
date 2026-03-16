@@ -67,9 +67,9 @@ enum StatusCode : StatusCodeT {
 
 unittest {
   tag(Level.Always, "FILE", "%s", __FILE__);
-  tag(Level.Always, "TEST", "statuscodes: %s", EnumMembers!StatusCode.length);
-  /*foreach (immutable v; EnumMembers!StatusCode) {
-    custom(2, "TEST", "[%s] %s: \"%s\"", v.code, v, v.reason);
-  }*/
+  assert(EnumMembers!StatusCode.length == 48, "must have 48 status codes");
+  assert(StatusCode.Ok.code == 200, "Ok must be 200");
+  assert(StatusCode.NotFound.code == 404,"NotFound must be 404");
+  assert(StatusCode.ISE.code == 500, "ISE must be 500");
 }
 

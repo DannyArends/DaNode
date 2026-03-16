@@ -87,6 +87,8 @@ class Process : Thread {
     // Last time the process was modified (e.g. data on stdout/stderr)
     final @property long lastmodified() const { synchronized { return(Msecs(modified)); } }
 
+    final @property bool timedOut() const { synchronized { return(Msecs(modified) >= maxtime); } }
+
     // Is the external process still running ?
     final @property bool running() const { synchronized { return(!process.terminated); } }
 
@@ -188,8 +190,8 @@ unittest {
   auto p = new Process(["rdmd", "www/localhost/dmd.d"], "test/dmd.in", null, false);
   p.start();
   while(!p.finished){ Thread.sleep(msecs(5)); }
-  tag(Level.Always, "TEST", "status of output: %s", p.status());
-  tag(Level.Always, "TEST", "length of output: %s", p.length());
-  tag(Level.Always, "TEST", "time of output: %s", p.time());
+  assert(p.status() == 0, "dmd.d process must exit 0");
+  assert(p.length() > 0, "process must produce output");
+  assert(p.time() > 0,   "process must have run time");
 }
 

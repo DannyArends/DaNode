@@ -4,7 +4,7 @@ import danode.imports;
 import danode.functions : has, from;
 import danode.files : FilePayload;
 import danode.request : Request;
-import danode.log : log, error, Level;
+import danode.log : log, tag, error, Level;
 
 struct WebConfig {
   string[string]  data;
@@ -57,15 +57,41 @@ struct WebConfig {
 
   // Is the directory allowed to be viewed ?
   @property bool dirAllowed(in string localroot, in string path) const {
-    log(Level.Trace, "dirAllowed: %s %s", localroot, path);
-    if (path.length <= localroot.length + 1) return true; // root dir always allowed
-    string npath = path[(localroot.length + 1) .. $];
-    log(Level.Trace, "npath: %s", npath);
+    string root = localroot.endsWith("/") ? localroot : localroot ~ "/";
+    string p = path.startsWith(root) ? path : path.replace(localroot, root);
+    if (p.length <= root.length) return true;
+    string npath = p[root.length .. $];
     foreach (d; allowdirs) {
-      log(Level.Trace, "%s in allowdirs: %s %s", npath, d, npath.indexOf(d));
       if (indexOf(strip(npath), strip(d)) == 0) return true;
     }
     return false;
   }
+}
+
+unittest {
+  tag(Level.Always, "FILE", "%s", __FILE__);
+  import danode.filesystem : FileSystem;
+
+  FileSystem fs = new FileSystem("./www/");
+  auto fp = fs.file(fs.localroot("localhost"), "/web.config");
+  WebConfig config = WebConfig(fp);
+
+  // localhost web.config has: shorturl=yes, allowcgi=yes, redirect=dmd.d, allowdirs=ddoc/,test/
+  assert(config.allowcgi,                          "allowcgi must be yes");
+  assert(config.redirect(),                        "redirect must be set");
+  assert(config.domain("localhost") == "localhost", "shorturl=yes must return shorthost");
+  assert(config.index() == "/dmd.d",               "index must be /dmd.d");
+  assert(!config.redirectdir(),                    "redirectdir must be no");
+
+  // dirAllowed
+  string localroot = fs.localroot("localhost");
+  assert(config.dirAllowed(localroot, localroot),            "root dir must be allowed");
+  assert(config.dirAllowed(localroot, localroot ~ "test/"),  "test/ must be allowed");
+  assert(!config.dirAllowed(localroot, localroot ~ "etc/"),  "etc/ must not be allowed");
+
+  // shorturl=no → www. prefix
+  WebConfig noShort = WebConfig(fp);
+  noShort.data["shorturl"] = "no";
+  assert(noShort.domain("localhost") == "www.localhost", "shorturl=no must add www.");
 }
 

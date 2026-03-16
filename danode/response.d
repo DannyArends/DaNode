@@ -43,54 +43,24 @@ struct Response {
     // Scripts are allowed to have/send their own header
     if (payload.type == PayloadType.Script) {
       CGI script = to!CGI(payload);
-      string scriptheader = script.fullHeader();
-      auto status = script.statuscode();
-      log(Level.Verbose, "Script '%s', status (%s)", script.command, status);
-      connection = script.getHeader("Connection", "No Request");
-      long clength = script.getHeader("Content-Length", -1); // Is the content length provided ?
-      foreach (line; scriptheader.split("\n")) {
+      foreach (line; script.fullHeader().split("\n")) {
         auto v = line.split(": ");
         if(v.length == 2) this.headers[v[0]] = chomp(v[1]);
       }
-      if (status.code != 500 && scriptheader.length > 0) {
-        auto htype = script.headerType();
-        if (htype == HeaderType.FastCGI || htype == HeaderType.None) {
-          hdr.put(format("%s %d %s\r\n", protocol, payload.statuscode, payload.statuscode.reason));
-        }
-        hdr.put(scriptheader);
-        if (!hdr.data.endsWith("\r\n\r\n")) hdr.put("\r\n");
-        if (clength == -1) connection = "Close";
-        return(hdr.data);
-      }
-      if (connection != "No Request" && clength > -1) {
-        log(Level.Verbose, "Script '%s' in keepalive mode connection '%s' (%s, %d)", script.command, connection, script.headerType(), clength);
-        hdr.put(scriptheader);
-        return(hdr.data); // The script can communicate
-      }
-      if (connection != "Close") {
-        log(Level.Verbose, "Script '%s', failed - headerType: %s, Content-Length: %d, connection: '%s', headerLength: %d, header: [%s]", 
-               script.command, script.headerType(), clength, connection, scriptheader.length, scriptheader);
-      }else{
-        log(Level.Verbose, "Script '%s', header generation (%s, %d)", script.command, script.headerType(), clength);
-      }
-      connection = "Close";
+      if (buildScriptHeader(hdr, connection, script, protocol)) return(hdr.data);
     }
-    // Construct the header for all other requests (and scripts that failed to provide a valid one
+    // Server-generated header
     hdr.put(format("%s %d %s\r\n", protocol, statuscode, statuscode.reason));
-    foreach (key, value; headers) { 
-      hdr.put(format("%s: %s\r\n", key, value));
-    }
+    foreach (key, value; headers) { hdr.put(format("%s: %s\r\n", key, value)); }
     hdr.put(format("Date: %s\r\n", htmltime()));
-    if (payload.type != PayloadType.Script && payload.length >= 0) { // If we have any payload
+    if (payload.type != PayloadType.Script && payload.length >= 0) {
       long contentLength = isRange ? (rangeEnd - rangeStart + 1) : payload.length;
       hdr.put(format("Content-Length: %d\r\n", contentLength));
-      hdr.put(format("Last-Modified: %s\r\n", htmltime(payload.mtime))); // It could be modified long ago, lets inform the client
-      if (maxage > 0) { // Perhaps we can have the client cache it (when very old)
-        hdr.put(format("Cache-Control: max-age=%d, public\r\n", maxage));
-      }
+      hdr.put(format("Last-Modified: %s\r\n", htmltime(payload.mtime)));
+      if (maxage > 0) { hdr.put(format("Cache-Control: max-age=%d, public\r\n", maxage)); }
     }
-    hdr.put(format("Content-Type: %s\r\n", payload.mimetype)); // We just send our mime type
-    hdr.put(format("Connection: %s\r\n\r\n", connection)); // Client can choose to keep-alive
+    hdr.put(format("Content-Type: %s\r\n", payload.mimetype));
+    hdr.put(format("Connection: %s\r\n\r\n", connection));
     return(hdr.data);
   }
 
@@ -111,15 +81,36 @@ struct Response {
   // Stream of bytes (header + stream of bytes)
   @property final const(char)[] bytes(in ptrdiff_t maxsize = 4096) {
     ptrdiff_t hsize = header.length;
-    if(index <= hsize) {  // We haven't completed the header yet
+    if(index < hsize) {  // We haven't completed the header yet
       ptrdiff_t remaining = maxsize - hsize;
       return(header[index .. hsize] ~ payload.bytes(0, remaining > 0 ? remaining : 0, isRange, rangeStart, rangeEnd));
     }
-    return(payload.bytes(index-hsize, maxsize, isRange, rangeStart, rangeEnd)); // Header completed, just stream bytes from the payload
+    return(payload.bytes(index-hsize, maxsize, isRange, rangeStart, rangeEnd));
   }
 
   @property final bool ready(bool r = false){ 
     if(r){ routed = r; } return(routed && payload !is null && payload.ready()); }
+}
+
+bool buildScriptHeader(ref Appender!(char[]) hdr, ref string connection, CGI script, string protocol) {
+  string scriptheader = script.fullHeader();
+  connection = script.getHeader("Connection", "No Request");
+  long clength = script.getHeader("Content-Length", -1);
+  auto status = script.statuscode();
+  bool valid = status.code != 500 && scriptheader.length > 0 && clength != -1 && script.contentLengthValid;
+  if (valid) {
+    log(Level.Verbose, "Script '%s', status (%s)", script.command, status);
+    auto htype = script.headerType();
+    if (htype == HeaderType.FastCGI || htype == HeaderType.None) {
+      hdr.put(format("%s %d %s\r\n", protocol, script.statuscode, script.statuscode.reason));
+    }
+    hdr.put(scriptheader);
+    if (!hdr.data.endsWith("\r\n\r\n")) hdr.put("\r\n");
+    return true;
+  }
+  log(Level.Verbose, "Script '%s' falling back to server header (status=%s, clength=%d)", script.command, status, clength);
+  connection = "Close";
+  return false;
 }
 
 // create a standard response
@@ -196,5 +187,35 @@ void notFound(ref Response response) {
 
 unittest {
   tag(Level.Always, "FILE", "%s", __FILE__);
-}
 
+  // setPayload
+  Response r;
+  r.setPayload(StatusCode.Ok, "hello", "text/plain");
+  assert(r.ready, "setPayload must set ready");
+  assert(r.statuscode == StatusCode.Ok, "setPayload must set statuscode");
+  assert(r.payload.mimetype == "text/plain", "setPayload must set mimetype");
+
+  // notFound
+  Response r2;
+  r2.notFound();
+  assert(r2.ready, "notFound must set ready");
+  assert(r2.statuscode == StatusCode.NotFound, "notFound must be 404");
+
+  // forbidden
+  Response r3;
+  r3.forbidden();
+  assert(r3.ready, "forbidden must set ready");
+  assert(r3.statuscode == StatusCode.Forbidden, "forbidden must be 403");
+
+  // badRequest
+  Response r4;
+  r4.badRequest();
+  assert(r4.ready, "badRequest must set ready");
+  assert(r4.statuscode == StatusCode.BadRequest, "badRequest must be 400");
+
+  // domainNotFound
+  Response r5;
+  r5.domainNotFound();
+  assert(r5.ready, "domainNotFound must set ready");
+  assert(r5.statuscode == StatusCode.NotFound, "domainNotFound must be 404");
+}
