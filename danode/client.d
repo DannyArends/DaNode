@@ -44,16 +44,12 @@ class Client : Thread, ClientInterface {
         }
         while (running) {
           if (driver.receive(driver.socket) > 0) {     // We've received new data
-            if (driver.inbuffer.data.length > MAX_HEADER_SIZE) {  // Check if we exceed the max header size
-              log(Level.Verbose, "header too large from %s:%s", ip, port);
-              driver.setHeaderTooLarge(response); stop(); continue;
-            }
-            if (driver.hasHeader()) {
-              size_t limit  = (driver.header.indexOf("multipart/") >= 0) ? MAX_UPLOAD_SIZE : MAX_REQUEST_SIZE;
-              if (driver.inbuffer.data.length > limit) {
-                log(Level.Verbose, "request too large from %s:%s", ip, port);
-                driver.setPayloadTooLarge(response); stop(); continue;
-              }
+            if (!driver.hasHeader()) {
+              if (driver.inbuffer.data.length > MAX_HEADER_SIZE) { driver.setHeaderTooLarge(response); stop(); continue; }
+            } else {
+              if (driver.endOfHeader > MAX_HEADER_SIZE) { driver.setHeaderTooLarge(response); stop(); continue; }
+              size_t limit = (driver.header.indexOf("multipart/") >= 0) ? MAX_UPLOAD_SIZE : MAX_REQUEST_SIZE;
+              if (driver.inbuffer.data.length > limit) { driver.setPayloadTooLarge(response); stop(); continue; }
             }
             // Parse the data and try to create a response (Could fail multiple times)
             if (!response.ready) { router.route(driver, request, response, maxtime); }
@@ -63,7 +59,6 @@ class Client : Thread, ClientInterface {
             driver.send(response, driver.socket);           // Send the response, hit multiple times, send what you can and return
           }
           if (response.ready && response.completed) {       // We've completed the request, response cycle
-            this.log(request, response);
             request.clearUploadFiles();                     // Clean uploaded files
             driver.inbuffer.clear();                        // Clear the input buffer
             driver.requests++;
@@ -74,12 +69,12 @@ class Client : Thread, ClientInterface {
           if (lastmodified >= maxtime) { // Client are not allowed to be silent for more than maxtime
             log(Level.Trace, "inactivity: %s > %s", lastmodified, maxtime);
             driver.setTimedOut(response);
-            if (request.isValid) { this.log(request, response); }
             stop(); continue;
           }
           log(Level.Trace, "Connection %s:%s (%s msecs) %s", ip, port, starttime, to!string(driver.inbuffer.data));
           Thread.sleep(dur!"msecs"(2));
         }
+        this.log(request, response);
       } catch(Exception e) { log(Level.Verbose, "Unknown Client Exception: %s", e); stop();
       } catch(Error e) { log(Level.Verbose, "Unknown Client Error: %s", e); stop(); }
 
@@ -109,9 +104,11 @@ class Client : Thread, ClientInterface {
 void log(in ClientInterface cl, in Request rq, in Response rs) {
   string uri;
   try { uri = decodeComponent(rq.uri); } catch (Exception e) { uri = rq.uri; }
-  long bytes = rs.isRange ? (rs.rangeEnd - rs.rangeStart + 1) : rs.payload.length;
-  tag(Level.Always, format("%d", rs.statuscode), 
-      "%s %s:%s %s%s %s %skb", htmltime(), cl.ip, cl.port, rq.shorthost, uri.replace("%", "%%"), Msecs(rq.starttime), bytes/1024);
+  long bytes = (rs.payload && rs.isRange) ? (rs.rangeEnd - rs.rangeStart + 1) : (rs.payload ? rs.payload.length : 0);
+  int code = cast(int)(rs.payload ? rs.statuscode.code : 0);
+  long ms = rq.starttime == SysTime.init ? -1 : Msecs(rq.starttime);
+  tag(Level.Always, format("%d", code),
+      "%s %s:%s %s%s %s %skb", htmltime(), cl.ip, cl.port, rq.shorthost, uri.replace("%", "%%"), ms, bytes/1024);
 }
 
 // serve a 408 connection timed out page
