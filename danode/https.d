@@ -71,7 +71,7 @@ version(SSL) {
         return(false);
       }
 
-      override bool socketReady() { return socket !is null && socket.isAlive() && ssl !is null; }
+      override bool socketReady() const { return socket !is null && socket.isAlive() && ssl !is null; }
 
       // Close the connection, by shutting down the SSL and Socket object
       override void closeConnection() {

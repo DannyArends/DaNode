@@ -3,6 +3,7 @@ module danode.interfaces;
 import danode.imports;
 import danode.functions : Msecs, bodystart, endofheader, fullheader;
 import danode.response : Response;
+import danode.statuscode : StatusCode;
 import danode.log : log, error, Level;
 
 /* Client interface used by the server */
@@ -31,7 +32,7 @@ abstract class DriverInterface {
     bool                blocking = false;    /// Blocking communication ?
 
     this(Socket socket, bool blocking = false) { this.socket = socket; this.blocking = blocking; systime = Clock.currTime(); touch(); }
-    bool socketReady(){ if (socket !is null) { return socket.isAlive(); } return false; }; /// Is the connection alive ?
+    bool socketReady() const { if (socket !is null) { return socket.isAlive(); } return false; }; /// Is the connection alive ?
     void touch() { modtime = Clock.currTime(); }
     void closeSocket() {
       try {
@@ -95,15 +96,22 @@ abstract class DriverInterface {
 }
 
 class StringDriver : DriverInterface {
+  public:
+    StatusCode    lastStatus;
+    string        lastMime;
+    const(char)[] lastBody;
+
     this(string input) { super(null); inbuffer ~= input; }
     override bool openConnection() { return(true); }
     override void closeConnection() nothrow { }
+    override bool socketReady() const { return(true); }
     @nogc override bool isSecure() const nothrow { return(false); }
     override long receiveData(ref char[] buffer) { buffer = inbuffer.data; return(buffer.length); }
     override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096)  { 
-      response.header();
+      lastStatus = response.statuscode;
+      lastMime   = response.payload.mimetype.idup;
+      lastBody   = response.payload.bytes(0, cast(ptrdiff_t) response.payload.length);
       response.completed = true;
     }
 }
-
 

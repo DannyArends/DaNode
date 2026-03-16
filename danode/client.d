@@ -91,10 +91,7 @@ class Client : Thread, ClientInterface {
     }
 
     // Is the client still running, if the socket was gone it's not otherwise check the terminated flag
-    final @property bool running() const {
-      if (driver.socket is null) return(false);
-      return(!atomicLoad(terminated) && driver.socket.isAlive());
-    }
+    final @property bool running() const { return(!atomicLoad(terminated) && driver.socketReady()); }
 
     // Stop the client by setting the terminated flag
     final @property void stop() {

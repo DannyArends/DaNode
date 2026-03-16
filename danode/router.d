@@ -147,51 +147,75 @@ class Router {
 }
 
 // Helper function used to make calls during a unittest, setup a driver, a client and run the request
-void runRequest(Router router, string request = "GET /dmd.d HTTP/1.1\nHost: localhost\n\n") {
+StringDriver runRequest(Router router, string request = "GET /dmd.d HTTP/1.1\nHost: localhost\n\n", long maxtime = 1000) {
   auto driver = new StringDriver(request);
-  auto client = new Client(router, driver, 250);
+  auto client = new Client(router, driver, maxtime);
   log(Level.Verbose, "Router: [I] %s:%s %s", client.ip(), client.port(), request.splitLines()[0]);
   client.start();
-  while (client.running()) {
-    Thread.sleep(dur!"msecs"(2));
-  }
+  client.join();
+  return driver;
 }
 
 unittest {
   tag(Level.Always, "FILE", "%s", __FILE__);
 
   auto router = new Router("./www/", Address.init);
-  router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\n\n");
-  router.runRequest("POST /dmd.d HTTP/1.1\nHost: localhost\n\n");
+  StringDriver res;
 
-  router.runRequest("GET /keepalive.d HTTP/1.1\nHost: localhost\n\n");
-  router.runRequest("POST /keepalive.d HTTP/1.1\nHost: localhost\n\n");
+  res = router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\n\n");
+  assert(res.lastStatus == StatusCode.Ok, format("GET /dmd.d expected 200, got %d", res.lastStatus.code));
 
-  router.runRequest("GET /notfound.txt HTTP/1.1\nHost: localhost\n\n");
-  router.runRequest("POST /notfound.txt HTTP/1.1\nHost: localhost\n\n");
+  res = router.runRequest("POST /dmd.d HTTP/1.1\nHost: localhost\n\n");
+  assert(res.lastStatus == StatusCode.Ok, format("POST /dmd.d expected 200, got %d", res.lastStatus.code));
 
-  router.runRequest("GET /data.ill HTTP/1.1\nHost: localhost\n\n");
-  router.runRequest("POST /data.ill HTTP/1.1\nHost: localhost\n\n");
+  res = router.runRequest("GET /keepalive.d HTTP/1.1\nHost: localhost\n\n");
+  assert(res.lastStatus == StatusCode.Ok, format("GET /keepalive.d expected 200, got %d", res.lastStatus.code));
+  res = router.runRequest("POST /keepalive.d HTTP/1.1\nHost: localhost\n\n");
+  assert(res.lastStatus == StatusCode.Ok, format("POST /keepalive.d expected 200, got %d", res.lastStatus.code));
 
-  router.runRequest("GET /ISE1.d HTTP/1.1\nHost: localhost\n\n");
-  router.runRequest("POST /ISE1.d HTTP/1.1\nHost: localhost\n\n");
+  res = router.runRequest("GET /notfound.txt HTTP/1.1\nHost: localhost\n\n");
+  assert(res.lastStatus == StatusCode.Ok, format("GET /notfound.txt expected 200, got %d", res.lastStatus.code));
+  res = router.runRequest("POST /notfound.txt HTTP/1.1\nHost: localhost\n\n");
+  assert(res.lastStatus == StatusCode.Ok, format("POST /notfound.txt expected 200, got %d", res.lastStatus.code));
 
-  router.runRequest("GET /ISE2.d HTTP/1.1\nHost: localhost\n\n");
-  router.runRequest("POST /ISE2.d HTTP/1.1\nHost: localhost\n\n");
+  res = router.runRequest("GET /data.ill HTTP/1.1\nHost: localhost\n\n");
+  assert(res.lastStatus == StatusCode.Forbidden, format("GET /data.ill expected 403, got %d", res.lastStatus.code));
+  res = router.runRequest("POST /data.ill HTTP/1.1\nHost: localhost\n\n");
+  assert(res.lastStatus == StatusCode.Forbidden, format("POST /data.ill expected 403, got %d", res.lastStatus.code));
 
-  router.runRequest("GET /ISE3.d HTTP/1.1\nHost: localhost\nConnection: keep-alive\n\n");
-  router.runRequest("POST /ISE3.d HTTP/1.1\nHost: localhost\nConnection: keep-alive\n\n");
+  res = router.runRequest("GET /ISE1.d HTTP/1.1\nHost: localhost\n\n");
+  assert(res.lastStatus == StatusCode.ISE, format("GET /ISE1.d expected 500, got %d", res.lastStatus.code));
+  res = router.runRequest("POST /ISE1.d HTTP/1.1\nHost: localhost\n\n");
+  assert(res.lastStatus == StatusCode.ISE, format("POST /ISE1.d expected 500, got %d", res.lastStatus.code));
 
-  router.runRequest("GET /test.txt HTTP/1.1\nHost: localhost\n\n");
-  router.runRequest("POST /test.txt HTTP/1.1\nHost: localhost\n\n");
+  res = router.runRequest("GET /ISE2.d HTTP/1.1\nHost: localhost\n\n");
+  assert(res.lastStatus == StatusCode.ISE);
+  res = router.runRequest("POST /ISE2.d HTTP/1.1\nHost: localhost\n\n");
+  assert(res.lastStatus == StatusCode.ISE);
 
-  router.runRequest("GET /test HTTP/1.1\nHost: localhost\n\n");
-  router.runRequest("POST /test HTTP/1.1\nHost: localhost\n\n");
+  res = router.runRequest("GET /ISE3.d HTTP/1.1\nHost: localhost\nConnection: keep-alive\n\n");
+  assert(res.lastStatus == StatusCode.TimedOut);
+  res = router.runRequest("POST /ISE3.d HTTP/1.1\nHost: localhost\nConnection: keep-alive\n\n");
+  assert(res.lastStatus == StatusCode.TimedOut);
 
-  router.runRequest("GET /test/1.txt HTTP/1.1\nHost: localhost\n\n");
-  router.runRequest("POST /test/1.txt HTTP/1.1\nHost: localhost\n\n");
+  res = router.runRequest("GET /test.txt HTTP/1.1\nHost: localhost\n\n");
+  assert(res.lastStatus == StatusCode.Ok);
+  res = router.runRequest("POST /test.txt HTTP/1.1\nHost: localhost\n\n");
+  assert(res.lastStatus == StatusCode.Ok);
 
-  router.runRequest("GET /test/notfound.txt HTTP/1.1\nHost: localhost\n\n");
-  router.runRequest("POST /test/notfound.txt HTTP/1.1\nHost: localhost\n\n");
+  res = router.runRequest("GET /test HTTP/1.1\nHost: localhost\n\n");
+  assert(res.lastStatus == StatusCode.Ok);
+  res = router.runRequest("POST /test HTTP/1.1\nHost: localhost\n\n");
+  assert(res.lastStatus == StatusCode.Ok);
+
+  res = router.runRequest("GET /test/1.txt HTTP/1.1\nHost: localhost\n\n");
+  assert(res.lastStatus == StatusCode.Ok);
+  res = router.runRequest("POST /test/1.txt HTTP/1.1\nHost: localhost\n\n");
+  assert(res.lastStatus == StatusCode.Ok);
+
+  res = router.runRequest("GET /test/notfound.txt HTTP/1.1\nHost: localhost\n\n");
+  assert(res.lastStatus == StatusCode.Ok);
+  res = router.runRequest("POST /test/notfound.txt HTTP/1.1\nHost: localhost\n\n");
+  assert(res.lastStatus == StatusCode.Ok);
 }
 
