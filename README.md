@@ -16,7 +16,7 @@ different universities. owever, shortly after I wanted to use other programming 
 encrypted homepage, why not [brainfuck](https://en.wikipedia.org/wiki/Brainfuck)? However, more common languages such as 
 [Ada](https://en.wikipedia.org/wiki/Ada), [R](https://www.r-project.org) or [PHP](https://en.wikipedia.org/wiki/PHP) are also fine.
 
-##### Main features:
+### Main features:
 
 - Support server side web applications written in **ANY** programming language
 - SSL/HTTPs support by [openSSL 3.0](https://www.openssl.org/) through [ImportC](https://dlang.org/spec/importc.html)
@@ -28,7 +28,7 @@ encrypted homepage, why not [brainfuck](https://en.wikipedia.org/wiki/Brainfuck)
 - API support for PHP, Python, D, R, or add your own in: [api/](api/)
 - [Example](www/localhost/) web applications, including [PHP](www/localhost/php.php), [Perl](www/localhost/perl.pl), [D](www/localhost/keepalive.d), [R](www/localhost/rscript.r), [brainfuck](www/localhost/test.bf) and [Ada](www/localhost/test.ada).
 
-##### Get DaNode
+### Get DaNode
 
 Install the DMD compiler from [https://dlang.org/](https://dlang.org/download.html)
 
@@ -58,7 +58,7 @@ Start the web server at a specific port (e.g. 8080)
 
 Confirm that the web server is running by going to: http://localhost:8080/
 
-##### Enable HTTPs support
+### Enable HTTPs support
 
 To compile the server with HTTPS support (binds to port 443), first compile openSSL in 
 the [deps](./deps/) folder, see the [guide](./deps/README.md). After that use dub and 
@@ -85,7 +85,7 @@ and https://127.0.0.1/ and make sure you have enough user rights to bind port 80
 private key and domain certificates are required. I use Let's Encrypt to secure my own homepage. 
 Setup instructions for Let's Encrypt can be found in the [sh/letsEncrypt](sh/letsEncrypt) file.
 
-##### Troubleshooting: [ERROR]  unable to bind socket on port 80
+### Troubleshooting: [ERROR]  unable to bind socket on port 80
 
 Starting the server on port 80 and 443 might fail, when you do not have appropriate 
 rights on the system. First check if you can start the server on another port:
@@ -102,7 +102,7 @@ connections to port 80 (and 443, when using the ssl version), then start the web
 ./sh/run
 ```
 
-##### Command-line parameters
+### Command-line parameters
 
 The content of the ./sh/run shell script:
 
@@ -123,14 +123,14 @@ of 100 simultaneous connection (per port), and produces more log output (-v 2).
 --verbose   -v       Verbose level, logs on STDOUT (integer)
 ```
 
-##### Example websites
+### Example websites
 
 See the [www/](www/) folder for a number of example web sites. After compiling the web 
 server, run the web server and the [www/localhost/](www/localhost/) folder is available 
 at http://localhost/ or http://127.0.0.1/ from the browser. For the other examples in 
 the [www/](www/) folder you will have to update your hosts file.
 
-##### Create a PHP enabled website
+### Create a PHP enabled website
 
 To create a simple PHP enabled web site first download and install DaNode, the next 
 step is to create a directory for the new website, by executing the following commands 
@@ -158,7 +158,7 @@ allowcgi     = yes
 redirecturl  = index.php
 ```
 
-##### Update the hosts file
+### Update the hosts file
 
 If you do not own the domain name you want to host, use the /etc/hosts file to redirect 
 requests from the domain name to your local IP address using the hosts file:
@@ -177,18 +177,18 @@ Then add the following lines to this hostfile using your favourite editor:
 Save the file with these lines added, then open a browser and navigate to: 
 http://www.domain.xxx, you should now see the content of your php / html file.
 
-##### Supported back-end languages
+### Supported back-end languages
 
 Languages with supported APIs: PHP, PYTHON, D, R
 
 See: [api/README.md](api/README.md)
 
-##### Contributing
+### Contributing
 
 Want to contribute? Great! Contribute to this repo by starring ⭐ or forking 🍴, and feel 
 free to start an issue first to discuss idea's before sending a pull request. You're also 
 welcome to post comments on commits.
 
-##### License
+### License
 
 Written by Danny Arends and released as [GPLv3](LICENSE.txt).
