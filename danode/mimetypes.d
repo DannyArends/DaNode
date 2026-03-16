@@ -1,6 +1,7 @@
 module danode.mimetypes;
 
 import danode.imports;
+import danode.log : log, tag, error, Level;
 
 immutable string      UNSUPPORTED_FILE = "file/unknown";                            /// Unsupported file mime
 immutable string      CGI_FILE         = "executable/";                             /// CGI mime prefix
@@ -44,16 +45,17 @@ pure string mime(string i) {
     
     case ".bin", ".class", ".dll", ".exe",".rdata"  : return "application/octet-stream";
     case ".apk"  : return "application/vnd.android.package-archive";
-    case ".ecma"  : return "application/ecmascript";
-    case ".epub"  : return "application/epub+zip";
+    case ".ecma" : return "application/ecmascript";
+    case ".epub" : return "application/epub+zip";
     case ".azw"  : return "application/vnd.amazon.ebook";
-    case ".gz"   : return "application/x-gzip";
-    case ".js"   : return "application/x-javascript";
+    case ".gz"   : return "application/gzip";
+    case ".js"   : return "application/javascript";
+    case ".json" : return "application/json";
     case ".pdf"  : return "application/pdf";
     case ".rar", ".tgz"  : return "application/x-compressed";
     case ".tar"  : return "application/x-tar";
     case ".z"    : return "application/x-compress";
-    case ".zip"  : return "application/x-zip-compressed";
+    case ".zip"  : return "application/zip";
     case ".bz"   : return "application/x-bzip";
     case ".bz2"  : return "application/x-bzip2";
     case ".jar"  : return "application/java-archive";
@@ -103,3 +105,29 @@ pure string mime(string i) {
     default : return UNSUPPORTED_FILE;
   }
 }
+
+unittest {
+  tag(Level.Always, "FILE", "%s", __FILE__);
+
+  // Static file types
+  assert(mime("test.html") == "text/html",              "html mime");
+  assert(mime("test.txt")  == "text/plain",             "txt mime");
+  assert(mime("test.css")  == "text/css",               "css mime");
+  assert(mime("test.js")   == "application/javascript", "js mime");
+  assert(mime("test.pdf")  == "application/pdf",        "pdf mime");
+  assert(mime("test.png")  == "image/png",              "png mime");
+  assert(mime("test.jpg")  == "image/jpeg",             "jpg mime");
+  assert(mime("test.gif")  == "image/gif",              "gif mime");
+  assert(mime("test.json") == "application/json",       "json mime");
+
+  // CGI types
+  assert(mime("test.d").startsWith(CGI_FILE),    ".d must be CGI");
+  assert(mime("test.php").startsWith(CGI_FILE),  ".php must be CGI");
+  assert(mime("test.py").startsWith(CGI_FILE),   ".py must be CGI");
+  assert(mime("test.pl").startsWith(CGI_FILE),   ".pl must be CGI");
+
+  // Unknown
+  assert(mime("test.ill") == UNSUPPORTED_FILE,   "unknown must be UNSUPPORTED_FILE");
+  assert(mime("noextension") == UNSUPPORTED_FILE, "no extension must be UNSUPPORTED_FILE");
+}
+

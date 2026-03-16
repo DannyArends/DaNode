@@ -187,5 +187,35 @@ void notFound(ref Response response) {
 
 unittest {
   tag(Level.Always, "FILE", "%s", __FILE__);
-}
 
+  // setPayload
+  Response r;
+  r.setPayload(StatusCode.Ok, "hello", "text/plain");
+  assert(r.ready, "setPayload must set ready");
+  assert(r.statuscode == StatusCode.Ok, "setPayload must set statuscode");
+  assert(r.payload.mimetype == "text/plain", "setPayload must set mimetype");
+
+  // notFound
+  Response r2;
+  r2.notFound();
+  assert(r2.ready, "notFound must set ready");
+  assert(r2.statuscode == StatusCode.NotFound, "notFound must be 404");
+
+  // forbidden
+  Response r3;
+  r3.forbidden();
+  assert(r3.ready, "forbidden must set ready");
+  assert(r3.statuscode == StatusCode.Forbidden, "forbidden must be 403");
+
+  // badRequest
+  Response r4;
+  r4.badRequest();
+  assert(r4.ready, "badRequest must set ready");
+  assert(r4.statuscode == StatusCode.BadRequest, "badRequest must be 400");
+
+  // domainNotFound
+  Response r5;
+  r5.domainNotFound();
+  assert(r5.ready, "domainNotFound must set ready");
+  assert(r5.statuscode == StatusCode.NotFound, "domainNotFound must be 404");
+}
