@@ -2,7 +2,9 @@ module danode.cgi;
 
 import danode.imports;
 import danode.functions : Msecs, bodystart, endofheader, fullheader;
-import danode.log;
+import danode.log : log, tag, error, Level;
+import danode.router : Router, runRequest;
+import danode.interfaces : StringDriver;
 import danode.process : Process;
 import danode.statuscode : StatusCode;
 import danode.payload : HeaderType, Payload, PayloadType;
@@ -128,3 +130,20 @@ class CGI : Payload {
     @property final ptrdiff_t bodyStart() const { return(bodystart(rawOutput())); }
 }
 
+
+unittest {
+  tag(Level.Always, "FILE", "%s", __FILE__);
+
+  auto router = new Router("./www/", Address.init);
+  StringDriver res;
+
+  // dmd.d has wrong Content-Length - must force Close
+  res = router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\nConnection: keep-alive\n\n");
+  assert(res.lastStatus == StatusCode.Ok, format("dmd.d expected 200, got %d", res.lastStatus.code));
+  assert(icmp(res.lastConnection, "close") == 0, format("dmd.d must force Close, got %s", res.lastConnection));
+
+  // keepalive.d has correct Content-Length - must honour keep-alive
+  res = router.runRequest("GET /keepalive.d HTTP/1.1\nHost: localhost\nConnection: keep-alive\n\n");
+  assert(res.lastStatus == StatusCode.Ok, format("keepalive.d expected 200, got %d", res.lastStatus.code));
+  assert(icmp(res.lastConnection, "keep-alive") == 0, format("keepalive.d must keep-alive, got %s", res.lastConnection));
+}

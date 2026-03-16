@@ -100,6 +100,7 @@ class StringDriver : DriverInterface {
   public:
     StatusCode    lastStatus;
     string        lastMime;
+    string        lastConnection;
     const(char)[] lastBody;
 
   public:
@@ -115,9 +116,11 @@ class StringDriver : DriverInterface {
       return inbuffer.data.length;              // don't clear here - client loop does it
     }
     override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096) {
+      response.header();
       lastStatus = response.statuscode;
-      lastMime   = response.payload.mimetype.idup;
-      lastBody   = response.payload.bytes(0, cast(ptrdiff_t) response.payload.length);
+      lastMime = response.payload.mimetype.idup;
+      lastConnection = response.connection.idup;
+      lastBody = response.payload.bytes(0, cast(ptrdiff_t) response.payload.length);
       response.completed = true;
     }
 }

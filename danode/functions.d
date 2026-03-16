@@ -64,6 +64,7 @@ string safePath(in string root, in string path) {
 }
 
 @nogc pure long Msecs(in SysTime t, in SysTime t0 = Clock.currTime()) nothrow {
+  if(t == SysTime.init) return(-1);
   return((t0 - t).total!"msecs"());
 }
 
@@ -247,5 +248,9 @@ unittest {
 
   // bodystart - no body
   assert(bodystart("incomplete") == -1, "no terminator must return -1");
+
+  // functions.d unittest
+  assert(Msecs(SysTime.init) == -1, "SysTime.init must return -1");
+  assert(Msecs(Clock.currTime()) >= 0, "current time must return >= 0");
 }
 

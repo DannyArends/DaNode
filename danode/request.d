@@ -194,4 +194,9 @@ struct Request {
 
 unittest {
   tag(Level.Always, "FILE", "%s", __FILE__);
+  assert(parseHTTPVersion("HTTP/1.1") == HTTPVersion.v11, "HTTP/1.1 must parse");
+  assert(parseHTTPVersion("HTTP/1.0") == HTTPVersion.v10, "HTTP/1.0 must parse");
+  assert(parseHTTPVersion("HTTP/2")   == HTTPVersion.v20, "HTTP/2 must parse");
+  assert(parseHTTPVersion("garbage")  == HTTPVersion.v09, "invalid must return v09");
+  assert(parseHTTPVersion("")         == HTTPVersion.v09, "empty must return v09");
 }
