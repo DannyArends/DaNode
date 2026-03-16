@@ -114,8 +114,6 @@ class StringDriver : DriverInterface {
       return inbuffer.data.length;              // don't clear here - client loop does it
     }
     override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096) {
-      import std.stdio : writefln;
-      writefln("StringDriver.send() called, statuscode=%d", response.statuscode.code);
       lastStatus = response.statuscode;
       lastMime   = response.payload.mimetype.idup;
       lastBody   = response.payload.bytes(0, cast(ptrdiff_t) response.payload.length);

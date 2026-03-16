@@ -137,44 +137,57 @@ void setPayloadTooLarge(ref DriverInterface driver, ref Response response) {
 unittest {
   tag(Level.Always, "FILE", "%s", __FILE__);
   auto router = new Router("./www/", Address.init);
+  StringDriver res;
 
-  router.runRequest("GET /test.pdf HTTP/1.1\nHost: localhost\nRange: bytes=0-65535\n\n");
-  router.runRequest("GET /test.pdf HTTP/1.1\nHost: localhost\nRange: bytes=32517-\n\n");
+  // Range requests
+  res = router.runRequest("GET /test.pdf HTTP/1.1\nHost: localhost\nRange: bytes=0-65535\n\n");
+  assert(res.lastStatus == StatusCode.PartialContent, format("Range 0-65535 expected 206, got %d", res.lastStatus.code));
+  assert(res.lastMime == "application/pdf", format("Range expected application/pdf, got %s", res.lastMime));
 
-  router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\n\n");
-  router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\r\n\r\n");
-  router.runRequest("GET /dmd.d HTTP/1.1\nHost: www.localhost\n\n");
-  router.runRequest("GET /dmd.d HTTP/1.1\nHost: www.localhost\r\n\r\n");
-  router.runRequest("GET /dmd.d HTTP/1.1\nHost: notfound\n\n");
-  router.runRequest("GET /dmd.d HTTP/1.1\nHost: notfound\r\n\r\n");
+  res = router.runRequest("GET /test.pdf HTTP/1.1\nHost: localhost\nRange: bytes=65535-\n\n");
+  assert(res.lastStatus == StatusCode.PartialContent, format("Range 32517- expected 206, got %d", res.lastStatus.code));
+  assert(res.lastMime == "application/pdf", format("Range expected application/pdf, got %s", res.lastMime));
 
-  router.runRequest("GET /dmd.d\nHost: localhost\n\n");
-  router.runRequest("GET /dmd.d\nHost: notfound\n\n");
+  // \r\n\r\n header terminator
+  res = router.runRequest("GET /dmd.d HTTP/1.1\r\nHost: localhost\r\n\r\n");
+  assert(res.lastStatus == StatusCode.Ok, format("CRLF expected 200, got %d", res.lastStatus.code));
+  assert(res.lastMime == "text/html", format("dmd.d expected text/html, got %s", res.lastMime));
 
-  router.runRequest("GET\nHost: localhost\n\n");
-  router.runRequest("GET\nHost: notfound\n\n");
+  // www. redirect
+  res = router.runRequest("GET /dmd.d HTTP/1.1\nHost: www.localhost\n\n");
+  assert(res.lastStatus == StatusCode.MovedPermanently, format("www. expected 301, got %d", res.lastStatus.code));
 
-  router.runRequest("GET /php.php HTTP/1.1\nHost: localhost\n\n");
-  router.runRequest("GET /php.php HTTP/1.1\nHost: localhost\r\n\r\n");
+  // Unknown domain
+  res = router.runRequest("GET /dmd.d HTTP/1.1\nHost: notfound\n\n");
+  assert(res.lastStatus == StatusCode.NotFound, format("notfound domain expected 404, got %d", res.lastStatus.code));
+  assert(res.lastMime == "text/plain", format("notfound expected text/plain, got %s", res.lastMime));
 
-  router.runRequest("GET /php-cgi.fphp HTTP/1.1\nHost: localhost\n\n");
-  router.runRequest("GET /php-cgi.fphp HTTP/1.1\nHost: localhost\r\n\r\n");
+  // No HTTP version
+  res = router.runRequest("GET /dmd.d\nHost: localhost\n\n");
+  assert(res.lastStatus == StatusCode.BadRequest, format("No version expected 400, got %d", res.lastStatus.code));
+  assert(res.lastMime == "text/plain", format("BadRequest expected text/plain, got %s", res.lastMime));
 
-  router.runRequest("GET /phpinfo.fphp HTTP/1.1\nHost: localhost\n\n");
-  router.runRequest("GET /phpinfo.fphp HTTP/1.1\nHost: localhost\r\n\r\n");
+  // Malformed request
+  res = router.runRequest("GET\nHost: localhost\n\n");
+  assert(res.lastStatus == StatusCode.BadRequest, format("Malformed expected 400, got %d", res.lastStatus.code));
+  assert(res.lastMime == "text/plain", format("BadRequest expected text/plain, got %s", res.lastMime));
 
-  router.runRequest("GET /dmd.d HTTP/1.2\nHost: localhost\n\n");
-  router.runRequest("GET /keepalive.d HTTP/1.1\nHost: localhost\nConnection: keep-alive\n\n");
+  // Invalid HTTP version
+  res = router.runRequest("GET /dmd.d HTTP/1.2\nHost: localhost\n\n");
+  assert(res.lastStatus == StatusCode.Ok, format("HTTP/1.2 expected 200, got %d", res.lastStatus.code));
 
-  // Test all available RequestMethods, and an invalid one
-  router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\n\n");
-  router.runRequest("HEAD /dmd.d HTTP/1.1\nHost: localhost\n\n");
-  router.runRequest("POST /dmd.d HTTP/1.1\nHost: localhost\n\n");
-  router.runRequest("PUT /dmd.d HTTP/1.1\nHost: localhost\n\n");
-  router.runRequest("DELETE /dmd.d HTTP/1.1\nHost: localhost\n\n");
-  router.runRequest("CONNECT /dmd.d HTTP/1.1\nHost: localhost\n\n");
-  router.runRequest("OPTIONS * HTTP/1.1\n\n");
-  router.runRequest("TRACE /dmd.d HTTP/1.1\nHost: localhost\n\n");
-  router.runRequest("NO /dmd.d HTTP/1.1\nHost: localhost\n\n");
+  // All HTTP methods
+  foreach (method; ["GET", "HEAD", "POST", "PUT", "DELETE", "CONNECT", "TRACE"]) {
+    res = router.runRequest(format("%s /dmd.d HTTP/1.1\nHost: localhost\n\n", method));
+    assert(res.lastStatus == StatusCode.Ok, format("%s /dmd.d expected 200, got %d", method, res.lastStatus.code));
+  }
+
+  // Invalid method
+  res = router.runRequest("NO /dmd.d HTTP/1.1\nHost: localhost\n\n");
+  assert(res.lastStatus == StatusCode.BadRequest, format("Invalid method expected 400, got %d", res.lastStatus.code));
+
+  // OPTIONS (no host required)
+  res = router.runRequest("OPTIONS * HTTP/1.1\n\n");
+  assert(res.lastStatus == StatusCode.NotFound, format("OPTIONS expected 404, got %d", res.lastStatus.code));
 }
 
