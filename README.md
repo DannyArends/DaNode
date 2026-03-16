@@ -102,7 +102,7 @@ connections to port 80 (and 443, when using the ssl version), then start the web
 
 ### Command-line parameters
 
-The content of the ./sh/run shell script:
+The content of the [./sh/run](sh/run) shell script:
 
 ```
 nohup authbind danode/server -k -b 100 -v 2 > server.log 2>&1 &
