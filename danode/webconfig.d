@@ -57,12 +57,11 @@ struct WebConfig {
 
   // Is the directory allowed to be viewed ?
   @property bool dirAllowed(in string localroot, in string path) const {
-    log(Level.Trace, "dirAllowed: %s %s", localroot, path);
-    if (path.length <= localroot.length + 1) return true; // root dir always allowed
-    string npath = path[localroot.length + (localroot.endsWith("/") ? 0 : 1) .. $];
-    log(Level.Trace, "npath: %s", npath);
+    string root = localroot.endsWith("/") ? localroot : localroot ~ "/";
+    string p = path.startsWith(root) ? path : path.replace(localroot, root);
+    if (p.length <= root.length) return true;
+    string npath = p[root.length .. $];
     foreach (d; allowdirs) {
-      log(Level.Trace, "%s in allowdirs: %s %s", npath, d, npath.indexOf(d));
       if (indexOf(strip(npath), strip(d)) == 0) return true;
     }
     return false;
