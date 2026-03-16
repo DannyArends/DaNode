@@ -1,7 +1,7 @@
 module danode.cgi;
 
 import danode.imports;
-import danode.functions : bodystart, endofheader, fullheader;
+import danode.functions : Msecs, bodystart, endofheader, fullheader;
 import danode.log;
 import danode.process : Process;
 import danode.statuscode : StatusCode;
@@ -89,23 +89,21 @@ class CGI : Payload {
     @property final StatusCode statuscode() const {
       string status = "";
       auto htype = headerType();
-      if (htype == HeaderType.FastCGI) {
-        status = getHeader!string("Status", "");
-        status = status.split(" ")[0];
-      }
+      if (htype == HeaderType.FastCGI) { status = getHeader!string("Status", "").split(" ")[0]; }
       if (htype == HeaderType.HTTP10 || htype == HeaderType.HTTP11) {
         string[] values = firstHeaderLine().split(" ");
         if(values.length >= 3) status = values[1];
       }
-      if (status == "") { return((external.status == 0)? StatusCode.Ok : StatusCode.ISE); }
-      StatusCode s = StatusCode.ISE;
+      if (status == "") {
+        if (external.status == 0) return StatusCode.Ok;
+        if (!external.running && external.timedOut()) return StatusCode.TimedOut;
+        return StatusCode.ISE;
+      }
       try {
         int code = to!int(status);
-        foreach (immutable v; EnumMembers!StatusCode) {
-          if (v.code == code) return v;
-        }
-      } catch (Exception e){ error("unable to get statuscode from script"); }
-      return(s);
+        foreach (immutable v; EnumMembers!StatusCode) { if (v.code == code) return v; }
+      } catch (Exception e) { error("unable to get statuscode from script"); }
+      return StatusCode.ISE;
     }
 
     @property bool contentLengthValid() const {

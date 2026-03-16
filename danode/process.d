@@ -87,6 +87,8 @@ class Process : Thread {
     // Last time the process was modified (e.g. data on stdout/stderr)
     final @property long lastmodified() const { synchronized { return(Msecs(modified)); } }
 
+    final @property bool timedOut() const { synchronized { return(Msecs(modified) >= maxtime); } }
+
     // Is the external process still running ?
     final @property bool running() const { synchronized { return(!process.terminated); } }
 

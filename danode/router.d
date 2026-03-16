@@ -195,9 +195,9 @@ unittest {
   assert(res.lastStatus == StatusCode.ISE, format("POST /ISE2.d expected 500, got %d", res.lastStatus.code));
 
   res = router.runRequest("GET /ISE3.d HTTP/1.1\nHost: localhost\nConnection: keep-alive\n\n");
-  assert(res.lastStatus == StatusCode.ISE, format("GET /ISE3.d expected 500, got %d", res.lastStatus.code));
+  assert(res.lastStatus == StatusCode.TimedOut, format("GET /ISE3.d expected 408, got %d", res.lastStatus.code));
   res = router.runRequest("POST /ISE3.d HTTP/1.1\nHost: localhost\nConnection: keep-alive\n\n");
-  assert(res.lastStatus == StatusCode.ISE, format("POST /ISE3.d expected 500, got %d", res.lastStatus.code));
+  assert(res.lastStatus == StatusCode.TimedOut, format("POST /ISE3.d expected 408, got %d", res.lastStatus.code));
 
   res = router.runRequest("GET /test.txt HTTP/1.1\nHost: localhost\n\n");
   assert(res.lastStatus == StatusCode.Ok, format("GET /test.txt expected 200, got %d", res.lastStatus.code));
