@@ -65,13 +65,12 @@ class Client : Thread, ClientInterface {
           }
           if (response.ready && response.completed) {       // We've completed the request, response cycle
             this.log(request, response);
-            log(Level.Trace, "completed: index=%d length=%d", response.index, response.length);
             request.clearUploadFiles();                     // Clean uploaded files
-            request.destroy();                              // Clear the request structure
-            driver.inbuffer.destroy();                      // Clear the input buffer
+            driver.inbuffer.clear();                        // Clear the input buffer
             driver.requests++;
-            if(!response.keepalive) stop();                 // No keep alive, then stop this client
-            response.destroy();                             // Clear the response structure
+            if(!response.keepalive){ stop(); continue; }    // No keep alive, then stop this client
+            request = Request.init;                         // Reset request for next request cycle
+            response = Response.init;                       // Reset response for next request cycle
           }
           if (lastmodified >= maxtime) { // Client are not allowed to be silent for more than maxtime
             log(Level.Trace, "inactivity: %s > %s", lastmodified, maxtime);
@@ -87,7 +86,6 @@ class Client : Thread, ClientInterface {
 
       log(Level.Verbose, "Connection %s:%s (%s) closed. %d requests %s (%s msecs)", ip, port, (driver.isSecure() ? "SSL" : "HTTP"), 
                                                                                     driver.requests, driver.senddata, starttime);
-      driver.destroy();
     }
 
     // Is the client still running, if the socket was gone it's not otherwise check the terminated flag
@@ -113,7 +111,8 @@ void log(in ClientInterface cl, in Request rq, in Response rs) {
   string uri;
   try { uri = decodeComponent(rq.uri); } catch (Exception e) { uri = rq.uri; }
   long bytes = rs.isRange ? (rs.rangeEnd - rs.rangeStart + 1) : rs.payload.length;
-  tag(Level.Always, format("%d", rs.statuscode), "%s %s:%s %s%s %s %s", htmltime(), cl.ip, cl.port, rq.shorthost, uri.replace("%", "%%"), Msecs(rq.starttime), bytes);
+  tag(Level.Always, format("%d", rs.statuscode), 
+      "%s %s:%s %s%s %s %skb", htmltime(), cl.ip, cl.port, rq.shorthost, uri.replace("%", "%%"), Msecs(rq.starttime), bytes/1024);
 }
 
 // serve a 408 connection timed out page

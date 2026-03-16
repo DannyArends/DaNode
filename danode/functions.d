@@ -127,8 +127,8 @@ pure bool isAllowed(in string path) { return(mime(path) != UNSUPPORTED_FILE); }
 // Where does the HTTP request header end ?
 @nogc pure ptrdiff_t endofheader(T)(const(T) buffer) nothrow {
   ptrdiff_t len = buffer.length;
-  for (ptrdiff_t i = 0; i < len - 3; i++) {
-    if (buffer[i] == '\r' && buffer[i+1] == '\n' && buffer[i+2] == '\r' && buffer[i+3] == '\n') return i;
+  for (ptrdiff_t i = 0; i < len - 1; i++) {
+    if (i < len - 3 && buffer[i] == '\r' && buffer[i+1] == '\n' && buffer[i+2] == '\r' && buffer[i+3] == '\n') return i;
     if (buffer[i] == '\n' && buffer[i+1] == '\n') return i;
   }
   return -1;

@@ -135,7 +135,7 @@ final void parseMultipart(ref Request request, in FileSystem filesystem, const s
    This data is picked-up by the different CGI APIs, and presented to the client in the regular way */
 final void serverAPI(in FileSystem filesystem, in WebConfig config, in Request request, in Response response)  {
   Appender!(string) content;
-  content.put(format("S=REDIRECT_STATUS=%d\n", response.payload.statuscode));
+  content.put(format("S=REDIRECT_STATUS=%d\n", (response.payload)? response.payload.statuscode.code : 200));
 
   // Give HTTP_COOKIES to CGI
   foreach (c; request.cookies.split("; ")) { content.put(format("C=%s\n", chomp(c)) ); }

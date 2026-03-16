@@ -101,23 +101,21 @@ class StringDriver : DriverInterface {
     string        lastMime;
     const(char)[] lastBody;
 
-  private:
-    bool consumed = false;
-
   public:
     this(string input) { super(null); inbuffer ~= input; }
     override bool openConnection() { return(true); }
     override void closeConnection() nothrow { }
-    override bool socketReady() const { return(true); }
+    override bool socketReady() const { return inbuffer.data.length > 0; }
     @nogc override bool isSecure() const nothrow { return(false); }
     override long receiveData(ref char[] buffer) { return(0); }  // unused - overriding receive() directly
     override ptrdiff_t receive(Socket socket, ptrdiff_t maxsize = 4096) {
-      if (consumed) return(0);
-      consumed = true;
+      if (inbuffer.data.length == 0) return 0;  // consumed when empty
       touch();
-      return(inbuffer.data.length);
+      return inbuffer.data.length;              // don't clear here - client loop does it
     }
     override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096) {
+      import std.stdio : writefln;
+      writefln("StringDriver.send() called, statuscode=%d", response.statuscode.code);
       lastStatus = response.statuscode;
       lastMime   = response.payload.mimetype.idup;
       lastBody   = response.payload.bytes(0, cast(ptrdiff_t) response.payload.length);

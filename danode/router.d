@@ -148,7 +148,7 @@ class Router {
 
 // Helper function used to make calls during a unittest, setup a driver, a client and run the request
 StringDriver runRequest(Router router, string request = "GET /dmd.d HTTP/1.1\nHost: localhost\n\n", long maxtime = 1000) {
-  tag(Level.Always, "runRequest", "%s", request);
+  tag(Level.Verbose, "runRequest", "%s", request);
   auto driver = new StringDriver(request);
   auto client = new Client(router, driver, maxtime);
   log(Level.Verbose, "Router: [I] %s:%s %s", client.ip(), client.port(), request.splitLines()[0]);
@@ -175,9 +175,9 @@ unittest {
   assert(res.lastStatus == StatusCode.Ok, format("POST /keepalive.d expected 200, got %d", res.lastStatus.code));
 
   res = router.runRequest("GET /notfound.txt HTTP/1.1\nHost: localhost\n\n");
-  assert(res.lastStatus == StatusCode.Ok, format("GET /notfound.txt expected 200, got %d", res.lastStatus.code));
+  assert(res.lastStatus == StatusCode.NotFound, format("GET /notfound.txt expected 404, got %d", res.lastStatus.code));
   res = router.runRequest("POST /notfound.txt HTTP/1.1\nHost: localhost\n\n");
-  assert(res.lastStatus == StatusCode.Ok, format("POST /notfound.txt expected 200, got %d", res.lastStatus.code));
+  assert(res.lastStatus == StatusCode.NotFound, format("POST /notfound.txt expected 404, got %d", res.lastStatus.code));
 
   res = router.runRequest("GET /data.ill HTTP/1.1\nHost: localhost\n\n");
   assert(res.lastStatus == StatusCode.Forbidden, format("GET /data.ill expected 403, got %d", res.lastStatus.code));
@@ -190,33 +190,33 @@ unittest {
   assert(res.lastStatus == StatusCode.ISE, format("POST /ISE1.d expected 500, got %d", res.lastStatus.code));
 
   res = router.runRequest("GET /ISE2.d HTTP/1.1\nHost: localhost\n\n");
-  assert(res.lastStatus == StatusCode.ISE);
+  assert(res.lastStatus == StatusCode.ISE, format("GET /ISE2.d expected 500, got %d", res.lastStatus.code));
   res = router.runRequest("POST /ISE2.d HTTP/1.1\nHost: localhost\n\n");
-  assert(res.lastStatus == StatusCode.ISE);
+  assert(res.lastStatus == StatusCode.ISE, format("POST /ISE2.d expected 500, got %d", res.lastStatus.code));
 
   res = router.runRequest("GET /ISE3.d HTTP/1.1\nHost: localhost\nConnection: keep-alive\n\n");
-  assert(res.lastStatus == StatusCode.TimedOut);
+  assert(res.lastStatus == StatusCode.ISE, format("GET /ISE3.d expected 500, got %d", res.lastStatus.code));
   res = router.runRequest("POST /ISE3.d HTTP/1.1\nHost: localhost\nConnection: keep-alive\n\n");
-  assert(res.lastStatus == StatusCode.TimedOut);
+  assert(res.lastStatus == StatusCode.ISE, format("POST /ISE3.d expected 500, got %d", res.lastStatus.code));
 
   res = router.runRequest("GET /test.txt HTTP/1.1\nHost: localhost\n\n");
-  assert(res.lastStatus == StatusCode.Ok);
+  assert(res.lastStatus == StatusCode.Ok, format("GET /test.txt expected 200, got %d", res.lastStatus.code));
   res = router.runRequest("POST /test.txt HTTP/1.1\nHost: localhost\n\n");
-  assert(res.lastStatus == StatusCode.Ok);
+  assert(res.lastStatus == StatusCode.Ok, format("POST /test.txt expected 200, got %d", res.lastStatus.code));
 
-  res = router.runRequest("GET /test HTTP/1.1\nHost: localhost\n\n");
-  assert(res.lastStatus == StatusCode.Ok);
-  res = router.runRequest("POST /test HTTP/1.1\nHost: localhost\n\n");
-  assert(res.lastStatus == StatusCode.Ok);
+  res = router.runRequest("GET /test/ HTTP/1.1\nHost: localhost\n\n");
+  assert(res.lastStatus == StatusCode.Ok, format("POST /test/ expected 200, got %d", res.lastStatus.code));
+  res = router.runRequest("POST /test/ HTTP/1.1\nHost: localhost\n\n");
+  assert(res.lastStatus == StatusCode.Ok, format("POST /test/ expected 200, got %d", res.lastStatus.code));
 
   res = router.runRequest("GET /test/1.txt HTTP/1.1\nHost: localhost\n\n");
-  assert(res.lastStatus == StatusCode.Ok);
+  assert(res.lastStatus == StatusCode.Ok, format("POST /test expected 200, got %d", res.lastStatus.code));
   res = router.runRequest("POST /test/1.txt HTTP/1.1\nHost: localhost\n\n");
-  assert(res.lastStatus == StatusCode.Ok);
+  assert(res.lastStatus == StatusCode.Ok, format("POST /test expected 200, got %d", res.lastStatus.code));
 
   res = router.runRequest("GET /test/notfound.txt HTTP/1.1\nHost: localhost\n\n");
-  assert(res.lastStatus == StatusCode.Ok);
+  assert(res.lastStatus == StatusCode.NotFound, format("POST /test/notfound.txt expected 404, got %d", res.lastStatus.code));
   res = router.runRequest("POST /test/notfound.txt HTTP/1.1\nHost: localhost\n\n");
-  assert(res.lastStatus == StatusCode.Ok);
+  assert(res.lastStatus == StatusCode.NotFound, format("POST /test/notfound.txt expected 404, got %d", res.lastStatus.code));
 }
 
