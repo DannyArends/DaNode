@@ -59,7 +59,7 @@ class Client : Thread, ClientInterface {
           }
           if (response.ready && response.completed) {       // We've completed the request, response cycle
             driver.requests++;
-            this.log(request, response);
+            if(response.keepalive) { this.log(request, response); }
             request.clearUploadFiles();                     // Clean uploaded files
             driver.inbuffer.clear();                        // Clear the input buffer
             if(!response.keepalive){ stop(); continue; }    // No keep alive, then stop this client
