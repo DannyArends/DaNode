@@ -29,10 +29,7 @@ class HTTP : DriverInterface {
       SocketSet writeSet = new SocketSet();
       writeSet.add(socket);
       if (Socket.select(null, writeSet, null, dur!"msecs"(0)) <= 0) return;
-auto b = response.bytes(maxsize);
-//log(Level.Always, "DEBUG bytes length=%d index=%d hsize=%d", b.length, response.index, response.header.length);
-ptrdiff_t send = socket.send(b);
-
+      ptrdiff_t send = socket.send(response.bytes(maxsize));
       if (send > 0) {
         log(Level.Trace, "Send result=%d index=%d length=%d", send, response.index, response.length);
         touch();

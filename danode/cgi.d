@@ -112,7 +112,6 @@ class CGI : Payload {
       if (endOfHeader < 0) return false;
       ptrdiff_t actual = to!ptrdiff_t(external.length) - bodyStart;
       ptrdiff_t claimed = getHeader!ptrdiff_t("Content-Length", -1);
-      //log(Level.Always, "DEBUG contentLengthValid: actual=%d claimed=%d", actual, claimed);
       return claimed == actual;
     }
 
@@ -121,7 +120,6 @@ class CGI : Payload {
     final const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 4096, bool isRange = false, long rangeStart = 0, long rangeEnd = -1) {
       auto o = rawOutput();
       ptrdiff_t start = endofheader(o) > 0 ? bodystart(o) : 0;
-//log(Level.Always, "DEBUG CGI.bytes: o.length=%d from_raw=%d", o.length, from + start);
       from += start;
       return o[from .. to!ptrdiff_t(min(from+maxsize, $))];
     }

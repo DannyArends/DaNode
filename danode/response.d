@@ -60,17 +60,17 @@ struct Response {
         hdr.put(scriptheader);
         if (!hdr.data.endsWith("\r\n\r\n")) hdr.put("\r\n");
         if (clength == -1 || !script.contentLengthValid){
-          log(Level.Always, "Script '%s' Content-Length mismatch, forcing Close", script.command);
+          log(Level.Verbose, "Script '%s' Content-Length mismatch, forcing Close", script.command);
           connection = "Close";
         }
         return(hdr.data);
       }
       if (connection != "No Request" && clength > -1) {
         if (!script.contentLengthValid) {
-          log(Level.Always, "Script '%s' Content-Length mismatch, forcing Close", script.command);
+          log(Level.Verbose, "Script '%s' Content-Length mismatch, forcing Close", script.command);
           connection = "Close";
         } else {
-          log(Level.Always, "Script '%s' in keepalive mode connection '%s' (%s, %d)", script.command, connection, script.headerType(), clength);
+          log(Level.Verbose, "Script '%s' in keepalive mode connection '%s' (%s, %d)", script.command, connection, script.headerType(), clength);
           hdr.put(scriptheader);
           return(hdr.data);
         }
@@ -123,9 +123,7 @@ struct Response {
       ptrdiff_t remaining = maxsize - hsize;
       return(header[index .. hsize] ~ payload.bytes(0, remaining > 0 ? remaining : 0, isRange, rangeStart, rangeEnd));
     }
-auto pb = payload.bytes(index-hsize, maxsize, isRange, rangeStart, rangeEnd);
-//  log(Level.Always, "DEBUG response.bytes: index=%d hsize=%d from=%d pb.length=%d", index, hsize, index-hsize, pb.length);
-return pb;
+    return(payload.bytes(index-hsize, maxsize, isRange, rangeStart, rangeEnd));
   }
 
   @property final bool ready(bool r = false){ 
