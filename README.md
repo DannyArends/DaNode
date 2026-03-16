@@ -8,7 +8,7 @@ output to *stdout*. DaNode handles on multiple domains. DaNode supports hosting 
 [Server Name Identification](https://en.wikipedia.org/wiki/Server_Name_Indication), SSL certificates are automatically renewed via the 
 [ACME protocol](https://en.wikipedia.org/wiki/Automatic_Certificate_Management_Environment).
 
-*DaNode has been battle tested in production for over 12 years hosting several of my web domains, such as my own [personal website](https://www.dannyarends.nl/).*
+*DaNode has been battle tested in production for over 12 years, including hosting my own [personal website](https://www.dannyarends.nl/).*
 
 Written because I was looking for a quick way of sharing [Rscript](https://www.r-project.org/about.html) output with other researchers at 
 different universities. owever, shortly after I wanted to use other programming languages as well, so I made the server able to serve 
