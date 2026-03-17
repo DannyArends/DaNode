@@ -141,6 +141,7 @@ unittest {
   tag(Level.Always, "WARMUP", "compiling CGI scripts...");
   router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\n\n", 5000);
   router.runRequest("GET /keepalive.d HTTP/1.1\nHost: localhost\n\n", 5000);
+  router.runRequest("GET /sse.d HTTP/1.1\nHost: localhost\n\n", 5000);
   router.runRequest("GET /ISE1.d HTTP/1.1\nHost: localhost\n\n", 5000);
   router.runRequest("GET /ISE2.d HTTP/1.1\nHost: localhost\n\n", 5000);
   router.runRequest("GET /ISE3.d HTTP/1.1\nHost: localhost\n\n", 5000);
