@@ -38,7 +38,7 @@ class Message : Payload {
     final @property PayloadType type() const { return(PayloadType.Message); }
     final @property long ready() { return(true); }
     final @property ptrdiff_t length() const { return(message.length); }
-    final @property SysTime mtime() { return Clock.currTime(); }
+    final @property SysTime mtime() { return SysTime.init; }
     final @property string mimetype() const { return mime; }
     final @property StatusCode statuscode() const { return status; }
     char[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 4096, bool isRange = false, long start = 0, long end = -1) {

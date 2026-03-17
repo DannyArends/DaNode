@@ -4,7 +4,7 @@ import danode.imports;
 import danode.cgi : CGI;
 import danode.interfaces : DriverInterface, StringDriver;
 import danode.functions : htmltime;
-import danode.statuscode : StatusCode;
+import danode.statuscode : StatusCode, noBody;
 import danode.request : Request;
 import danode.mimetypes : UNSUPPORTED_FILE;
 import danode.files : FileStream, FilePayload;
@@ -53,13 +53,13 @@ struct Response {
     hdr.put(format("%s %d %s\r\n", protocol, statuscode, statuscode.reason));
     foreach (key, value; headers) { hdr.put(format("%s: %s\r\n", key, value)); }
     hdr.put(format("Date: %s\r\n", htmltime()));
-    if (payload.type != PayloadType.Script && payload.length >= 0) {
+    if (payload.type != PayloadType.Script && !noBody(statuscode)) {
       long contentLength = isRange ? (rangeEnd - rangeStart + 1) : payload.length;
       hdr.put(format("Content-Length: %d\r\n", contentLength));
-      hdr.put(format("Last-Modified: %s\r\n", htmltime(payload.mtime)));
+      hdr.put(format("Content-Type: %s\r\n", payload.mimetype));
       if (maxage > 0) { hdr.put(format("Cache-Control: max-age=%d, public\r\n", maxage)); }
     }
-    hdr.put(format("Content-Type: %s\r\n", payload.mimetype));
+    if (payload.mtime != SysTime.init) { hdr.put(format("Last-Modified: %s\r\n", htmltime(payload.mtime))); }
     hdr.put(format("Connection: %s\r\n\r\n", connection));
     return(hdr.data);
   }

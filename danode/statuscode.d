@@ -65,6 +65,9 @@ enum StatusCode : StatusCodeT {
   NetworkAuthenticationRequired = StatusCodeT(511, "Network Authentication Required")
 };
 
+// RFC 7230: responses that must not include a message body: 1XX, 204 and,  304
+bool noBody(StatusCode sc) { return(sc.code < 200 || sc == StatusCode.NoContent || sc == StatusCode.NotModified); }
+
 unittest {
   tag(Level.Always, "FILE", "%s", __FILE__);
   assert(EnumMembers!StatusCode.length == 48, "must have 48 status codes");
