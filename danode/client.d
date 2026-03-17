@@ -14,6 +14,8 @@ import danode.log : log, tag, error, Level;
 immutable size_t MAX_HEADER_SIZE  = 1024 * 32;          //  32KB Header
 immutable size_t MAX_REQUEST_SIZE = 1024 * 1024 * 2;    //   2MB Body
 immutable size_t MAX_UPLOAD_SIZE  = 1024 * 1024 * 100;  // 100MB Multipart uploads
+immutable size_t MAX_SSE_TIME = 60_000;                 // 60 seconds max SSE lifetime
+
 
 class Client : Thread, ClientInterface {
   private:
@@ -57,7 +59,7 @@ class Client : Thread, ClientInterface {
           if (response.ready && !response.completed) {      // We know what to respond, but haven't send all of it yet
             driver.send(response, driver.socket);           // Send the response, hit multiple times, send what you can and return
             driver.touch();
-            if (response.scriptCompleted) response.completed = true;
+            if (response.scriptCompleted) { response.completed = true; stop(); continue; }
           }
           if (response.ready && response.completed) {       // We've completed the request, response cycle
             driver.requests++;
@@ -71,6 +73,10 @@ class Client : Thread, ClientInterface {
           if (lastmodified >= maxtime) { // Client are not allowed to be silent for more than maxtime
             log(Level.Trace, "inactivity: %s > %s", lastmodified, maxtime);
             driver.setTimedOut(response);
+            stop(); continue;
+          }
+          if (response.isSSE && starttime >= MAX_SSE_TIME) {
+            log(Level.Verbose, "SSE max lifetime reached, closing connection");
             stop(); continue;
           }
           log(Level.Trace, "Connection %s:%s (%s msecs) %s", ip, port, starttime, to!string(driver.inbuffer.data));
