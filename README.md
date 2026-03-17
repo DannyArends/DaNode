@@ -3,7 +3,7 @@ DaNode - A secure, small footprint web server written in D
 master: [![D](https://github.com/DannyArends/DaNode/actions/workflows/d.yml/badge.svg?branch=master)](https://github.com/DannyArends/DaNode/actions/workflows/d.yml)
 licence: [![license](https://img.shields.io/github/license/DannyArends/DaNode.svg?style=flat)](https://github.com/DannyArends/DaNode/blob/master/LICENSE.txt)
 
-DaNode is a web server written in the [D programming language](https://dlang.org/) that hosts websites written in **ANY** language that outputs to *stdout*. It supports multiple domains, SSL via ([ImportC](https://dlang.org/spec/importc.html)) with support for [Server Name Indication](https://en.wikipedia.org/wiki/Server_Name_Indication) (SNI) and [ACME](https://en.wikipedia.org/wiki/Automatic_Certificate_Management_Environment) automatic certificate renewal.
+DaNode is a web server written in the [D programming language](https://dlang.org/) that hosts websites written in **ANY** language that outputs to *stdout*. It supports multiple domains, SSL via [ImportC](https://dlang.org/spec/importc.html) with support for [Server Name Indication](https://en.wikipedia.org/wiki/Server_Name_Indication) (SNI) and [ACME](https://en.wikipedia.org/wiki/Automatic_Certificate_Management_Environment) automatic certificate renewal.
 
 *Battle tested in production for over 12 years, including hosting my own [personal website](https://www.dannyarends.nl/).*
 
