@@ -3,18 +3,20 @@ DaNode - A secure, small footprint web server written in D
 master: [![D](https://github.com/DannyArends/DaNode/actions/workflows/d.yml/badge.svg?branch=master)](https://github.com/DannyArends/DaNode/actions/workflows/d.yml)
 licence: [![license](https://img.shields.io/github/license/DannyArends/DaNode.svg?style=flat)](https://github.com/DannyArends/DaNode/blob/master/LICENSE.txt)
 
-DaNode is a web server written in the [D programming language](https://dlang.org/) that hosts websites written in **ANY** language that outputs to *stdout*. It supports multiple domains, SSL via [SNI](https://en.wikipedia.org/wiki/Server_Name_Indication), and automatic certificate renewal via [ACME](https://en.wikipedia.org/wiki/Automatic_Certificate_Management_Environment).
+DaNode is a web server written in the [D programming language](https://dlang.org/) that hosts websites written in **ANY** language that outputs to *stdout*. It supports multiple domains, SSL via ([ImportC](https://dlang.org/spec/importc.html)) with support for [Server Name Indication](https://en.wikipedia.org/wiki/Server_Name_Indication) (SNI) and [ACME](https://en.wikipedia.org/wiki/Automatic_Certificate_Management_Environment) automatic certificate renewal.
 
 *Battle tested in production for over 12 years, including hosting my own [personal website](https://www.dannyarends.nl/).*
 
 ### Main features
 
 - Host websites in **ANY** language that writes to *stdout*
-- HTTPS via [OpenSSL](https://www.openssl.org/): SNI, Modern TLS, auto-renewing [ACME](https://en.wikipedia.org/wiki/Automatic_Certificate_Management_Environment) certificates
+- HTTPS via [OpenSSL](https://www.openssl.org/): SNI, Modern TLS (1.2+), [ACME](https://en.wikipedia.org/wiki/Automatic_Certificate_Management_Environment) based auto-renewing certificates
 - Minimal footprint: Code, CPU, and RAM
 - Native APIs for PHP, Python, D, R — or [add your own](api/)
 - [Range request](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Range_requests) support for video/audio streaming
 - [Example sites](www/localhost/) in PHP, Perl, D, R, Ada, brainfuck
+- Per-domain configuration via `web.config` (CGI, redirects, directory access control)
+- HTTP keep-alive, conditional GET (`If-Modified-Since`), and per-IP rate limiting
 
 ### Get DaNode
 
