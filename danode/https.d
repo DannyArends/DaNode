@@ -95,7 +95,7 @@ version(SSL) {
           touch();
           response.index += send;
           senddata[requests] += send;
-          if(response.index >= response.length) response.completed = true;
+          if(response.index >= response.length && response.canComplete) response.completed = true;
           pending = [];  // clear on success, fetch next chunk next call
         }
       }

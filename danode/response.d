@@ -78,6 +78,11 @@ struct Response {
     if (isRange) return header.length + (rangeEnd - rangeStart + 1);
     return header.length + payload.length;
   }
+
+  @property final bool isSSE() const { return(payload !is null && payload.mimetype == "text/event-stream"); }
+  @property final bool scriptCompleted() { return(canComplete && payload.type == PayloadType.Script && payload.ready > 0 && index >= length); }
+  @property final bool canComplete() const { return(payload !is null && payload.length >= 0); }
+
   // Stream of bytes (header + stream of bytes)
   @property final const(char)[] bytes(in ptrdiff_t maxsize = 4096) {
     ptrdiff_t hsize = header.length;
@@ -97,7 +102,9 @@ bool buildScriptHeader(ref Appender!(char[]) hdr, ref string connection, CGI scr
   connection = script.getHeader("Connection", "No Request");
   long clength = script.getHeader("Content-Length", -1);
   auto status = script.statuscode();
-  bool valid = status.code != 500 && scriptheader.length > 0 && clength != -1 && script.contentLengthValid;
+  bool isSSE = script.mimetype == "text/event-stream";
+  bool valid = status.code != 500 && scriptheader.length > 0 && 
+               (isSSE || (clength != -1 && script.contentLengthValid));
   if (valid) {
     log(Level.Verbose, "Script '%s', status (%s)", script.command, status);
     auto htype = script.headerType();

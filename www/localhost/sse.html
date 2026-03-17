@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<body>
+<ul id="events"></ul>
+<script>
+  const es = new EventSource('/sse.d');
+  es.onmessage = e => {
+    const li = document.createElement('li');
+    li.textContent = e.data;
+    document.getElementById('events').appendChild(li);
+  };
+</script>
+</body>
+</html>
