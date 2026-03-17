@@ -104,7 +104,9 @@ bool buildScriptHeader(ref Appender!(char[]) hdr, ref string connection, CGI scr
   connection = script.getHeader("Connection", "No Request");
   long clength = script.getHeader("Content-Length", -1);
   auto status = script.statuscode();
-  bool valid = status.code != 500 && scriptheader.length > 0 && clength != -1 && script.contentLengthValid;
+  bool isSSE = script.mimetype == "text/event-stream";
+  bool valid = status.code != 500 && scriptheader.length > 0 && 
+               (isSSE || (clength != -1 && script.contentLengthValid));
   if (valid) {
     log(Level.Verbose, "Script '%s', status (%s)", script.command, status);
     auto htype = script.headerType();
