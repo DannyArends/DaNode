@@ -19,8 +19,7 @@ dub test               # Run unit tests
 | `danode/filesystem.d` | File serving, directory listing |
 | `danode/webconfig.d` | Per-domain configuration parsing |
 | `danode/https.d` | OpenSSL/ImportC bindings |
-| `danode/https.d` | OpenSSL/ImportC bindings |
- 
+
 ### Security Rules
 Always use these — never bypass them:
 
@@ -34,4 +33,16 @@ Always use these — never bypass them:
 - No external dependencies except OpenSSL (optional, `ssl` config)
 - Per-domain sites live under `www/<domain>/`
 - Per-domain config in `www/<domain>/web.config`
+
+### Building the SSL Dependency
+
+OpenSSL must be compiled from the submodule before `dub build --config=ssl`:
+```bash
+git submodule update --init --recursive
+cd deps/openssl
+./Configure linux-x86_64
+make
+```
+
+More exhaustive Linux & Windows instructions: see [`deps/README.md`](deps/README.md)
 
