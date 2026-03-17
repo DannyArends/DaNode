@@ -35,7 +35,7 @@ class HTTP : DriverInterface {
         touch();
         response.index += send;
         senddata[requests] += send;
-        if(response.index >= response.length && response.length >= 0) response.completed = true;
+        if(response.index >= response.length && response.payload !is null && response.payload.length >= 0) response.completed = true;
       }
     }
 

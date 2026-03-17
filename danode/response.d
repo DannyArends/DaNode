@@ -80,10 +80,10 @@ struct Response {
   }
 
   @property bool scriptCompleted() {
-      if (payload is null || payload.type != PayloadType.Script) return false;
-      if (payload.ready == 0) return false;      // script still running
-      if (length < 0) return false;              // length unknown, not done
-      return index >= length;                    // all bytes sent
+    if (payload is null || payload.type != PayloadType.Script) return false;
+    if (payload.ready == 0) return false;
+    if (payload.length < 0) return false;   // check payload.length, not response.length
+    return index >= length;
   }
 
   // Stream of bytes (header + stream of bytes)
