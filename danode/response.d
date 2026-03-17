@@ -110,8 +110,10 @@ bool buildScriptHeader(ref Appender!(char[]) hdr, ref string connection, CGI scr
     if (htype == HeaderType.FastCGI || htype == HeaderType.None) {
       hdr.put(format("%s %d %s\r\n", protocol, script.statuscode, script.statuscode.reason));
     }
-    hdr.put(scriptheader);
-    if (!hdr.data.endsWith("\r\n\r\n")) hdr.put("\r\n");
+    foreach (line; scriptheader.split("\n")) {
+      if (line.length > 0 && icmp(strip(line).split(":")[0], "connection") != 0){ hdr.put(line ~ "\n"); }
+    }
+    hdr.put(format("Connection: %s\r\n\r\n", connection));
     return true;
   }
   log(Level.Verbose, "Script '%s' falling back to server header (status=%s, clength=%d)", script.command, status, clength);
