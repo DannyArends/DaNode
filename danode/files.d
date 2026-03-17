@@ -168,8 +168,12 @@ bool isCompressible(string mime) {
 void serveStaticFile(ref Response response, in Request request, FileSystem fs) {
   log(Level.Trace, "serving a static file");
   FilePayload reqFile = fs.file(fs.localroot(request.shorthost()), request.path);
+  string etag = format(`"%s"`, md5UUID(reqFile.filePath ~ reqFile.mtime.toISOString()));
+   response.customheader("ETag", etag);
 
-  if (request.ifModified >= reqFile.mtime()) { return(response.notModified(reqFile.mimetype)); }
+  if (request.ifNoneMatch == etag || request.ifModified >= reqFile.mtime()) { 
+    return response.notModified(reqFile.mimetype, etag);
+  }
   if (reqFile.needsupdate()) reqFile.buffer();
   if (request.hasRange) { return(response.serveRangeFile(request, reqFile)); }
 
@@ -226,5 +230,13 @@ unittest {
   assert(res.lastStatus == StatusCode.Ok, format("Expected 200, got %d", res.lastStatus.code));
   assert(res.lastHeaders.get("Content-Encoding", "") == "gzip", "Expected gzip Content-Encoding header");
   assert(res.lastBody.length >= 2 && res.lastBody[0] == 0x1f && res.lastBody[1] == 0x8b, "Expected gzip magic bytes 1f 8b");
+
+  // Route 4: ETag - not modified
+  res = router.runRequest("GET /index.html HTTP/1.1\nHost: localhost\n\n");
+  string etag = res.lastHeaders.get("ETag", "");
+  assert(etag.length > 0, "Expected ETag header in response");
+
+  res = router.runRequest("GET /index.html HTTP/1.1\nHost: localhost\nIf-None-Match: " ~ etag ~ "\n\n");
+  assert(res.lastStatus == StatusCode.NotModified, format("Expected 304, got %d", res.lastStatus.code));
 }
 

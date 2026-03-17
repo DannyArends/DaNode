@@ -147,6 +147,7 @@ struct Request {
   final @property @nogc bool track() const nothrow { return(  headers.from("DNT","0") == "0"); }
   final @property @nogc string cookies() const nothrow { return(headers.from("Cookie")); }
   final @property @nogc string useragent() const nothrow { return(headers.from("User-Agent", "Unknown")); }
+  final @property @nogc string ifNoneMatch() const nothrow { return headers.from("If-None-Match"); }
   final @nogc string shorthost() const nothrow { return host.startsWith("www.") ? host[4 .. $] : host; }
   final string[] command(string localpath) const {
     import std.path : dirName;

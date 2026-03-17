@@ -139,7 +139,8 @@ void redirect(ref Response response, in Request request, in string fqdn, bool is
 }
 
 // serve a not modified response
-void notModified(ref Response response, in string mimetype = UNSUPPORTED_FILE) { 
+void notModified(ref Response response, in string mimetype = UNSUPPORTED_FILE, string etag = "") { 
+  if (etag.length) response.customheader("ETag", etag);
   response.setPayload(StatusCode.NotModified, "", mimetype);
 }
 
