@@ -5,12 +5,12 @@ licence: [![license](https://img.shields.io/github/license/DannyArends/DaNode.sv
 
 DaNode is a web server written in the [D programming language](https://dlang.org/) that hosts websites written in **ANY** language that outputs to *stdout*. It supports multiple domains, SSL via [SNI](https://en.wikipedia.org/wiki/Server_Name_Indication), and automatic certificate renewal via [ACME](https://en.wikipedia.org/wiki/Automatic_Certificate_Management_Environment).
 
-*Battle tested in production for over 12 years, including my own [personal website](https://www.dannyarends.nl/).*
+*Battle tested in production for over 12 years, including hosting my own [personal website](https://www.dannyarends.nl/).*
 
 ### Main features
 
 - Host websites in **ANY** language that writes to *stdout*
-- HTTPS via [OpenSSL 3.0](https://www.openssl.org/): SNI, Modern TLS, auto-renewing [ACME](https://en.wikipedia.org/wiki/Automatic_Certificate_Management_Environment) certs
+- HTTPS via [OpenSSL](https://www.openssl.org/): SNI, Modern TLS, auto-renewing [ACME](https://en.wikipedia.org/wiki/Automatic_Certificate_Management_Environment) certificates
 - Minimal footprint: Code, CPU, and RAM
 - Native APIs for PHP, Python, D, R — or [add your own](api/)
 - [Range request](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Range_requests) support for video/audio streaming
