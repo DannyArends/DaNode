@@ -1,4 +1,4 @@
-# AI Agent Guide
+AI Agent Guide
 ----------------
 
 ### Build & Test
