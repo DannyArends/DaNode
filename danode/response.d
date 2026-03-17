@@ -79,14 +79,9 @@ struct Response {
     return header.length + payload.length;
   }
 
-  @property final bool isSSE() const { return payload !is null && payload.mimetype == "text/event-stream"; }
-
-  @property final bool scriptCompleted() {
-    if (payload is null || payload.type != PayloadType.Script) return false;
-    if (payload.ready == 0) return false;
-    if (payload.length < 0) return false;   // check payload.length, not response.length
-    return index >= length;
-  }
+  @property final bool isSSE() const { return(payload !is null && payload.mimetype == "text/event-stream"); }
+  @property final bool scriptCompleted() { return(canComplete && payload.type == PayloadType.Script && payload.ready > 0 && index >= length); }
+  @property final bool canComplete() const { return(payload !is null && payload.length >= 0); }
 
   // Stream of bytes (header + stream of bytes)
   @property final const(char)[] bytes(in ptrdiff_t maxsize = 4096) {

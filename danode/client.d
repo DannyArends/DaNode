@@ -58,8 +58,10 @@ class Client : Thread, ClientInterface {
           }
           if (response.ready && !response.completed) {      // We know what to respond, but haven't send all of it yet
             driver.send(response, driver.socket);           // Send the response, hit multiple times, send what you can and return
-            if (response.isSSE) driver.touch();
-            if (response.scriptCompleted) { response.completed = true; stop(); continue; }
+            if (response.isSSE) {
+              if (response.scriptCompleted) { response.completed = true; stop(); continue; }
+              if (starttime >= MAX_SSE_TIME) { log(Level.Verbose, "SSE max lifetime reached"); stop(); continue; }
+            }
           }
           if (response.ready && response.completed) {       // We've completed the request, response cycle
             driver.requests++;
@@ -73,10 +75,6 @@ class Client : Thread, ClientInterface {
           if (lastmodified >= maxtime) { // Client are not allowed to be silent for more than maxtime
             log(Level.Trace, "inactivity: %s > %s", lastmodified, maxtime);
             driver.setTimedOut(response);
-            stop(); continue;
-          }
-          if (response.isSSE && starttime >= MAX_SSE_TIME) {
-            log(Level.Verbose, "SSE max lifetime reached, closing connection");
             stop(); continue;
           }
           log(Level.Trace, "Connection %s:%s (%s msecs) %s", ip, port, starttime, to!string(driver.inbuffer.data));
