@@ -99,7 +99,6 @@ struct Response {
 
 bool buildScriptHeader(ref Appender!(char[]) hdr, ref string connection, CGI script, string protocol) {
   string scriptheader = script.fullHeader();
-  connection = script.getHeader("Connection", "No Request");
   long clength = script.getHeader("Content-Length", -1);
   auto status = script.statuscode();
   bool isSSE = script.mimetype == "text/event-stream";
