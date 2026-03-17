@@ -225,5 +225,6 @@ unittest {
   res = router.runRequest("GET /index.html HTTP/1.1\nHost: localhost\nAccept-Encoding: gzip\n\n");
   assert(res.lastStatus == StatusCode.Ok, format("Expected 200, got %d", res.lastStatus.code));
   assert(res.lastHeaders.get("Content-Encoding", "") == "gzip", "Expected gzip Content-Encoding header");
+  assert(res.lastBody.length >= 2 && res.lastBody[0] == 0x1f && res.lastBody[1] == 0x8b, "Expected gzip magic bytes 1f 8b");
 }
 
