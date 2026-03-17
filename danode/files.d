@@ -1,11 +1,13 @@
+/** danode/files.d - Static file serving, gzip compression, ETag, and range requests
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.files;
 
 import danode.imports;
 import danode.statuscode : StatusCode;
 import danode.mimetypes : mime;
 import danode.payload : Payload, PayloadType, Message;
-import danode.log : log, error, Level;
-import danode.functions : isCGI;
+import danode.log : log, tag, error, Level;
+import danode.functions : isCGI, htmltime;
 import danode.request : Request;
 import danode.response : Response, notModified;
 import danode.filesystem : FileSystem;
@@ -52,7 +54,7 @@ class FileStream : Payload {
 /* Implementation of the Payload interface, by using an underlying file (static / deflate / cgi) */
 class FilePayload : Payload {
   public:
-    bool      deflate = false; // Is a deflate version of the file available ?
+    bool      gzip = false; // Is a gzip version of the file available ?
 
   private:
     string    path; // Path of the file
@@ -75,7 +77,7 @@ class FilePayload : Payload {
         if (!buffered) { log(Level.Trace, "File: '%s' needs buffering", path); return true; }
         if (mtime > btime) { log(Level.Trace, "File: '%s' stale record", path); return true; }
       }else{
-        log(Level.Verbose, "File: '%s' exceeds buffer (%d > %d)", path, fileSize(), buffermaxsize);
+        log(Level.Verbose, "File: '%s' exceeds buffer (%dkb > %dkb)", path, fileSize() / 1024, buffermaxsize / 1024);
       }
       return false;
     }
@@ -92,7 +94,9 @@ class FilePayload : Payload {
         f.close();
       } catch (Exception e) { error("Exception during buffering '%s': %s", path, e.msg); return; }
       try {
-        encbuf = cast(char[])( compress(buf, 9) );
+        auto c = new Compress(6, HeaderFormat.gzip);
+        encbuf = cast(char[])(c.compress(buf));
+        encbuf ~= cast(char[])(c.flush());
       } catch (Exception e) { error("Exception during compressing '%s': %s", path, e.msg); }
       btime = Clock.currTime();
       log(Level.Trace, "File: '%s' buffered %d|%d bytes", path, fileSize(), encbuf.length);
@@ -103,7 +107,7 @@ class FilePayload : Payload {
     final @property string content(){ return( to!string(bytes(0, length)) ); }
     /* Is the file a real file (i.e. does it exist on disk) */
     final @property bool realfile() const { return(path.exists()); }
-    /* Do we have a deflate encoded version */
+    /* Do we have a gzip encoded version */
     final @property bool hasEncodedVersion() const { return(encbuf !is null); }
     /* Is the file defined as static in mimetypes.d ? */
     final @property bool isStaticFile() { return(!path.isCGI()); }
@@ -129,7 +133,7 @@ class FilePayload : Payload {
     }
     /* Get the number of bytes that the client response has, based on encoding */
     final @property ptrdiff_t length() const {
-      if(hasEncodedVersion && deflate) return(encbuf.length);
+      if(hasEncodedVersion && gzip) return(encbuf.length);
       return(fileSize());
     }
 
@@ -139,7 +143,7 @@ class FilePayload : Payload {
       if (needsupdate) { buffer();  if (!buffered) { log(Level.Verbose, "FilePayload.bytes() failed to buffer '%s'", path); return([]); } }
       auto r = rangeCalc(from, maxsize, isRange, start, end);
       log(Level.Trace, "bytes: isRange=%s start=%d end=%d from=%d offset=%d sz=%d", isRange, start, end, from, r[0], r[1]);
-      if(hasEncodedVersion && deflate) {
+      if(hasEncodedVersion && gzip) {
         if(r[0] < encbuf.length) return( encbuf[r[0] .. to!ptrdiff_t(min(r[0]+r[1], $))] );
       } else {
         if(r[0] < buf.length) return( buf[r[0] .. to!ptrdiff_t(min(r[0]+r[1], $))] );
@@ -157,25 +161,32 @@ class FilePayload : Payload {
   return [offset, sz];
 }
 
+// Should the file be compressed ?
+bool isCompressible(string mime) {
+  return mime.startsWith("text/") || mime == "application/json" || mime == "application/javascript" || mime == "image/svg+xml";
+}
+
 // Serve a static file from the disc, send encrypted when requested and available
 void serveStaticFile(ref Response response, in Request request, FileSystem fs) {
   log(Level.Trace, "serving a static file");
-  string localroot = fs.localroot(request.shorthost());
-  FilePayload reqFile = fs.file(localroot, request.path);
-  if (request.acceptsEncoding("deflate") && reqFile.hasEncodedVersion && !request.hasRange) {
-    log(Level.Verbose, "will serve %s with deflate encoding", request.path);
-    reqFile.deflate = true;
-    response.customheader("Content-Encoding","deflate");
+  FilePayload reqFile = fs.file(fs.localroot(request.shorthost()), request.path);
+  string etag = format(`"%s"`, md5UUID(reqFile.filePath ~ reqFile.mtime.toISOString()));
+
+  // Send not modified if ETag matches (this adds the etag in the response)
+  if (request.ifNoneMatch == etag || request.ifModified >= reqFile.mtime()) { return response.notModified(reqFile.mimetype, etag); }
+  if (reqFile.needsupdate()) { reqFile.buffer(); }  // File might need to be buffered
+
+  // Add the ETag to every response (both range and normal files)
+  response.customheader("ETag", etag);
+  if (request.hasRange) { return(response.serveRangeFile(request, reqFile)); }
+
+  if (request.acceptsEncoding("gzip") && reqFile.hasEncodedVersion && isCompressible(reqFile.mimetype)) {
+    log(Level.Verbose, "will serve %s with gzip encoding", request.path);
+    reqFile.gzip = true;
+    response.customheader("Content-Encoding", "gzip");
   }
   response.payload = new FileStream(reqFile);
-
-  if (request.hasRange) { response.serveRangeFile(request, reqFile); return; }
-
-  if (!reqFile.deflate) response.customheader("Accept-Ranges", "bytes");
-  if (request.ifModified >= response.payload.mtime()) {
-    log(Level.Trace, "static file has not changed, sending notmodified");
-    response.notModified(response.payload.mimetype);
-  }
+  if (!reqFile.gzip) response.customheader("Accept-Ranges", "bytes");
   response.ready = true;
 }
 
@@ -198,5 +209,37 @@ void serveRangeFile(ref Response response, in Request request, FilePayload reqFi
     log(Level.Trace, "serveRangeFile: serving %d bytes", end - start + 1);
   }
   response.ready = true;
+}
+
+unittest {
+  import danode.interfaces : StringDriver;
+  import danode.router : Router, runRequest;
+
+  tag(Level.Always, "FILE", "%s", __FILE__);
+
+  auto router = new Router("./www/", Address.init);
+  StringDriver res;
+
+  // Route 1: 304 Not Modified
+  res = router.runRequest("GET /index.html HTTP/1.1\nHost: localhost\nIf-Modified-Since: " ~ htmltime(Clock.currTime + 1.hours) ~ "\n\n");
+  assert(res.lastStatus == StatusCode.NotModified, format("Expected 304, got %d", res.lastStatus.code));
+
+  // Route 2: Range request
+  res = router.runRequest("GET /test.pdf HTTP/1.1\nHost: localhost\nRange: bytes=0-1023\n\n");
+  assert(res.lastStatus == StatusCode.PartialContent, format("Expected 206, got %d", res.lastStatus.code));
+
+  // Route 3: Gzip compression
+  res = router.runRequest("GET /index.html HTTP/1.1\nHost: localhost\nAccept-Encoding: gzip\n\n");
+  assert(res.lastStatus == StatusCode.Ok, format("Expected 200, got %d", res.lastStatus.code));
+  assert(res.lastHeaders.get("Content-Encoding", "") == "gzip", "Expected gzip Content-Encoding header");
+  assert(res.lastBody.length >= 2 && res.lastBody[0] == 0x1f && res.lastBody[1] == 0x8b, "Expected gzip magic bytes 1f 8b");
+
+  // Route 4: ETag - not modified
+  res = router.runRequest("GET /index.html HTTP/1.1\nHost: localhost\n\n");
+  string etag = res.lastHeaders.get("ETag", "");
+  assert(etag.length > 0, "Expected ETag header in response");
+
+  res = router.runRequest("GET /index.html HTTP/1.1\nHost: localhost\nIf-None-Match: " ~ etag ~ "\n\n");
+  assert(res.lastStatus == StatusCode.NotModified, format("Expected 304, got %d", res.lastStatus.code));
 }
 

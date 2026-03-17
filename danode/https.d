@@ -1,10 +1,11 @@
+/** danode/https.d - HTTPS driver: SSL/TLS send/receive via OpenSSL ImportC bindings
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.https;
 
 version(SSL) {
+  import danode.imports;
   import danode.includes;
 
-  import danode.imports;
-  import danode.functions : Msecs;
   import danode.response : Response;
   import danode.log : tag, log, error, Level;
   import danode.interfaces : DriverInterface;
@@ -95,7 +96,7 @@ version(SSL) {
           touch();
           response.index += send;
           senddata[requests] += send;
-          if(response.index >= response.length) response.completed = true;
+          if(response.index >= response.length && response.canComplete) response.completed = true;
           pending = [];  // clear on success, fetch next chunk next call
         }
       }

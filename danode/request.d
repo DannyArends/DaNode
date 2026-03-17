@@ -1,8 +1,11 @@
+/** danode/request.d - HTTP request parsing: method, headers, range, CGI environment
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.request;
 
 import danode.imports;
+
 import danode.filesystem : FileSystem;
-import danode.interfaces : ClientInterface, DriverInterface;
+import danode.interfaces : DriverInterface;
 import danode.functions : interpreter, from, parseHtmlDate, parseQueryString;
 import danode.webconfig : WebConfig;
 import danode.post : PostItem, PostType;
@@ -147,6 +150,7 @@ struct Request {
   final @property @nogc bool track() const nothrow { return(  headers.from("DNT","0") == "0"); }
   final @property @nogc string cookies() const nothrow { return(headers.from("Cookie")); }
   final @property @nogc string useragent() const nothrow { return(headers.from("User-Agent", "Unknown")); }
+  final @property @nogc string ifNoneMatch() const nothrow { return headers.from("If-None-Match"); }
   final @nogc string shorthost() const nothrow { return host.startsWith("www.") ? host[4 .. $] : host; }
   final string[] command(string localpath) const {
     import std.path : dirName;

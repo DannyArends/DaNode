@@ -1,13 +1,14 @@
+/** danode/response.d - HTTP response construction, CGI header handling, static helpers
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.response;
 
 import danode.imports;
+
 import danode.cgi : CGI;
-import danode.interfaces : DriverInterface, StringDriver;
 import danode.functions : htmltime;
-import danode.statuscode : StatusCode;
+import danode.statuscode : StatusCode, noBody;
 import danode.request : Request;
 import danode.mimetypes : UNSUPPORTED_FILE;
-import danode.files : FileStream, FilePayload;
 import danode.payload : Payload, PayloadType, HeaderType, Message;
 import danode.log : tag, log, Level;
 import danode.webconfig;
@@ -53,13 +54,13 @@ struct Response {
     hdr.put(format("%s %d %s\r\n", protocol, statuscode, statuscode.reason));
     foreach (key, value; headers) { hdr.put(format("%s: %s\r\n", key, value)); }
     hdr.put(format("Date: %s\r\n", htmltime()));
-    if (payload.type != PayloadType.Script && payload.length >= 0) {
+    if (payload.type != PayloadType.Script && !noBody(statuscode)) {
       long contentLength = isRange ? (rangeEnd - rangeStart + 1) : payload.length;
       hdr.put(format("Content-Length: %d\r\n", contentLength));
-      hdr.put(format("Last-Modified: %s\r\n", htmltime(payload.mtime)));
+      hdr.put(format("Content-Type: %s\r\n", payload.mimetype));
       if (maxage > 0) { hdr.put(format("Cache-Control: max-age=%d, public\r\n", maxage)); }
     }
-    hdr.put(format("Content-Type: %s\r\n", payload.mimetype));
+    if (payload.mtime != SysTime.init) { hdr.put(format("Last-Modified: %s\r\n", htmltime(payload.mtime))); }
     hdr.put(format("Connection: %s\r\n\r\n", connection));
     return(hdr.data);
   }
@@ -78,6 +79,11 @@ struct Response {
     if (isRange) return header.length + (rangeEnd - rangeStart + 1);
     return header.length + payload.length;
   }
+
+  @property final bool isSSE() const { return(payload !is null && payload.mimetype == "text/event-stream"); }
+  @property final bool scriptCompleted() { return(canComplete && payload.type == PayloadType.Script && payload.ready > 0 && index >= length); }
+  @property final bool canComplete() const { return(payload !is null && payload.length >= 0); }
+
   // Stream of bytes (header + stream of bytes)
   @property final const(char)[] bytes(in ptrdiff_t maxsize = 4096) {
     ptrdiff_t hsize = header.length;
@@ -94,18 +100,21 @@ struct Response {
 
 bool buildScriptHeader(ref Appender!(char[]) hdr, ref string connection, CGI script, string protocol) {
   string scriptheader = script.fullHeader();
-  connection = script.getHeader("Connection", "No Request");
   long clength = script.getHeader("Content-Length", -1);
   auto status = script.statuscode();
-  bool valid = status.code != 500 && scriptheader.length > 0 && clength != -1 && script.contentLengthValid;
+  bool isSSE = script.mimetype == "text/event-stream";
+  bool valid = status.code != 500 && scriptheader.length > 0 && 
+               (isSSE || (clength != -1 && script.contentLengthValid));
   if (valid) {
     log(Level.Verbose, "Script '%s', status (%s)", script.command, status);
     auto htype = script.headerType();
     if (htype == HeaderType.FastCGI || htype == HeaderType.None) {
       hdr.put(format("%s %d %s\r\n", protocol, script.statuscode, script.statuscode.reason));
     }
-    hdr.put(scriptheader);
-    if (!hdr.data.endsWith("\r\n\r\n")) hdr.put("\r\n");
+    foreach (line; scriptheader.split("\n")) {
+      if (line.length > 0 && icmp(strip(line).split(":")[0], "connection") != 0){ hdr.put(line ~ "\n"); }
+    }
+    hdr.put(format("Connection: %s\r\n\r\n", connection));
     return true;
   }
   log(Level.Verbose, "Script '%s' falling back to server header (status=%s, clength=%d)", script.command, status, clength);
@@ -139,7 +148,8 @@ void redirect(ref Response response, in Request request, in string fqdn, bool is
 }
 
 // serve a not modified response
-void notModified(ref Response response, in string mimetype = UNSUPPORTED_FILE) { 
+void notModified(ref Response response, in string mimetype = UNSUPPORTED_FILE, string etag = "") { 
+  if (etag.length) response.customheader("ETag", etag);
   response.setPayload(StatusCode.NotModified, "", mimetype);
 }
 

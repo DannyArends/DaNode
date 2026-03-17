@@ -1,5 +1,0 @@
-#!/bin/bash
-
-PATH=~/ldc2/bin:$PATH
-dub build --compiler=ldc2 --config=ssl --force
-

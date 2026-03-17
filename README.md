@@ -1,32 +1,22 @@
-DaNode - A secure and small footprint web server for D
-------------------------------------------------------
+DaNode - A secure, small footprint web server written in D
+----------------------------------------------------------
 master: [![D](https://github.com/DannyArends/DaNode/actions/workflows/d.yml/badge.svg?branch=master)](https://github.com/DannyArends/DaNode/actions/workflows/d.yml)
 licence: [![license](https://img.shields.io/github/license/DannyArends/DaNode.svg?style=flat)](https://github.com/DannyArends/DaNode/blob/master/LICENSE.txt)
 
-Web server written in the [D programming language](https://dlang.org/) to host websites written in **ANY** programming language that can 
-output to *stdout*. DaNode handles on multiple domains. DaNode supports hosting multiple domains, and provides encryption over SSL using 
-[Server Name Identification](https://en.wikipedia.org/wiki/Server_Name_Indication), SSL certificates are automatically renewed via the 
-[ACME protocol](https://en.wikipedia.org/wiki/Automatic_Certificate_Management_Environment).
+DaNode is a web server written in the [D programming language](https://dlang.org/) that hosts websites written in **ANY** language that outputs to *stdout*. It supports multiple domains, SSL via [ImportC](https://dlang.org/spec/importc.html) with support for [Server Name Indication](https://en.wikipedia.org/wiki/Server_Name_Indication) (SNI) and [ACME](https://en.wikipedia.org/wiki/Automatic_Certificate_Management_Environment) automatic certificate renewal.
 
-*DaNode has been battle tested in production for over 12 years, including hosting my own [personal website](https://www.dannyarends.nl/).*
-
-Written because I was looking for a quick way of sharing [Rscript](https://www.r-project.org/about.html) output with other researchers at 
-different universities. owever, shortly after I wanted to use other programming languages as well, so I made the server able to serve 
-**ANY** programming language. DaNode makes it easy to any language to write an SSL encrypted website, use any language to write your SSL 
-encrypted homepage, why not [brainfuck](https://en.wikipedia.org/wiki/Brainfuck)? However, more common languages such as 
-[Ada](https://en.wikipedia.org/wiki/Ada), [R](https://www.r-project.org) or [PHP](https://en.wikipedia.org/wiki/PHP) are also fine.
+*Battle tested in production for over 12 years, including hosting my own [personal website](https://www.dannyarends.nl/).*
 
 ### Main features
 
-- Build your website in **ANY** programming language that can output to *stdout*
-- SSL/HTTPs support by [openSSL 3.0](https://www.openssl.org/) through [ImportC](https://dlang.org/spec/importc.html)
-- [Server Name Identification](https://en.wikipedia.org/wiki/Server_Name_Indication) by using free [Let's encrypt](https://letsencrypt.org/) certificates
-- Automatic certificate renewal via the [ACME protocol](https://en.wikipedia.org/wiki/Automatic_Certificate_Management_Environment)
-- Modern [TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security) - TLS 1.2 minimum, but TLS 1.3 preference
-- Small footprint: Code, CPU and RAM
-- [Partial Content](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Range_requests) allows streaming video, audio
-- API support for PHP, Python, D, R, or add your own in: [api/](api/)
-- [Example](www/localhost/) web applications, including [PHP](www/localhost/php.php), [Perl](www/localhost/perl.pl), [D](www/localhost/keepalive.d), [R](www/localhost/rscript.r), [brainfuck](www/localhost/test.bf) and [Ada](www/localhost/test.ada).
+- Host websites in **ANY** language that writes to *stdout*
+- HTTPS via [OpenSSL](https://www.openssl.org/): SNI, Modern TLS (1.2+), [ACME](https://en.wikipedia.org/wiki/Automatic_Certificate_Management_Environment) based auto-renewing certificates
+- Minimal footprint: Code, CPU, and RAM
+- Native APIs for PHP, Python, D, R — or [add your own](api/)
+- [Range request](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Range_requests) support for video/audio streaming
+- [Example sites](www/localhost/) in PHP, Perl, D, R, Ada, brainfuck
+- Per-domain configuration via `web.config` (CGI, redirects, directory access control)
+- HTTP keep-alive, conditional GET (`If-Modified-Since`), and per-IP rate limiting
 
 ### Get DaNode
 

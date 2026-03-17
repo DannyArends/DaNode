@@ -1,3 +1,5 @@
+/** danode/process.d - External process management: spawn, pipe, timeout, drain stdout/stderr
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.process;
 
 import danode.imports;
@@ -187,10 +189,11 @@ class Process : Thread {
 
 unittest {
   tag(Level.Always, "FILE", "%s", __FILE__);
-  auto p = new Process(["rdmd", "www/localhost/dmd.d"], "test/dmd.in", null, false);
+
+  auto p = new Process(["rdmd", "www/localhost/sse.d"], "/dev/null", null, false);
   p.start();
   while(!p.finished){ Thread.sleep(msecs(5)); }
-  assert(p.status() == 0, "dmd.d process must exit 0");
+  assert(p.status() == 0, "process must exit 0");
   assert(p.length() > 0, "process must produce output");
   assert(p.time() > 0,   "process must have run time");
 }

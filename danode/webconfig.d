@@ -1,10 +1,12 @@
+/** danode/webconfig.d - Per-domain web.config parsing: CGI, redirects, directory access control
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.webconfig;
 
 import danode.imports;
+
 import danode.functions : has, from;
 import danode.files : FilePayload;
-import danode.request : Request;
-import danode.log : log, tag, error, Level;
+import danode.log : log, tag, Level;
 
 struct WebConfig {
   string[string]  data;

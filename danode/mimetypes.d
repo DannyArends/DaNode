@@ -1,7 +1,10 @@
+/** danode/mimetypes.d - MIME type detection by file extension, CGI executable detection
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.mimetypes;
 
 import danode.imports;
-import danode.log : log, tag, error, Level;
+
+import danode.log : log, tag, Level;
 
 immutable string      UNSUPPORTED_FILE = "file/unknown";                            /// Unsupported file mime
 immutable string      CGI_FILE         = "executable/";                             /// CGI mime prefix

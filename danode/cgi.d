@@ -1,10 +1,11 @@
+/** danode/cgi.d - Common Gateway Interface: script execution, header parsing, SSE streaming
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.cgi;
 
 import danode.imports;
-import danode.functions : Msecs, bodystart, endofheader, fullheader;
+
+import danode.functions : bodystart, endofheader, fullheader;
 import danode.log : log, tag, error, Level;
-import danode.router : Router, runRequest;
-import danode.interfaces : StringDriver;
 import danode.process : Process;
 import danode.statuscode : StatusCode;
 import danode.payload : HeaderType, Payload, PayloadType;
@@ -26,8 +27,12 @@ class CGI : Payload {
     // The sort of payload carried (PayLoadType.Script)
     final @property PayloadType type() const { return(PayloadType.Script); }
 
-    // Is the payload ready ?
-    final @property long ready() { return(external.finished); }
+    // Ready to start sending ?
+    final @property long ready() { 
+      if (external.finished) return true;
+      if (mimetype == "text/event-stream") return (endOfHeader > 0);
+      return false;
+    }
 
     // length of the message portion of the output (generated HTTP headers are detected and substracted)
     final @property ptrdiff_t length() const {
@@ -97,8 +102,9 @@ class CGI : Payload {
         if(values.length >= 3) status = values[1];
       }
       if (status == "") {
+        if (external.running) return StatusCode.Ok;   // still streaming, assume Ok
         if (external.status == 0) return StatusCode.Ok;
-        if (!external.running && external.timedOut()) return StatusCode.TimedOut;
+        if (external.timedOut()) return StatusCode.TimedOut;
         return StatusCode.ISE;
       }
       try {
@@ -132,6 +138,9 @@ class CGI : Payload {
 
 
 unittest {
+  import danode.router : Router, runRequest;
+  import danode.interfaces : StringDriver;
+
   tag(Level.Always, "FILE", "%s", __FILE__);
 
   auto router = new Router("./www/", Address.init);
@@ -140,12 +149,18 @@ unittest {
   tag(Level.Always, "WARMUP", "compiling CGI scripts...");
   router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\n\n", 5000);
   router.runRequest("GET /keepalive.d HTTP/1.1\nHost: localhost\n\n", 5000);
+  router.runRequest("GET /sse.d HTTP/1.1\nHost: localhost\n\n", 5000);
   router.runRequest("GET /ISE1.d HTTP/1.1\nHost: localhost\n\n", 5000);
   router.runRequest("GET /ISE2.d HTTP/1.1\nHost: localhost\n\n", 5000);
   router.runRequest("GET /ISE3.d HTTP/1.1\nHost: localhost\n\n", 5000);
   tag(Level.Always, "WARMUP", "done");
 
   StringDriver res;
+
+  // dmd.d without keep-alive request - must be Close
+  res = router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\n\n");
+  assert(icmp(res.lastConnection, "close") == 0, format("dmd.d no-keepalive must be Close, got %s", res.lastConnection));
+
   // dmd.d has wrong Content-Length - must force Close
   res = router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\nConnection: keep-alive\n\n");
   assert(res.lastStatus == StatusCode.Ok, format("dmd.d expected 200, got %d", res.lastStatus.code));
@@ -155,4 +170,14 @@ unittest {
   res = router.runRequest("GET /keepalive.d HTTP/1.1\nHost: localhost\nConnection: keep-alive\n\n");
   assert(res.lastStatus == StatusCode.Ok, format("keepalive.d expected 200, got %d", res.lastStatus.code));
   assert(icmp(res.lastConnection, "keep-alive") == 0, format("keepalive.d must keep-alive, got %s", res.lastConnection));
+
+  // keepalive.d without keep-alive request - client asks Close, must be Close
+  res = router.runRequest("GET /keepalive.d HTTP/1.1\nHost: localhost\nConnection: close\n\n");
+  assert(icmp(res.lastConnection, "close") == 0, format("keepalive.d client-close must be Close, got %s", res.lastConnection));
+
+  // SSE - streams 3 ticks then exits cleanly
+  res = router.runRequest("GET /sse.d HTTP/1.1\nHost: localhost\n\n", 5000);
+  assert(res.lastStatus == StatusCode.Ok, format("SSE expected 200, got %d", res.lastStatus.code));
+  assert(res.lastMime == "text/event-stream", format("SSE expected text/event-stream, got %s", res.lastMime));
 }
+

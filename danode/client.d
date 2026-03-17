@@ -1,19 +1,24 @@
+/** danode/client.d - Per-connection thread: request/response lifecycle, keep-alive, timeouts
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.client;
 
 import danode.imports;
+
 import danode.cgi : CGI;
-import danode.router : Router, runRequest;
 import danode.statuscode : StatusCode;
 import danode.functions: htmltime, Msecs;
 import danode.interfaces : DriverInterface, ClientInterface, StringDriver;
+import danode.router : Router, runRequest;
 import danode.response : Response, setPayload;
 import danode.request : Request;
-import danode.payload : Message, PayloadType;
-import danode.log : log, tag, error, Level;
+import danode.payload : PayloadType;
+import danode.log : log, tag, Level;
 
 immutable size_t MAX_HEADER_SIZE  = 1024 * 32;          //  32KB Header
 immutable size_t MAX_REQUEST_SIZE = 1024 * 1024 * 2;    //   2MB Body
 immutable size_t MAX_UPLOAD_SIZE  = 1024 * 1024 * 100;  // 100MB Multipart uploads
+immutable size_t MAX_SSE_TIME = 60_000;                 // 60 seconds max SSE lifetime
+
 
 class Client : Thread, ClientInterface {
   private:
@@ -56,6 +61,10 @@ class Client : Thread, ClientInterface {
           }
           if (response.ready && !response.completed) {      // We know what to respond, but haven't send all of it yet
             driver.send(response, driver.socket);           // Send the response, hit multiple times, send what you can and return
+            if (response.isSSE) {
+              if (response.scriptCompleted) { response.completed = true; stop(); continue; }
+              if (starttime >= MAX_SSE_TIME) { log(Level.Verbose, "SSE max lifetime reached"); stop(); continue; }
+            }
           }
           if (response.ready && response.completed) {       // We've completed the request, response cycle
             driver.requests++;
@@ -134,6 +143,7 @@ void setPayloadTooLarge(ref DriverInterface driver, ref Response response) {
 
 unittest {
   tag(Level.Always, "FILE", "%s", __FILE__);
+
   auto router = new Router("./www/", Address.init);
   StringDriver res;
 

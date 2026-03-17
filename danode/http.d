@@ -1,3 +1,5 @@
+/** danode/http.d - Plain HTTP driver: non-blocking socket send/receive
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.http;
 
 import danode.imports;
@@ -35,7 +37,7 @@ class HTTP : DriverInterface {
         touch();
         response.index += send;
         senddata[requests] += send;
-        if(response.index >= response.length) response.completed = true;
+        if(response.index >= response.length && response.canComplete) response.completed = true;
       }
     }
 

@@ -1,3 +1,5 @@
+/** danode/log.d - Logging infrastructure: levels, tagged output, error reporting
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.log;
 
 import danode.imports;

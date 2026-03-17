@@ -1,3 +1,5 @@
+/** danode/interfaces.d - Abstract driver and client interfaces, StringDriver test stub
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.interfaces;
 
 import danode.imports;
@@ -98,10 +100,11 @@ abstract class DriverInterface {
 
 class StringDriver : DriverInterface {
   public:
-    StatusCode    lastStatus;
-    string        lastMime;
-    string        lastConnection;
-    const(char)[] lastBody;
+    StatusCode      lastStatus;
+    string          lastMime;
+    string          lastConnection;
+    const(char)[]   lastBody;
+    string[string]  lastHeaders;
 
   public:
     this(string input) { super(null); inbuffer ~= input; }
@@ -111,9 +114,8 @@ class StringDriver : DriverInterface {
     @nogc override bool isSecure() const nothrow { return(false); }
     override long receiveData(ref char[] buffer) { return(0); }  // unused - overriding receive() directly
     override ptrdiff_t receive(Socket socket, ptrdiff_t maxsize = 4096) {
-      if (inbuffer.data.length == 0) return 0;  // consumed when empty
-      touch();
-      return inbuffer.data.length;              // don't clear here - client loop does it
+      if (inbuffer.data.length != 0) touch();
+      return(inbuffer.data.length);
     }
     override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096) {
       response.header();
@@ -121,6 +123,7 @@ class StringDriver : DriverInterface {
       lastMime = response.payload.mimetype.idup;
       lastConnection = response.connection.idup;
       lastBody = response.payload.bytes(0, cast(ptrdiff_t) response.payload.length);
+      lastHeaders = response.headers.dup;
       response.completed = true;
     }
 }

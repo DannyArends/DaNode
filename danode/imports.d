@@ -1,8 +1,10 @@
+/** danode/imports.d - Shared public imports for the entire DaNode codebase
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.imports;
 
 // Public imported function from core.stdc
-public import core.stdc.stdlib : exit, free, malloc, realloc;
-public import core.stdc.stdio : fileno, printf;
+public import core.stdc.stdlib : exit, free;
+public import core.stdc.stdio : fileno;
 
 // Public imported structures and enums from core
 public import core.atomic;
