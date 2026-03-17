@@ -169,12 +169,13 @@ void serveStaticFile(ref Response response, in Request request, FileSystem fs) {
   log(Level.Trace, "serving a static file");
   FilePayload reqFile = fs.file(fs.localroot(request.shorthost()), request.path);
   string etag = format(`"%s"`, md5UUID(reqFile.filePath ~ reqFile.mtime.toISOString()));
-   response.customheader("ETag", etag);
 
-  if (request.ifNoneMatch == etag || request.ifModified >= reqFile.mtime()) { 
-    return response.notModified(reqFile.mimetype, etag);
-  }
-  if (reqFile.needsupdate()) reqFile.buffer();
+  // Send not modified if ETag matches (this adds the etag in the response)
+  if (request.ifNoneMatch == etag || request.ifModified >= reqFile.mtime()) { return response.notModified(reqFile.mimetype, etag); }
+  if (reqFile.needsupdate()) { reqFile.buffer(); }  // File might need to be buffered
+
+  // Add the ETag to every response (both range and normal files)
+  response.customheader("ETag", etag);
   if (request.hasRange) { return(response.serveRangeFile(request, reqFile)); }
 
   if (request.acceptsEncoding("gzip") && reqFile.hasEncodedVersion && isCompressible(reqFile.mimetype)) {
