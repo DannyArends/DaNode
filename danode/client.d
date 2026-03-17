@@ -11,8 +11,8 @@ import danode.interfaces : DriverInterface, ClientInterface, StringDriver;
 import danode.router : Router, runRequest;
 import danode.response : Response, setPayload;
 import danode.request : Request;
-import danode.payload : Message, PayloadType;
-import danode.log : log, tag, error, Level;
+import danode.payload : PayloadType;
+import danode.log : log, tag, Level;
 
 immutable size_t MAX_HEADER_SIZE  = 1024 * 32;          //  32KB Header
 immutable size_t MAX_REQUEST_SIZE = 1024 * 1024 * 2;    //   2MB Body

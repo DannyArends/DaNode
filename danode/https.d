@@ -3,10 +3,9 @@
 module danode.https;
 
 version(SSL) {
+  import danode.imports;
   import danode.includes;
 
-  import danode.imports;
-  import danode.functions : Msecs;
   import danode.response : Response;
   import danode.log : tag, log, error, Level;
   import danode.interfaces : DriverInterface;

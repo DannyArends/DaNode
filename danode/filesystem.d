@@ -5,7 +5,7 @@ module danode.filesystem;
 import danode.imports;
 
 import danode.statuscode : StatusCode;
-import danode.payload : Payload, PayloadType;
+import danode.payload : PayloadType;
 import danode.files : FilePayload, FileStream;
 import danode.functions : has;
 import danode.log : log, tag, error, Level;
