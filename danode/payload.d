@@ -1,3 +1,5 @@
+/** danode/payload.d - Payload interface and Message type for server-generated responses
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.payload;
 
 import danode.imports;

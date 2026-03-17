@@ -1,3 +1,5 @@
+/** danode/router.d - Request routing: domain resolution, path dispatch, CGI/static/directory
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.router;
 
 import danode.imports;

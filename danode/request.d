@@ -1,3 +1,5 @@
+/** danode/request.d - HTTP request parsing: method, headers, range, CGI environment
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.request;
 
 import danode.imports;

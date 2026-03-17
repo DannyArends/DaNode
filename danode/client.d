@@ -1,3 +1,5 @@
+/** danode/client.d - Per-connection thread: request/response lifecycle, keep-alive, timeouts
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.client;
 
 import danode.imports;

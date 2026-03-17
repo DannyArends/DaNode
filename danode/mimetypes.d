@@ -1,3 +1,5 @@
+/** danode/mimetypes.d - MIME type detection by file extension, CGI executable detection
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.mimetypes;
 
 import danode.imports;

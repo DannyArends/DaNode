@@ -1,3 +1,5 @@
+/** danode/response.d - HTTP response construction, CGI header handling, static helpers
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.response;
 
 import danode.imports;

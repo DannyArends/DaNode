@@ -1,3 +1,5 @@
+/** danode/filesystem.d - File system abstraction: path resolution, security checks, directory listing
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.filesystem;
 
 import danode.imports;

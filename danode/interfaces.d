@@ -1,3 +1,5 @@
+/** danode/interfaces.d - Abstract driver and client interfaces, StringDriver test stub
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.interfaces;
 
 import danode.imports;

@@ -1,3 +1,5 @@
+/** danode/ssl.d - SSL context management: certificate loading, SNI, TLS configuration
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.ssl;
 
 version(SSL) {

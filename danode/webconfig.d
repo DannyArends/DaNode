@@ -1,3 +1,5 @@
+/** danode/webconfig.d - Per-domain web.config parsing: CGI, redirects, directory access control
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.webconfig;
 
 import danode.imports;

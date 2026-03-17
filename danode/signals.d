@@ -1,3 +1,5 @@
+/** danode/signals.d - POSIX signal handling: SIGPIPE suppression
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.signals;
 
 version(Posix) {

@@ -1,3 +1,5 @@
+/** danode/cgi.d - Common Gateway Interface: script execution, header parsing, SSE streaming
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.cgi;
 
 import danode.imports;

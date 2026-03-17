@@ -1,3 +1,5 @@
+/** danode/functions.d - Utility functions: date parsing, CGI detection, query strings, encoding
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.functions;
 
 import danode.imports;

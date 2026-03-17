@@ -1,3 +1,5 @@
+/** danode/acme.d - Automatic certificate renewal via the ACME protocol (Let's Encrypt)
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.acme;
 
 version(SSL) {

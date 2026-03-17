@@ -1,3 +1,5 @@
+/** danode/files.d - Static file serving, gzip compression, ETag, and range requests
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.files;
 
 import danode.imports;

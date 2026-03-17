@@ -1,3 +1,5 @@
+/** danode/https.d - HTTPS driver: SSL/TLS send/receive via OpenSSL ImportC bindings
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.https;
 
 version(SSL) {

@@ -1,3 +1,5 @@
+/** danode/server.d - Entry point: socket setup, connection acceptance, rate limiting
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.server;
 
 import danode.imports;

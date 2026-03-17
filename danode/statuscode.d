@@ -1,3 +1,5 @@
+/** danode/statuscode.d - HTTP status codes, reason phrases, and RFC 7230 body rules
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.statuscode;
 
 import danode.imports;

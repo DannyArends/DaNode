@@ -1,3 +1,5 @@
+/** danode/process.d - External process management: spawn, pipe, timeout, drain stdout/stderr
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.process;
 
 import danode.imports;

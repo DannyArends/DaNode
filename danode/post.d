@@ -1,3 +1,5 @@
+/** danode/post.d - HTTP POST parsing: form data, multipart, file uploads
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.post;
 
 import danode.imports;

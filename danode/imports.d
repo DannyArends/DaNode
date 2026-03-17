@@ -1,3 +1,5 @@
+/** danode/imports.d - Shared public imports for the entire DaNode codebase
+  * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.imports;
 
 // Public imported function from core.stdc
