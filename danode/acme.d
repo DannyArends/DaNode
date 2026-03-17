@@ -253,7 +253,6 @@ version(SSL) {
 
   // Extract public key as JWK JSON (for newAccount header)
   string jwkPublic(EVP_PKEY* pkey) {
-    import std.json : JSONValue, toJSON;
     BIGNUM* bn_n = BN_new();
     BIGNUM* bn_e = BN_new();
     EVP_PKEY_get_bn_param(pkey, "n", &bn_n);

@@ -3,10 +3,9 @@
 module danode.cgi;
 
 import danode.imports;
+
 import danode.functions : Msecs, bodystart, endofheader, fullheader;
 import danode.log : log, tag, error, Level;
-import danode.router : Router, runRequest;
-import danode.interfaces : StringDriver;
 import danode.process : Process;
 import danode.statuscode : StatusCode;
 import danode.payload : HeaderType, Payload, PayloadType;
@@ -139,6 +138,9 @@ class CGI : Payload {
 
 
 unittest {
+  import danode.router : Router, runRequest;
+  import danode.interfaces : StringDriver;
+
   tag(Level.Always, "FILE", "%s", __FILE__);
 
   auto router = new Router("./www/", Address.init);
