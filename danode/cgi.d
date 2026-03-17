@@ -152,6 +152,11 @@ unittest {
   tag(Level.Always, "WARMUP", "done");
 
   StringDriver res;
+
+  // dmd.d without keep-alive request - must be Close
+  res = router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\n\n");
+  assert(icmp(res.lastConnection, "close") == 0, format("dmd.d no-keepalive must be Close, got %s", res.lastConnection));
+
   // dmd.d has wrong Content-Length - must force Close
   res = router.runRequest("GET /dmd.d HTTP/1.1\nHost: localhost\nConnection: keep-alive\n\n");
   assert(res.lastStatus == StatusCode.Ok, format("dmd.d expected 200, got %d", res.lastStatus.code));
@@ -161,6 +166,10 @@ unittest {
   res = router.runRequest("GET /keepalive.d HTTP/1.1\nHost: localhost\nConnection: keep-alive\n\n");
   assert(res.lastStatus == StatusCode.Ok, format("keepalive.d expected 200, got %d", res.lastStatus.code));
   assert(icmp(res.lastConnection, "keep-alive") == 0, format("keepalive.d must keep-alive, got %s", res.lastConnection));
+
+  // keepalive.d without keep-alive request - client asks Close, must be Close
+  res = router.runRequest("GET /keepalive.d HTTP/1.1\nHost: localhost\nConnection: close\n\n");
+  assert(icmp(res.lastConnection, "close") == 0, format("keepalive.d client-close must be Close, got %s", res.lastConnection));
 
   // SSE - streams 3 ticks then exits cleanly
   res = router.runRequest("GET /sse.d HTTP/1.1\nHost: localhost\n\n", 5000);
