@@ -6,10 +6,7 @@ version(SSL) {
   import danode.imports;
   import danode.includes;
 
-  import danode.imports;
-  import danode.client;
   import danode.log : log, tag, error, Level;
-  import danode.response : Response;
 
   // SSL context structure, stored relation between hostname 
   // and the SSL context, should be allocated only once available to C, and deallocated at exit

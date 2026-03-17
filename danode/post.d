@@ -3,17 +3,17 @@
 module danode.post;
 
 import danode.imports;
+
 import danode.cgi : CGI;
 import danode.client : MAX_REQUEST_SIZE;
 import danode.statuscode : StatusCode;
 import danode.interfaces : StringDriver;
 import danode.request : Request, RequestMethod;
-import danode.response : SERVERINFO, Response, redirect, create, setPayload;
+import danode.response : SERVERINFO, Response, setPayload;
 import danode.webconfig : WebConfig;
 import danode.mimetypes : mime;
-import danode.router : Router, runRequest;
 import danode.filesystem : FileSystem;
-import danode.functions : from, has, isCGI, isFILE, isDIR, writeFile, parseQueryString;
+import danode.functions : from, writeFile, parseQueryString;
 import danode.log : log, tag, error, Level;
 
 immutable string      MPHEADER         = "multipart/form-data";                     /// Multipart header id
@@ -172,8 +172,9 @@ final void serverAPI(in FileSystem filesystem, in WebConfig config, in Request r
 }
 
 unittest {
+  import danode.router : Router, runRequest;
+
   tag(Level.Always, "FILE", "%s", __FILE__);
-  import danode.filesystem : FileSystem;
 
   FileSystem fs = new FileSystem("./www/");
 

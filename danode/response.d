@@ -3,13 +3,12 @@
 module danode.response;
 
 import danode.imports;
+
 import danode.cgi : CGI;
-import danode.interfaces : DriverInterface, StringDriver;
 import danode.functions : htmltime;
 import danode.statuscode : StatusCode, noBody;
 import danode.request : Request;
 import danode.mimetypes : UNSUPPORTED_FILE;
-import danode.files : FileStream, FilePayload;
 import danode.payload : Payload, PayloadType, HeaderType, Message;
 import danode.log : tag, log, Level;
 import danode.webconfig;

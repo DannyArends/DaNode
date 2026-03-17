@@ -3,11 +3,11 @@
 module danode.filesystem;
 
 import danode.imports;
+
 import danode.statuscode : StatusCode;
-import danode.mimetypes : mime;
 import danode.payload : Payload, PayloadType;
 import danode.files : FilePayload, FileStream;
-import danode.functions : has, isCGI;
+import danode.functions : has;
 import danode.log : log, tag, error, Level;
 
 /* Domain name structure containing files in that domain

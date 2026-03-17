@@ -3,8 +3,9 @@
 module danode.request;
 
 import danode.imports;
+
 import danode.filesystem : FileSystem;
-import danode.interfaces : ClientInterface, DriverInterface;
+import danode.interfaces : DriverInterface;
 import danode.functions : interpreter, from, parseHtmlDate, parseQueryString;
 import danode.webconfig : WebConfig;
 import danode.post : PostItem, PostType;

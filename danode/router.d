@@ -3,18 +3,18 @@
 module danode.router;
 
 import danode.imports;
+
 import danode.client : Client;
-import danode.interfaces : ClientInterface, DriverInterface, StringDriver;
+import danode.interfaces : DriverInterface, StringDriver;
 import danode.statuscode : StatusCode;
 import danode.request : Request;
 import danode.response : Response, setPayload, create, badRequest, domainNotFound, forbidden, redirect, serveCGI, serveDirectory, notFound;
-import danode.payload : Message;
 import danode.files : serveStaticFile;
 import danode.webconfig : WebConfig;
-import danode.functions : from, has, isCGI, isFILE, isDIR, isAllowed, safePath;
+import danode.functions : isCGI, isFILE, isDIR, isAllowed, safePath;
 import danode.filesystem : FileSystem;
 import danode.post : parsePost;
-import danode.log : log, tag, error, Level;
+import danode.log : log, tag, Level;
 
 version(SSL) {
   import danode.ssl : hasCertificate;
