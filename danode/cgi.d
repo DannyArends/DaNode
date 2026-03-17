@@ -100,8 +100,9 @@ class CGI : Payload {
         if(values.length >= 3) status = values[1];
       }
       if (status == "") {
+        if (external.running) return StatusCode.Ok;   // still streaming, assume Ok
         if (external.status == 0) return StatusCode.Ok;
-        if (!external.running && external.timedOut()) return StatusCode.TimedOut;
+        if (external.timedOut()) return StatusCode.TimedOut;
         return StatusCode.ISE;
       }
       try {
