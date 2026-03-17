@@ -156,4 +156,12 @@ unittest {
   res = router.runRequest("GET /keepalive.d HTTP/1.1\nHost: localhost\nConnection: keep-alive\n\n");
   assert(res.lastStatus == StatusCode.Ok, format("keepalive.d expected 200, got %d", res.lastStatus.code));
   assert(icmp(res.lastConnection, "keep-alive") == 0, format("keepalive.d must keep-alive, got %s", res.lastConnection));
+
+  // SSE - streams 3 ticks then exits cleanly
+  res = router.runRequest("GET /sse.d HTTP/1.1\nHost: localhost\n\n", 5000);
+  assert(res.lastStatus == StatusCode.Ok, format("SSE expected 200, got %d", res.lastStatus.code));
+  assert(res.lastMime == "text/event-stream", format("SSE expected text/event-stream, got %s", res.lastMime));
+  assert(res.lastBody.canFind("tick 0"), "SSE expected tick 0 in body");
+  assert(res.lastBody.canFind("tick 2"), "SSE expected tick 2 in body");
 }
+
