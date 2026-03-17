@@ -26,8 +26,11 @@ class CGI : Payload {
     // The sort of payload carried (PayLoadType.Script)
     final @property PayloadType type() const { return(PayloadType.Script); }
 
-    // Is the payload ready ?
-    final @property long ready() { return(external.finished); }
+    // Ready to start sending ?
+    final @property long ready() { 
+        if (external.finished) return(true);
+        return(endOfHeader > 0);
+    }
 
     // length of the message portion of the output (generated HTTP headers are detected and substracted)
     final @property ptrdiff_t length() const {

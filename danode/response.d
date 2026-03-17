@@ -78,6 +78,13 @@ struct Response {
     if (isRange) return header.length + (rangeEnd - rangeStart + 1);
     return header.length + payload.length;
   }
+
+  @property bool scriptCompleted() {
+      if (payload is null || payload.type != PayloadType.Script) return false;
+      if (payload.ready == 0) return false;           // script still running
+      return index >= length;                          // all bytes sent
+  }
+
   // Stream of bytes (header + stream of bytes)
   @property final const(char)[] bytes(in ptrdiff_t maxsize = 4096) {
     ptrdiff_t hsize = header.length;
