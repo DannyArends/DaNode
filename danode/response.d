@@ -79,9 +79,9 @@ struct Response {
     return header.length + payload.length;
   }
 
-  @property bool isSSE() { return payload !is null && payload.mimetype == "text/event-stream"; }
+  @property final bool isSSE() const { return payload !is null && payload.mimetype == "text/event-stream"; }
 
-  @property bool scriptCompleted() {
+  @property final bool scriptCompleted() {
     if (payload is null || payload.type != PayloadType.Script) return false;
     if (payload.ready == 0) return false;
     if (payload.length < 0) return false;   // check payload.length, not response.length

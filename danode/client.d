@@ -58,7 +58,7 @@ class Client : Thread, ClientInterface {
           }
           if (response.ready && !response.completed) {      // We know what to respond, but haven't send all of it yet
             driver.send(response, driver.socket);           // Send the response, hit multiple times, send what you can and return
-            driver.touch();
+            if (response.isSSE) driver.touch();
             if (response.scriptCompleted) { response.completed = true; stop(); continue; }
           }
           if (response.ready && response.completed) {       // We've completed the request, response cycle
