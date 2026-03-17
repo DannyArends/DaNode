@@ -109,14 +109,11 @@ string htmltime(in SysTime d = Clock.currTime()) {
 }
 
 bool isFILE(in string path) {
-  try { return(isFile(path)); }
-  catch(Exception e) { error("isFILE: I/O exception '%s'", e.msg); }
-  return false;
+  try { return(isFile(path)); } catch(Exception e) { error("isFILE: I/O exception '%s'", e.msg); } return false;
 }
 
 bool isDIR(in string path) {
-  try { return(isDir(path)); }
-  catch(Exception e) { error("isDIR: I/O exception '%s'", e.msg); }
+  try { return(isDir(path)); } catch(Exception e) { error("isDIR: I/O exception '%s'", e.msg); }
   return false;
 }
 
@@ -155,8 +152,8 @@ pure string fullheader(T)(const(T) buffer) {
 // Which interpreter (if any) should be used for the path ?
 string interpreter(in string path) {
   if (!isCGI(path)) return [];
-  string[] mime = mime(path).split("/");
-  if(mime.length > 1) return(mime[1]);
+  string[] parts = mime(path).split("/");
+  if(parts.length > 1) return(parts[1]);
   return [];
 }
 
