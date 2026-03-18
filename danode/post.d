@@ -36,15 +36,19 @@ struct PostItem {
 final bool parsePost(ref Request request, ref Response response, in FileSystem filesystem) {
   if (response.havepost || request.method != RequestMethod.POST) { return(response.havepost = true); }
 
-  long expectedlength = to!long(from(request.headers, "Content-Length", "0"));
+  long expectedlength;
+  try {
+    expectedlength = to!long(from(request.headers, "Content-Length", "0"));
+  } catch (Exception e) {
+    return(response.setPayload(StatusCode.BadRequest, "400 - Bad Request\n", "text/plain"));
+  }
   string content = request.body;
   if (expectedlength == 0) {
     log(Level.Trace, "Post: [T] Content-Length not specified (or 0), length: %s", content.length);
     return(response.havepost = true); // When we don't receive any post data it is meaningless to scan for any content
   } else if (expectedlength > MAX_REQUEST_SIZE) {
     log(Level.Verbose, "Post: [W] Upload too large: %d bytes from %s", expectedlength, request.ip);
-    response.setPayload(StatusCode.PayloadTooLarge, "413 - Payload Too Large\n", "text/plain");
-    return(response.havepost = true);
+    return(response.setPayload(StatusCode.PayloadTooLarge, "413 - Payload Too Large\n", "text/plain"));
   }
   log(Level.Trace, "Post: [T] Received %s of %s", content.length, expectedlength);
   if(content.length < expectedlength) return(false);
@@ -58,7 +62,7 @@ final bool parsePost(ref Request request, ref Response response, in FileSystem f
     log(Level.Verbose, "XFORM: [T] # of items: %s", request.postinfo.length);
   } else if (contenttype.indexOf(MPHEADER) >= 0) {
     auto parts = split(contenttype, "boundary=");
-    if (parts.length < 2) return response.havepost = true;
+    if (parts.length < 2) return(response.havepost = true);
     string mpid = parts[1];
     log(Level.Verbose, "MPART: [I] header: %s, parsing %d bytes", mpid, expectedlength);
     request.parseMultipart(filesystem, content, mpid);
@@ -70,8 +74,7 @@ final bool parsePost(ref Request request, ref Response response, in FileSystem f
     error("parsePost: Unsupported POST content type: %s [%s] -> %s", contenttype, expectedlength, content);
     request.parseXform(content);
   }
-  response.havepost = true;
-  return(response.havepost);
+  return(response.havepost = true);
 }
 
 // Parse X-form content in the body of the request

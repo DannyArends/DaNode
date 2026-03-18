@@ -136,7 +136,7 @@ Response create(in Request request, Address address, in StatusCode statuscode = 
 
 bool setPayload(ref Response response, StatusCode code, string msg = "", in string mimetype = UNSUPPORTED_FILE) {
   response.payload = new Message(code, msg, mimetype);
-  return(response.ready = true);
+  return(response.ready = response.havepost = true);
 }
 
 // send a redirect permanently response
