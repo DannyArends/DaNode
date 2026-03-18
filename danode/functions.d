@@ -171,7 +171,7 @@ string browseDir(in string root, in string localpath) {
 }
 
 // Reset the socketset and add a server socket to the set
-int sISelect(SocketSet set, Socket socket, bool write = false, int timeout = 5) {
+int sISelect(SocketSet set, Socket socket, bool write = false, int timeout = 25) {
   set.reset();
   set.add(socket);
   return(write ? Socket.select(null, set, null, dur!"msecs"(timeout)) : Socket.select(set, null, null, dur!"msecs"(timeout)));

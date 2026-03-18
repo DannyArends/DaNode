@@ -53,7 +53,7 @@ abstract class DriverInterface {
     // Receive upto maxsize of bytes from the client into the input buffer
     ptrdiff_t receive(Socket socket, ptrdiff_t maxsize = 4096) {
       if (!socketReady()) return(-1);
-      if (socketSet.sISelect(socket) <= 0) return(0);
+      if (socketSet.sISelect(socket, false, 25) <= 0) return(0);
       ptrdiff_t received;
       char[] tmpbuffer = new char[](maxsize);
       if ((received = receiveData(tmpbuffer)) > 0) { inbuffer.put(tmpbuffer[0 .. received]); touch(); }

@@ -74,7 +74,7 @@ class Server : Thread {
 
     // Accept an incoming connection and create a client object
     final void accept(ref Appender!(Client[]) persistent, Socket socket, bool secure = false) {
-      if (set.sISelect(socket) <= 0 || nAlive >= MAX_CLIENTS) return;
+      if (set.sISelect(socket, false, 5) <= 0 || nAlive >= MAX_CLIENTS) return;
       log(Level.Trace, "Accepting %s request", secure ? "HTTPs" : "HTTP");
       try {
           DriverInterface driver = null;
