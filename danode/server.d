@@ -3,7 +3,7 @@
 module danode.server;
 
 import danode.imports;
-import danode.functions : Msecs, sISelect, resolveFolder;
+import danode.functions : from, Msecs, sISelect, resolveFolder;
 import danode.client : Client;
 import danode.interfaces : DriverInterface;
 import danode.http : HTTP;
@@ -21,12 +21,14 @@ immutable int MAX_CLIENTS_PER_IP = 32;
 
 class Server : Thread {
   private:
-    Socket            socket;                 // The server socket
-    SocketSet         set;                    // SocketSet for server socket and client listeners
-    Client[]          clients;                // List of clients
-    bool              terminated;             // Server running
-    SysTime           starttime;              // Start time of the server
-    Router            router;                 // Router to route requests
+    Socket              socket;                 // The server socket
+    SocketSet           set;                    // SocketSet for server socket and client listeners
+    Client[]            clients;                // List of clients
+    bool                terminated;             // Server running
+    SysTime             starttime;              // Start time of the server
+    Router              router;                 // Router to route requests
+    long[string]        nAlivePerIP;
+
   public:
     string wwwFolder    = "www/";
 
@@ -72,7 +74,7 @@ class Server : Thread {
 
     // Accept an incoming connection and create a client object
     final void accept(ref Appender!(Client[]) persistent, Socket socket, bool secure = false) {
-      if (set.sISelect(socket) <= 0 || nAlive() >= MAX_CLIENTS) return;
+      if (set.sISelect(socket) <= 0 || nAlive >= MAX_CLIENTS) return;
       log(Level.Trace, "Accepting %s request", secure ? "HTTPs" : "HTTP");
       try {
           DriverInterface driver = null;
@@ -81,7 +83,7 @@ class Server : Thread {
           if (driver is null) return;
           Client client = new Client(router, driver);
           client.start();
-          if (nAliveFromIP(client.ip) <= MAX_CLIENTS_PER_IP) {
+          if (nAlivePerIP.from(client.ip, 0) <= MAX_CLIENTS_PER_IP) {
             persistent.put(client);
           } else { log(Level.Always, "Rate limit exceeded [%s]", client.ip); client.stop(); }
       } catch(Exception e) { error("Unable to accept connection: %s", e.msg); }
@@ -96,33 +98,24 @@ class Server : Thread {
       }
     } }
 
-    final long nAliveFromIP(string ip) { synchronized {
-      long sum = 0;
-      foreach(Client client; clients){ if(client.running && client.ip == ip) sum++; }
-      return sum;
-    } }
-
     // Stop all clients and shutdown the server
     final void stop(){ synchronized {
       foreach(ref Client client; clients){ client.stop(); } terminated = true;
     } }
 
+    final @property long nAlive() { return nAlivePerIP.byValue.sum; }
+
      // Returns a Duration object holding the server uptime
     final @property Duration uptime() const { return(Clock.currTime() - starttime); }
 
      // Print some server information
-    final @property void info() { log(Level.Always, "Uptime %s, Connections: %d / %d", uptime(), nAlive(), clients.length); }
+    final @property void info() { log(Level.Always, "Uptime %s, Connections: %d / %d", uptime(), nAlive, clients.length); }
     
     // Hostname of the server
     final @property string hostname() { return(socket.hostName()); }
     version(SSL) {
       final @property string sslKey() { return(sslPath ~ ssl); }
       final @property string accountKey() { return(sslPath ~ account); }
-    }
-
-    // Number of alive connections
-    final @property long nAlive() {
-      long sum = 0; foreach(Client client; clients){ if(client.running){ sum++; } } return sum; 
     }
 
     final void run() {
@@ -134,8 +127,10 @@ class Server : Thread {
           persistent.clear();                                     // Clear the Appender
           accept(persistent, socket);
           version (SSL) { accept(persistent, sslsocket, true); }
+
+          nAlivePerIP = null;
           foreach (Client client; previous) {   // Foreach through the Slice reference
-            if(client.running) persistent.put(client);          // Add the backlog of persistent clients
+            if(client.running) { nAlivePerIP[client.ip]++; persistent.put(client); }
             else if(!client.isRunning) client.join();           // join finished threads
           }
           clients = persistent.data;
