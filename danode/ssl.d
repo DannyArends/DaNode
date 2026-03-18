@@ -29,13 +29,21 @@ version(SSL) {
       string hostname = to!(string)(cast(const(char*)) SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name));
       log(Level.Verbose, "SSL: [I] Looking for hostname: %s", hostname);
       if(hostname is null) { log(Level.Verbose, "SSL: [W] Client no SNI support, using default: contexts[0]"); return; }
-      ptrdiff_t idx = findContext(hostname);
-      if (idx >= 0) { 
-        log(Level.Verbose, "SSL: [I] Switching SSL context to %s", hostname); 
-        SSL_set_SSL_CTX(ssl, contexts[idx].context);
-      }else{ error("SSL: Callback failed to find certificate for %s", hostname); }
+      synchronized(contextsMutex) {
+        ptrdiff_t idx = findContext(hostname);
+        if (idx >= 0) { 
+          log(Level.Verbose, "SSL: [I] Switching SSL context to %s", hostname); 
+          SSL_set_SSL_CTX(ssl, contexts[idx].context);
+        }else{ error("SSL: Callback failed to find certificate for %s", hostname); }
+      }
     }
   }
+
+  __gshared Mutex contextsMutex;
+
+  shared static this() { contextsMutex = new Mutex(); }
+  ptrdiff_t findContextLocked(string hostname) { synchronized(contextsMutex) { return findContext(hostname); } }
+
 
   void generateKey(string path, int bits = 4096) {
     if (path.exists()) return;
