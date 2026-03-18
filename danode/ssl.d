@@ -17,6 +17,9 @@ version(SSL) {
 
   alias size_t VERSION;
   immutable VERSION SSL23 = 0, SSL3 = 1, TLS1 = 2, DTLS1 = 3;
+  immutable int EVP_PKEY_RSA = 6;
+  immutable int EVP_PKEY_OP_KEYGEN = 8;
+  immutable int EVP_PKEY_CTRL_RSA_KEYGEN_BITS = 1;
 
   alias ExternC(T) = SetFunctionAttributes!(T, "C", functionAttributes!T);
 
@@ -46,10 +49,10 @@ version(SSL) {
   void generateKey(string path, int bits = 4096) {
     if (path.exists()) return;
     log(Level.Always, "SSL: Generating %d-bit RSA key at %s", bits, path);
-    EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new_id(6, null);  // 6 = EVP_PKEY_RSA
+    EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, null);
     scope(exit) EVP_PKEY_CTX_free(ctx);
     EVP_PKEY_keygen_init(ctx);
-    EVP_PKEY_CTX_ctrl(ctx, 6, 8, 1, bits, null);  // set_rsa_keygen_bits: op=KEYGEN(8), ctrl=KEYBITS(1)
+    EVP_PKEY_CTX_ctrl(ctx, EVP_PKEY_RSA, EVP_PKEY_OP_KEYGEN, EVP_PKEY_CTRL_RSA_KEYGEN_BITS, bits, null);
     EVP_PKEY* pkey;
     if (EVP_PKEY_keygen(ctx, &pkey) <= 0) { error("SSL: Keygen failed for %s", path); return; }
     scope(exit) EVP_PKEY_free(pkey);
