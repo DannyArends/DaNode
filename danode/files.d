@@ -86,6 +86,7 @@ class FilePayload : Payload {
        Updates the buffer time and status.
     */
     final void buffer() { synchronized {
+      if (!needsupdate()) return;  // re-check under lock
       if(buf is null) buf = new char[](fileSize());
       buf.length = fileSize();
       try {
