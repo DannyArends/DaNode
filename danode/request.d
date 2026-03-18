@@ -167,7 +167,7 @@ struct Request {
   }
 
   final string[string] environ(string localpath) const {
-    string[string] env = environment.toAA();
+    string[string] env;
     env["REQUEST_METHOD"] = to!string(method);
     env["QUERY_STRING"] = query.length > 1 ? query[1 .. $] : "";
     env["REQUEST_URI"] = decodeComponent(uripath);
@@ -179,7 +179,8 @@ struct Request {
     env["HTTP_HOST"] = host;
     env["HTTPS"] = isSecure ? "on" : "";
     env["REDIRECT_STATUS"] = "200";
-    foreach (k, v; headers) env["HTTP_" ~ k.toUpper().replace("-", "_")] = v;
+    env["PATH"] = environment.get("PATH", "");
+    foreach (k, v; headers) { env["HTTP_" ~ k.toUpper().replace("-", "_")] = v; }
     return env;
   }
 
