@@ -38,7 +38,7 @@ final bool parsePost(ref Request request, ref Response response, in FileSystem f
 
   long expectedlength;
   try {
-    expectedlength = to!long(from(request.headers, "Content-Length", "0"));
+    expectedlength = to!long(request.headers.from("Content-Length", "0"));
   } catch (Exception e) {
     return(response.setPayload(StatusCode.BadRequest, "400 - Bad Request\n", "text/plain"));
   }
