@@ -54,7 +54,7 @@ version(SSL) {
 
   ptrdiff_t findContext(string hostname) {
     for (size_t x = 0; x < contexts.length; x++) {
-      if (hostname.endsWith(to!string(contexts[x].hostname.ptr))) return(x);
+      if (hostname.endsWith(fromStringz(contexts[x].hostname))) return(x);
     }
     return(-1);
   }
@@ -129,7 +129,7 @@ version(SSL) {
     foreach (DirEntry d; dirEntries(sslPath, SpanMode.shallow)) {
       if (d.name.endsWith(".chain")) {
         string hostname = baseName(d.name, ".chain");
-        if (hostname.length < 255) {
+        if (hostname.length < 254) {
           string chainFile = d.name;
           log(Level.Verbose, "SSL: [I] Reloading certificate at: '%s'", chainFile);
           auto lc = loadContext(chainFile, hostname, sslKey);
