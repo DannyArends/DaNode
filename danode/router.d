@@ -10,7 +10,7 @@ import danode.statuscode : StatusCode;
 import danode.request : Request;
 import danode.response : Response, setPayload, create, badRequest, domainNotFound, forbidden, redirect, serveCGI, serveDirectory, notFound;
 import danode.files : serveStaticFile;
-import danode.webconfig : WebConfig;
+import danode.webconfig : getConfig, WebConfig;
 import danode.functions : isCGI, isFILE, isDIR, isAllowed, safePath;
 import danode.filesystem : FileSystem;
 import danode.post : parsePost;
@@ -23,7 +23,7 @@ version(SSL) {
 class Router {
   private:
     FileSystem filesystem;
-    WebConfig config;
+    WebConfig[string] configs;
     Address address;
 
   public:
@@ -60,7 +60,7 @@ class Router {
 
       version(SSL) { if (serveACMEChallenge(request, response)) return; }
 
-      config = WebConfig(filesystem.file(localroot, "/web.config"));
+      auto config = getConfig(configs, filesystem.file(localroot, "/web.config"), localroot);
       string fqdn = config.domain(request.shorthost());
       string localpath = safePath(localroot, decodeComponent(request.path));
       if (localpath is null) return(response.forbidden());
@@ -95,10 +95,10 @@ class Router {
         }
         if (pathIsDIR && config.dirAllowed(localroot, localpath)) {
           log(Level.Trace, "Router: [T] localpath %s is a directory [%s,%s]", localpath, config.redirectdir(), config.index());
-          if (config.redirectdir() && !finalrewrite) { return(redirectDirectory(request, response)); }
+          if (config.redirectdir() && !finalrewrite) { return(redirectDirectory(config, request, response)); }
           if (config.redirect() && exists(localpath ~ "/" ~ config.index()) && !finalrewrite) {
             if (!config.allowcgi) return(response.notFound());
-            return(redirectCanonical(request, response));
+            return(redirectCanonical(config, request, response));
           }
           return(response.serveDirectory(request, config, filesystem));
         }
@@ -108,7 +108,7 @@ class Router {
       log(Level.Trace, "Router: [T] Redirect: %s %d", config.redirect, finalrewrite);
       if(config.redirect && !finalrewrite) {
         if (!config.allowcgi) return(response.notFound());
-        return(this.redirectCanonical(request, response));
+        return(this.redirectCanonical(config, request, response));
       }
       return(response.notFound());  // Request is not hosted on this server
     }
@@ -134,14 +134,14 @@ class Router {
     final void scan() { filesystem.scan(); }
 
     // Redirect a directory browsing request to the index script
-    void redirectDirectory(ref Request request, ref Response response){
+    void redirectDirectory(WebConfig config, ref Request request, ref Response response){
       log(Level.Trace, "Router: [T] Redirecting directory request to index page");
       request.redirectdir(config);
       return deliver(request, response, true);
     }
 
     // Perform a canonical redirect of a non-existing page to the index script
-    void redirectCanonical(ref Request request, ref Response response){
+    void redirectCanonical(WebConfig config, ref Request request, ref Response response){
       log(Level.Trace, "Router: [T] Redirecting canonical url to the index page");
       request.url  = format("%s?%s", config.index, request.query);
       return deliver(request, response, true);

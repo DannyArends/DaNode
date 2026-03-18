@@ -9,9 +9,11 @@ import danode.files : FilePayload;
 import danode.log : log, tag, Level;
 
 struct WebConfig {
-  string[string]  data;
+  string[string] data;
+  SysTime mtime;
 
   this(FilePayload file, string def = "no") {
+    mtime = file.mtime;
     string[] elements;
     foreach (line; split(file.content, "\n")) {
       if (chomp(strip(line)) != "" && line[0] != '#') {
@@ -68,6 +70,11 @@ struct WebConfig {
     }
     return false;
   }
+}
+
+WebConfig getConfig(ref WebConfig[string] configs, FilePayload fp, string key) {
+  if (key !in configs || fp.mtime > configs[key].mtime) { configs[key] = WebConfig(fp); }
+  return configs[key];
 }
 
 unittest {
