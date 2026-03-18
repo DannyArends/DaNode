@@ -93,9 +93,11 @@ struct Request {
     string r = headers.from("Range");
     if (r.length == 0 || !r.startsWith("bytes=")) return [-1, -1];
     string[] parts = r[6 .. $].split("-");
-    long start = parts[0].length > 0 ? to!long(parts[0]) : 0;
-    long end = (parts.length > 1 && parts[1].length > 0) ? to!long(parts[1]) : -1;
-    return [start, end];
+    try {
+      long start = parts[0].length > 0 ? to!long(parts[0]) : 0;
+      long end = (parts.length > 1 && parts[1].length > 0) ? to!long(parts[1]) : -1;
+      return [start, end];
+    } catch (Exception e) { return [-1, -1]; }
   }
 
   final @property @nogc bool hasRange() const nothrow { return headers.from("Range").startsWith("bytes="); }
@@ -262,4 +264,8 @@ unittest {
   r10.headers["Accept-Encoding"] = "gzip, deflate";
   assert(r10.acceptsEncoding("deflate"), "deflate must be accepted");
   assert(!r10.acceptsEncoding("br"), "br must not be accepted");
+
+  Request r11;
+  r11.headers["Range"] = "bytes=abc-def";
+  assert(r11.range() == [-1, -1], "malformed range must return [-1, -1]");
 }
