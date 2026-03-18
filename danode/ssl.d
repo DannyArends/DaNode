@@ -42,8 +42,6 @@ version(SSL) {
   __gshared Mutex contextsMutex;
 
   shared static this() { contextsMutex = new Mutex(); }
-  ptrdiff_t findContextLocked(string hostname) { synchronized(contextsMutex) { return findContext(hostname); } }
-
 
   void generateKey(string path, int bits = 4096) {
     if (path.exists()) return;
@@ -92,7 +90,8 @@ version(SSL) {
 
   // Does the hostname requested have a certificate ?
   bool hasCertificate(string hostname) {
-    bool found = (findContext(hostname) >= 0);
+    bool found;
+    synchronized(contextsMutex) { found = (findContext(hostname) >= 0); }
     log(Level.Trace, "SSL: [T] '%s' certificate? %s", hostname, found);
     return found;
   }
@@ -145,7 +144,7 @@ version(SSL) {
         }
       }
     }
-    contexts = localContexts;  // atomic single assignment
+    synchronized(contextsMutex) { contexts = localContexts; }
     log(Level.Always, "SSL: [I] Loaded %s SSL certificates", contexts.length);
   }
 
@@ -154,8 +153,10 @@ version(SSL) {
     log(Level.Verbose, "SSL: [I] Closing server SSL socket");
     socket.close();
     log(Level.Verbose, "SSL: [I] Cleaning up %d SSL contexts", contexts.length);
-    foreach (ref ctx; contexts) { SSL_CTX_free(ctx.context); }
-    contexts = null;
+    synchronized(contextsMutex) {
+      foreach (ref ctx; contexts) { SSL_CTX_free(ctx.context); }
+      contexts = null;
+    }
   }
 
   void sslAssert(bool ret) { if (!ret) { ERR_print_errors_fp(null); throw new Exception("SSL_ERROR"); } }
