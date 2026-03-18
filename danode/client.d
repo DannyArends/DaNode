@@ -118,7 +118,7 @@ void log(in ClientInterface cl, in Request rq, in Response rs) {
   int code = cast(int)(rs.payload ? rs.statuscode.code : 0);
   long ms = rq.starttime == SysTime.init ? -1 : Msecs(rq.starttime);
   tag(Level.Always, format("%d", code),
-      "%s %s:%s %s%s [%d] %s %skb", htmltime(), cl.ip, cl.port, rq.shorthost, uri.replace("%", "%%"), cl.requests, ms, bytes/1024);
+      "%s %s:%s %s%s [%d] %.1fkb in %s ms ", htmltime(), cl.ip, cl.port, rq.shorthost, uri.replace("%", "%%"), cl.requests, bytes/1024f, ms);
 }
 
 // serve a 408 connection timed out page

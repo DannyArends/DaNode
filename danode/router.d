@@ -61,8 +61,8 @@ class Router {
       version(SSL) { if (serveACMEChallenge(request, response)) return; }
 
       auto config = getConfig(configs, filesystem.file(localroot, "/web.config"), localroot);
-      string fqdn = config.domain(request.shorthost());
-      string localpath = safePath(localroot, decodeComponent(request.path));
+      auto fqdn = config.domain(request.shorthost());
+      auto localpath = safePath(localroot, decodeComponent(request.path));
       if (localpath is null) return(response.forbidden());
 
       bool pathExists  = localpath.exists();

@@ -9,24 +9,27 @@ import danode.files : FilePayload;
 import danode.log : log, tag, Level;
 
 struct WebConfig {
-  string[string] data;
-  SysTime mtime;
+  private:
+    string[string] data;
+    SysTime mtime;
 
-  this(FilePayload file, string def = "no") {
-    mtime = file.mtime;
-    string[] elements;
-    foreach (line; split(file.content, "\n")) {
-      if (chomp(strip(line)) != "" && line[0] != '#') {
-        elements = split(line, "=");
-        string key = toLower(chomp(strip(elements[0])));
-        if (elements.length == 1) {
-          data[key] = def;
-        }else if (elements.length >= 2) {
-          data[key] = toLower(chomp(strip(join(elements[1 .. $], "="))));
+  public:
+
+    this(FilePayload file, string def = "no") {
+      mtime = file.mtime;
+      string[] elements;
+      foreach (line; split(file.content, "\n")) {
+        if (chomp(strip(line)) != "" && line[0] != '#') {
+          elements = split(line, "=");
+          string key = toLower(chomp(strip(elements[0])));
+          if (elements.length == 1) {
+            data[key] = def;
+          }else if (elements.length >= 2) {
+            data[key] = toLower(chomp(strip(join(elements[1 .. $], "="))));
+          }
         }
       }
     }
-  }
 
   private @nogc bool flag(string key, string def, string match) const nothrow { return data.from(key, def) == match; }
 
