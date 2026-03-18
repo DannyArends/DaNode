@@ -81,7 +81,6 @@ class Client : Thread, ClientInterface {
             stop(); continue;
           }
           log(Level.Trace, "Connection %s:%s (%s msecs) %s", ip, port, starttime, to!string(driver.inbuffer.data));
-          Thread.sleep(dur!"msecs"(2));
         }
         this.log(request, response);
       } catch(Exception e) { log(Level.Verbose, "Unknown Client Exception: %s", e); stop();

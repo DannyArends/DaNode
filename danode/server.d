@@ -83,7 +83,7 @@ class Server : Thread {
           if (driver is null) return;
           Client client = new Client(router, driver);
           client.start();
-          if (nAlivePerIP.from(client.ip, 0) <= MAX_CLIENTS_PER_IP) {
+          if (nAlivePerIP.from(client.ip, 0L) <= MAX_CLIENTS_PER_IP) {
             persistent.put(client);
           } else { log(Level.Always, "Rate limit exceeded [%s]", client.ip); client.stop(); }
       } catch(Exception e) { error("Unable to accept connection: %s", e.msg); }
@@ -109,7 +109,7 @@ class Server : Thread {
     final @property Duration uptime() const { return(Clock.currTime() - starttime); }
 
      // Print some server information
-    final @property void info() { log(Level.Always, "Uptime %s, Connections: %d / %d", uptime(), nAlive, clients.length); }
+    final @property void info() { log(Level.Always, "Uptime %s, Connections: %d / %d", uptime, nAlive, clients.length); }
     
     // Hostname of the server
     final @property string hostname() { return(socket.hostName()); }

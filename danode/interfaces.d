@@ -3,7 +3,7 @@
 module danode.interfaces;
 
 import danode.imports;
-import danode.functions : Msecs, bodystart, endofheader, fullheader;
+import danode.functions : Msecs, sISelect, bodystart, endofheader, fullheader;
 import danode.response : Response;
 import danode.statuscode : StatusCode;
 import danode.log : log, error, Level;
@@ -27,6 +27,7 @@ abstract class DriverInterface {
   public:
     Appender!(char[])   inbuffer;            /// Input appender buffer
     Socket              socket;              /// Client socket for reading and writing
+    SocketSet           socketSet;
     long                requests = 0;        /// Number of requests we handled
     long[long]          senddata;            /// Size of data send per request
     SysTime             systime;             /// Time in ms since this process came alive
@@ -34,7 +35,13 @@ abstract class DriverInterface {
     Address             address;             /// Private address field
     bool                blocking = false;    /// Blocking communication ?
 
-    this(Socket socket, bool blocking = false) { this.socket = socket; this.blocking = blocking; systime = Clock.currTime(); touch(); }
+    this(Socket socket, bool blocking = false) {
+      this.socket = socket;
+      this.socketSet = new SocketSet();
+      this.blocking = blocking;
+      systime = Clock.currTime();
+      touch(); 
+    }
     bool socketReady() const { if (socket !is null) { return socket.isAlive(); } return false; }; /// Is the connection alive ?
     void touch() { modtime = Clock.currTime(); }
     void closeSocket() {
@@ -46,6 +53,7 @@ abstract class DriverInterface {
     // Receive upto maxsize of bytes from the client into the input buffer
     ptrdiff_t receive(Socket socket, ptrdiff_t maxsize = 4096) {
       if (!socketReady()) return(-1);
+      if (socketSet.sISelect(socket) <= 0) return(0);
       ptrdiff_t received;
       char[] tmpbuffer = new char[](maxsize);
       if ((received = receiveData(tmpbuffer)) > 0) { inbuffer.put(tmpbuffer[0 .. received]); touch(); }
