@@ -97,11 +97,9 @@ class FileSystem {
 
     /* Rebuffer all file domains from disk, 
        By reusing domain keys so, we don't buffer new domains. This is ok since we would need to load SSL */
-    final void rebuffer() {
-      foreach(ref d; domains.byKey){ foreach(ref f; domains[d].files.byKey){
-        domains[d].files[f].buffer();
-      } }
-    }
+    final void rebuffer() { synchronized {
+      foreach(ref d; domains.byValue) { foreach(ref f; d.files.byValue) { f.buffer(); } }
+    } }
 }
 
 /* Basic unit-tests should be extended */
