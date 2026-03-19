@@ -210,6 +210,7 @@ unittest {
   assert(safePath("www/localhost", "/\0etc/passwd") is null, "null byte must be blocked");
   assert(safePath("www/localhost", "/test.txt") !is null, "valid path must be allowed");
   assert(safePath("www/localhost", "/test/1.txt") !is null, "valid subpath must be allowed");
+  assert(safePath("www/localhost", "/nonexistent.txt") !is null, "non-existent valid path must be allowed");
 
   // htmlEscape - XSS critical
   assert(htmlEscape("<script>") == "&lt;script&gt;", "< and > must be escaped");
