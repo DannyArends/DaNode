@@ -97,7 +97,7 @@ class Server {
     }
 
     @property bool alive() {
-      if (shutdownSignal) return false;
+      if (atomicLoad!(shutdownSignal)) return false;
       version(SSL) { return(socket.isAlive() && sslsocket.isAlive());
       } else { return(socket.isAlive()); }
     }
@@ -116,8 +116,7 @@ class Server {
         } catch(Exception e) { error("Unspecified top level server exception: %s", e.msg);
         } catch(Error e) { error("Unspecified top level server error: %s", e.msg); }
       }
-      socket.close();
-      version (SSL) { sslsocket.closeSSL(); }
+      stop();
     }
 }
 

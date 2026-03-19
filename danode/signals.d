@@ -23,7 +23,7 @@ version(Posix) {
         atomicStore(shutdownSignal, true);
         break;
       default:
-        if(atomicLoad(cv) > 1) write(2, cast(const(void*)) "[SIG]    Caught\n\0".ptr, 17);
+        if(atomicLoad(cv) > 1) write(2, cast(const(void*)) "[SIG]    Caught\n\0".ptr, 16);
         break;
     }
   }
