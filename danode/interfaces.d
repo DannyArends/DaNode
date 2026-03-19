@@ -11,26 +11,12 @@ import danode.response : Response, setPayload;
 import danode.statuscode : StatusCode;
 import danode.log : log, error, Level;
 
-/* Client interface used by the server */
-interface ClientInterface {
-  @property bool    running();          /// Is the client still handling requests
-  @property long    starttime();        /// When was the client last started
-  @property long    lastmodified();     /// When was the client last modified
-  @property void    stop();             /// Stop the client
-
-  @property long requests() const;      /// Number of requests served
-  @property string  ip() const;         /// IP location of the client
-  @property long    port() const;       /// Port at which the client is connected
-
-  void run();                           /// Main client loop and logic
-}
-
 /* Connection/Driver interface available to the client */
 abstract class DriverInterface {
   public:
     Appender!(char[])   inbuffer;            /// Input appender buffer
     Socket              socket;              /// Client socket for reading and writing
-    SocketSet           socketSet;
+    SocketSet           socketSet;           /// SocketSet used for non-blocking select on this connection
     long                requests = 0;        /// Number of requests we handled
     long[long]          senddata;            /// Size of data send per request
     SysTime             systime;             /// Time in ms since this process came alive

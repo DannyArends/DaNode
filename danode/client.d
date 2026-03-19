@@ -6,7 +6,7 @@ import danode.imports;
 
 import danode.statuscode : StatusCode;
 import danode.functions: htmltime, Msecs;
-import danode.interfaces : DriverInterface, ClientInterface, StringDriver, sendHeaderTooLarge, sendPayloadTooLarge, sendTimedOut;
+import danode.interfaces : DriverInterface, StringDriver, sendHeaderTooLarge, sendPayloadTooLarge, sendTimedOut;
 import danode.router : Router, runRequest;
 import danode.response : Response;
 import danode.request : Request;
@@ -17,7 +17,7 @@ immutable size_t MAX_REQUEST_SIZE = 1024 * 1024 * 2;    ///   2MB Body
 immutable size_t MAX_UPLOAD_SIZE  = 1024 * 1024 * 100;  /// 100MB Multipart uploads
 immutable size_t MAX_SSE_TIME = 60_000;                 /// 60 seconds max SSE lifetime
 
-class Client : ClientInterface {
+class Client {
   private:
     Router              router;              /// Router class from server
     DriverInterface     driver;              /// Driver
@@ -63,7 +63,7 @@ class Client : ClientInterface {
           }
           if (response.ready && response.completed) {       // We've completed the request, response cycle
             driver.requests++;
-            if(response.keepalive) { this.log(request, response); }
+            if(response.keepalive) { logRR(request, response); }
             request.clearUploadFiles();                     // Clean uploaded files
             driver.inbuffer.clear();                        // Clear the input buffer
             if(!response.keepalive){ stop(); continue; }    // No keep alive, then stop this client
@@ -77,11 +77,21 @@ class Client : ClientInterface {
           }
           log(Level.Trace, "Connection %s:%s (%s msecs) %s", ip, port, starttime, to!string(driver.inbuffer.data));
         }
-        this.log(request, response);
+        logRR(request, response);
       } catch(Exception e) { log(Level.Verbose, "Unknown Client Exception: %s", e); stop();
       } catch(Error e) { log(Level.Verbose, "Unknown Client Error: %s", e); stop(); }
       log(Level.Verbose, "Connection %s:%s (%s) closed. %d requests %s (%s msecs)", ip, port, (driver.isSecure() ? "SSL" : "HTTP"), 
                                                                                       driver.requests, driver.senddata, starttime);
+    }
+
+    void logRR(in Request rq, in Response rs) {
+      string uri;
+      try { uri = decodeComponent(rq.uri); } catch (Exception e) { uri = rq.uri; }
+      long bytes = (rs.payload && rs.isRange) ? (rs.rangeEnd - rs.rangeStart + 1) : (rs.payload ? rs.payload.length : 0);
+      int code = cast(int)(rs.payload ? rs.statuscode.code : 0);
+      long ms = rq.starttime == SysTime.init ? -1 : Msecs(rq.starttime);
+      tag(Level.Always, format("%d", code),
+          "%s %s:%s %s%s [%d] %.1fkb in %s ms ", htmltime(), ip, port, rq.shorthost, uri.replace("%", "%%"), requests, bytes/1024f, ms);
     }
 
     // Is the client still running, if the socket was gone it's not otherwise check the terminated flag
@@ -98,16 +108,6 @@ class Client : ClientInterface {
     final @property long lastmodified() const { return(driver.lastmodified); }
     final @property long port() const { return(driver.port()); } 
     final @property string ip() const { return(driver.ip()); } 
-}
-
-void log(in ClientInterface cl, in Request rq, in Response rs) {
-  string uri;
-  try { uri = decodeComponent(rq.uri); } catch (Exception e) { uri = rq.uri; }
-  long bytes = (rs.payload && rs.isRange) ? (rs.rangeEnd - rs.rangeStart + 1) : (rs.payload ? rs.payload.length : 0);
-  int code = cast(int)(rs.payload ? rs.statuscode.code : 0);
-  long ms = rq.starttime == SysTime.init ? -1 : Msecs(rq.starttime);
-  tag(Level.Always, format("%d", code),
-      "%s %s:%s %s%s [%d] %.1fkb in %s ms ", htmltime(), cl.ip, cl.port, rq.shorthost, uri.replace("%", "%%"), cl.requests, bytes/1024f, ms);
 }
 
 unittest {

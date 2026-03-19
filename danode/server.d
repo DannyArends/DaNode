@@ -35,8 +35,8 @@ class Server {
   public:
     this(ushort port = 80, int backlog = 100, string wwwFolder = "www/",
          string sslFolder = ".ssl/", string sslKey = "server.key", string accountKey = "account.key") {
-      starttime = Clock.currTime();                             // Start the timer
-      socket = initialize(port, backlog);                       // Create the HTTP socket
+      starttime = Clock.currTime(); // Start the timer
+      socket = initialize(port, backlog); // Create the HTTP socket
       pool = new WorkerPool(new Router(wwwFolder, socket.localAddress()));
       version(SSL) {
         sslPath = sslFolder.resolveFolder();
@@ -44,7 +44,7 @@ class Server {
         account = accountKey;
         sslsocket = initialize(443, backlog);  // Create the SSL / HTTPs socket
       }
-      set = new SocketSet(1);                       // Create a server socket set
+      set = new SocketSet();
       log(Level.Always, "Server '%s' created backlog: %d", this.hostname(), backlog);
     }
 
