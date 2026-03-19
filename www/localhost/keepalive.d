@@ -35,7 +35,7 @@ void main(string[] args){
   }
 
   htmlpage.put("  </body>");
-  htmlpage.put("</html>\n");
+  htmlpage.put("</html>");
 
   // Write headers
   writeln("HTTP/1.1 200 OK");
