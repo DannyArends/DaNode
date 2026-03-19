@@ -63,7 +63,7 @@ class Client {
           }
           if (response.ready && response.completed) {       // We've completed the request, response cycle
             driver.requests++;
-            if(response.keepalive) { logRR(request, response); }
+            if(response.keepalive) { logConnection(request, response); }
             request.clearUploadFiles();                     // Clean uploaded files
             driver.inbuffer.clear();                        // Clear the input buffer
             if(!response.keepalive){ stop(); continue; }    // No keep alive, then stop this client
@@ -77,14 +77,14 @@ class Client {
           }
           log(Level.Trace, "Connection %s:%s (%s msecs) %s", ip, port, starttime, to!string(driver.inbuffer.data));
         }
-        logRR(request, response);
+        logConnection(request, response);
       } catch(Exception e) { log(Level.Verbose, "Unknown Client Exception: %s", e); stop();
       } catch(Error e) { log(Level.Verbose, "Unknown Client Error: %s", e); stop(); }
       log(Level.Verbose, "Connection %s:%s (%s) closed. %d requests %s (%s msecs)", ip, port, (driver.isSecure() ? "SSL" : "HTTP"), 
                                                                                       driver.requests, driver.senddata, starttime);
     }
 
-    void logRR(in Request rq, in Response rs) {
+    void logConnection(in Request rq, in Response rs) {
       string uri;
       try { uri = decodeComponent(rq.uri); } catch (Exception e) { uri = rq.uri; }
       long bytes = (rs.payload && rs.isRange) ? (rs.rangeEnd - rs.rangeStart + 1) : (rs.payload ? rs.payload.length : 0);

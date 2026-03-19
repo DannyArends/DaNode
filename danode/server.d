@@ -3,12 +3,14 @@
 module danode.server;
 
 import danode.imports;
+
+import danode.log : cv, abort, log, tag, error, Level;
 import danode.functions : Msecs, sISelect, resolveFolder;
 import danode.interfaces : DriverInterface;
 import danode.http : HTTP;
 import danode.router : Router;
+import danode.signals : shutdownSignal;
 import danode.workerpool : WorkerPool;
-import danode.log : cv, abort, log, tag, error, Level;
 
 version(SSL) {
   import danode.acme : checkAndRenew;
@@ -82,13 +84,10 @@ class Server {
     }
 
     // Stop the pool and shutdown the server
-    final void stop(){ pool.stop(); }
+    final void stop() { pool.stop(); socket.close(); version(SSL) { sslsocket.closeSSL(); } }
 
-     // Returns a Duration object holding the server uptime
+    // Returns a Duration object holding the server uptime
     final @property Duration uptime() const { return(Clock.currTime() - starttime); }
-
-    // Print some server information
-    final @property void info() { log(Level.Always, "Uptime %s, Connections: %d / queued: %d", uptime, pool.nAlive, pool.queued); }
 
     // Hostname of the server
     final @property string hostname() { return(socket.hostName()); }
@@ -98,6 +97,7 @@ class Server {
     }
 
     @property bool alive() {
+      if (shutdownSignal) return false;
       version(SSL) { return(socket.isAlive() && sslsocket.isAlive());
       } else { return(socket.isAlive()); }
     }
