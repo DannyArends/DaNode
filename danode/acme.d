@@ -55,6 +55,8 @@ version(SSL) {
     JSONValue order = newOrder(dir, pkey, kid, domain, orderURL);
     log(Level.Verbose, "ACME: order: %s, orderURL: %s", order.toString(), orderURL);
     string[] tokens;
+    scope(exit) synchronized(getAcmeMutex()) { foreach (t; tokens) acmeChallenges.remove(t); }
+
     foreach (authURL; order["authorizations"].array) {
       JSONValue challenge = getHTTP01Challenge(authURL.str, dir, pkey, kid);
       if (challenge.type == JSONType.null_) return false;
@@ -62,11 +64,7 @@ version(SSL) {
       triggerChallenge(challenge, dir, pkey, kid);
     }
 
-    if (!pollAllAuthorizations(order, dir, pkey, kid)) {
-      foreach (t; tokens) synchronized(getAcmeMutex()) { acmeChallenges.remove(t); }
-      return false;
-    }
-    foreach (t; tokens) synchronized(getAcmeMutex()) { acmeChallenges.remove(t); }
+    if (!pollAllAuthorizations(order, dir, pkey, kid)) { return(false); }
 
     JSONValue finalized = finalizeOrder(order, dir, pkey, kid, csrPath);
     log(Level.Verbose, "ACME: order status: %s, finalized: %s", finalized["status"].str, finalized.toString());
