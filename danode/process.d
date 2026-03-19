@@ -190,7 +190,10 @@ class Process : Thread {
 unittest {
   tag(Level.Always, "FILE", "%s", __FILE__);
 
-  auto p = new Process(["rdmd", "www/localhost/sse.d"], "/dev/null", null, false);
+  immutable string nulldev = "/dev/null";
+  version(Windows) nulldev = "NUL";
+
+  auto p = new Process(["rdmd", "www/localhost/sse.d"], nulldev, null, false);
   p.start();
   while(!p.finished){ Thread.sleep(msecs(5)); }
   assert(p.status() == 0, "process must exit 0");
