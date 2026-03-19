@@ -73,11 +73,12 @@ class FilePayload : Payload {
     /* Does the file require to be updated before sending ? */
     final bool needsupdate() {
       if (!isStaticFile()) return false; // CGI files are never buffered, since they are executed
-      if (fileSize() > 0 && fileSize() < buffermaxsize) { //
+      ptrdiff_t sz = fileSize();
+      if (sz > 0 && sz < buffermaxsize) { //
         if (!buffered) { log(Level.Trace, "File: '%s' needs buffering", path); return true; }
         if (mtime > btime) { log(Level.Trace, "File: '%s' stale record", path); return true; }
       }else{
-        log(Level.Verbose, "File: '%s' exceeds buffer (%dkb > %dkb)", path, fileSize() / 1024, buffermaxsize / 1024);
+        log(Level.Verbose, "File: '%s' exceeds buffer (%.1fkb > %.1fkb)", path, sz / 1024f, buffermaxsize / 1024f);
       }
       return false;
     }
@@ -85,23 +86,24 @@ class FilePayload : Payload {
     /* Reads the file into the internal buffer, and compress the buffer to the enc buffer
        Updates the buffer time and status.
     */
-    final void buffer() { synchronized {
-      if (!needsupdate()) return;  // re-check under lock
-      if(buf is null) buf = new char[](fileSize());
-      buf.length = fileSize();
+    final bool buffer() { synchronized {
+      if (!needsupdate()) return(false);  // re-check under lock
+      ptrdiff_t sz = fileSize();
+      if(buf is null) buf = new char[](sz);
+      buf.length = sz;
       try {
         auto f = File(path, "rb");
         f.rawRead(buf);
         f.close();
-      } catch (Exception e) { error("Exception during buffering '%s': %s", path, e.msg); return; }
+      } catch (Exception e) { error("Exception during buffering '%s': %s", path, e.msg); return(false); }
       try {
         auto c = new Compress(6, HeaderFormat.gzip);
         encbuf = cast(char[])(c.compress(buf));
         encbuf ~= cast(char[])(c.flush());
-      } catch (Exception e) { error("Exception during compressing '%s': %s", path, e.msg); }
+      } catch (Exception e) { error("Exception during compressing '%s': %s", path, e.msg); return(false); }
       btime = Clock.currTime();
-      log(Level.Trace, "File: '%s' buffered %d|%d bytes", path, fileSize(), encbuf.length);
-      buffered = true;
+      log(Level.Trace, "File: '%s' buffered %.1fkb|%.1fkb", path, sz / 1024f, encbuf.length / 1024f);
+      return(buffered = true);
     } }
 
     /* Whole file content served via the bytes function */

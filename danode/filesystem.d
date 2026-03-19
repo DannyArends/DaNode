@@ -58,10 +58,7 @@ class FileSystem {
           if (!domain.files.has(shortname)) {
             domain.files[shortname] = new FilePayload(f.name, maxsize);
             domain.entries++;
-            if (domain.files[shortname].needsupdate()) {
-              domain.files[shortname].buffer();
-              domain.buffered++;
-            }
+            if(domain.files[shortname].buffer()) { domain.buffered++; }
           }
         }
       }
