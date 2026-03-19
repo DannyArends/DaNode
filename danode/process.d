@@ -190,7 +190,7 @@ class Process : Thread {
 unittest {
   tag(Level.Always, "FILE", "%s", __FILE__);
 
-  immutable string nulldev = "/dev/null";
+  string nulldev = "/dev/null";
   version(Windows) nulldev = "NUL";
 
   auto p = new Process(["rdmd", "www/localhost/sse.d"], nulldev, null, false);
