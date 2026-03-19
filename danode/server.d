@@ -97,9 +97,14 @@ class Server {
       final @property string accountKey() { return(sslPath ~ account); }
     }
 
+     @property bool alive() {
+      version(SSL) { return socket.isAlive() && sslsocket.isAlive();
+      } else { return socket.isAlive(); }
+    }
+
     final void run() {
       SysTime lastScan = Clock.currTime();
-      while(socket.isAlive()) {
+      while(alive) {
         try {
           accept(socket);
           version (SSL) { accept(sslsocket, true); }
@@ -133,7 +138,7 @@ void main(string[] args) {
                "accountKey",  &accountKey,   // Server Let's encrypt account key
                "verbose|v",   &verbose);     // Verbose level (via commandline)
   atomicStore(cv, verbose);
-  version(Posix){ 
+  version(Posix) {
     import danode.signals : setupPosix;
     setupPosix();
   }
