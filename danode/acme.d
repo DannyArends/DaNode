@@ -204,21 +204,23 @@ version(SSL) {
     return JSONValue.init;
   }
 
- // Compute SHA256 thumbprint of the public JWK
-  string jwkThumbprint(EVP_PKEY* pkey) {
-    // JWK thumbprint requires canonical JSON: sorted keys, no whitespace
+  // Extract RSA public key parameters as byte arrays
+  void extractRSAParams(EVP_PKEY* pkey, out ubyte[] nbuf, out ubyte[] ebuf) {
     BIGNUM* bn_n = BN_new();
     BIGNUM* bn_e = BN_new();
+    scope(exit) { BN_free(bn_n); BN_free(bn_e); }
     EVP_PKEY_get_bn_param(pkey, "n", &bn_n);
     EVP_PKEY_get_bn_param(pkey, "e", &bn_e);
-    int nlen = BN_num_bytes(bn_n);
-    int elen = BN_num_bytes(bn_e);
-    ubyte[] nbuf = new ubyte[](nlen);
-    ubyte[] ebuf = new ubyte[](elen);
+    nbuf = new ubyte[](BN_num_bytes(bn_n));
+    ebuf = new ubyte[](BN_num_bytes(bn_e));
     BN_bn2bin(bn_n, nbuf.ptr);
     BN_bn2bin(bn_e, ebuf.ptr);
-    BN_free(bn_n);
-    BN_free(bn_e);
+  }
+
+ // Compute SHA256 thumbprint of the public JWK
+  string jwkThumbprint(EVP_PKEY* pkey) {
+    ubyte[] nbuf, ebuf;
+    pkey.extractRSAParams(nbuf, ebuf);
 
     // RFC 7638 canonical form - keys must be sorted alphabetically
     string canonical = `{"e":"` ~ b64url(ebuf) ~ `","kty":"RSA","n":"` ~ b64url(nbuf) ~ `"}`;
@@ -253,19 +255,8 @@ version(SSL) {
 
   // Extract public key as JWK JSON (for newAccount header)
   string jwkPublic(EVP_PKEY* pkey) {
-    BIGNUM* bn_n = BN_new();
-    BIGNUM* bn_e = BN_new();
-    EVP_PKEY_get_bn_param(pkey, "n", &bn_n);
-    EVP_PKEY_get_bn_param(pkey, "e", &bn_e);
-
-    int nlen = BN_num_bytes(bn_n);
-    int elen = BN_num_bytes(bn_e);
-    ubyte[] nbuf = new ubyte[](nlen);
-    ubyte[] ebuf = new ubyte[](elen);
-    BN_bn2bin(bn_n, nbuf.ptr);
-    BN_bn2bin(bn_e, ebuf.ptr);
-    BN_free(bn_n);
-    BN_free(bn_e);
+    ubyte[] nbuf, ebuf;
+    pkey.extractRSAParams(nbuf, ebuf);
 
     JSONValue jwk = ["kty": JSONValue("RSA"), "n": JSONValue(b64url(nbuf)), "e": JSONValue(b64url(ebuf))];
     return toJSON(jwk);
