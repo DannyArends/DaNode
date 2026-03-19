@@ -4,20 +4,18 @@ module danode.client;
 
 import danode.imports;
 
-import danode.cgi : CGI;
 import danode.statuscode : StatusCode;
 import danode.functions: htmltime, Msecs;
-import danode.interfaces : DriverInterface, ClientInterface, StringDriver;
+import danode.interfaces : DriverInterface, ClientInterface, StringDriver, sendHeaderTooLarge, sendPayloadTooLarge, sendTimedOut;
 import danode.router : Router, runRequest;
-import danode.response : Response, setPayload;
+import danode.response : Response;
 import danode.request : Request;
-import danode.payload : PayloadType;
 import danode.log : log, tag, Level;
 
-immutable size_t MAX_HEADER_SIZE  = 1024 * 32;          //  32KB Header
-immutable size_t MAX_REQUEST_SIZE = 1024 * 1024 * 2;    //   2MB Body
-immutable size_t MAX_UPLOAD_SIZE  = 1024 * 1024 * 100;  // 100MB Multipart uploads
-immutable size_t MAX_SSE_TIME = 60_000;                 // 60 seconds max SSE lifetime
+immutable size_t MAX_HEADER_SIZE  = 1024 * 32;          ///  32KB Header
+immutable size_t MAX_REQUEST_SIZE = 1024 * 1024 * 2;    ///   2MB Body
+immutable size_t MAX_UPLOAD_SIZE  = 1024 * 1024 * 100;  /// 100MB Multipart uploads
+immutable size_t MAX_SSE_TIME = 60_000;                 /// 60 seconds max SSE lifetime
 
 class Client : ClientInterface {
   private:
@@ -28,7 +26,6 @@ class Client : ClientInterface {
 
   public:
     this(Router router, DriverInterface driver, long maxtime = 5000) {
-      log(Level.Trace, "client constructor");
       this.router = router;
       this.driver = driver;
       this.maxtime = maxtime;
@@ -37,7 +34,7 @@ class Client : ClientInterface {
    final void run() {
       log(Level.Trace, "New connection established %s:%d", ip(), port() );
       try {
-        if (driver.openConnection() == false) { log(Level.Verbose, "WARN: Unable to open connection"); stop(); }
+        if (!driver.openConnection()) { log(Level.Verbose, "WARN: Unable to open connection"); return; }
         Request request;
         Response response;
         scope (exit) {
@@ -48,11 +45,11 @@ class Client : ClientInterface {
         while (running) {
           if (driver.receive(driver.socket) > 0) { // We've received new data
             if (!driver.hasHeader()) {
-              if (driver.inbuffer.data.length > MAX_HEADER_SIZE) { driver.setHeaderTooLarge(response); stop(); continue; }
+              if (driver.inbuffer.data.length > MAX_HEADER_SIZE) { driver.sendHeaderTooLarge(response); stop(); continue; }
             } else {
-              if (driver.endOfHeader > MAX_HEADER_SIZE) { driver.setHeaderTooLarge(response); stop(); continue; }
+              if (driver.endOfHeader > MAX_HEADER_SIZE) { driver.sendHeaderTooLarge(response); stop(); continue; }
               size_t limit = (driver.header.indexOf("multipart/") >= 0) ? MAX_UPLOAD_SIZE : MAX_REQUEST_SIZE;
-              if (driver.inbuffer.data.length > limit) { driver.setPayloadTooLarge(response); stop(); continue; }
+              if (driver.inbuffer.data.length > limit) { driver.sendPayloadTooLarge(response); stop(); continue; }
             }
             // Parse the data and try to create a response (Could fail multiple times)
             if (!response.ready) { router.route(driver, request, response, maxtime); }
@@ -75,7 +72,7 @@ class Client : ClientInterface {
           }
           if (lastmodified >= maxtime) { // Client are not allowed to be silent for more than maxtime
             log(Level.Trace, "inactivity: %s > %s", lastmodified, maxtime);
-            driver.setTimedOut(response);
+            driver.sendTimedOut(response);
             stop(); continue;
           }
           log(Level.Trace, "Connection %s:%s (%s msecs) %s", ip, port, starttime, to!string(driver.inbuffer.data));
@@ -96,15 +93,10 @@ class Client : ClientInterface {
       atomicStore(terminated, true);
     }
 
-    // Number of requests served
     final @property long requests() const { return(driver ? driver.requests : 0); }
-    // Start time of the client in mseconds (stored in the connection driver)
     final @property long starttime() const { return(driver.starttime); }
-    // When was the client last modified in mseconds (stored in the connection driver)
     final @property long lastmodified() const { return(driver.lastmodified); }
-    // Port of the client
     final @property long port() const { return(driver.port()); } 
-    // ip address of the client
     final @property string ip() const { return(driver.ip()); } 
 }
 
@@ -116,25 +108,6 @@ void log(in ClientInterface cl, in Request rq, in Response rs) {
   long ms = rq.starttime == SysTime.init ? -1 : Msecs(rq.starttime);
   tag(Level.Always, format("%d", code),
       "%s %s:%s %s%s [%d] %.1fkb in %s ms ", htmltime(), cl.ip, cl.port, rq.shorthost, uri.replace("%", "%%"), cl.requests, bytes/1024f, ms);
-}
-
-// serve a 408 connection timed out page
-void setTimedOut(ref DriverInterface driver, ref Response response) {
-  if(response.payload && response.payload.type == PayloadType.Script){ to!CGI(response.payload).notifyovertime(); }
-  response.setPayload(StatusCode.TimedOut, "408 - Connection Timed Out\n", "text/plain");
-  driver.send(response, driver.socket);
-}
-
-// serve a 431 request header fields too large page
-void setHeaderTooLarge(ref DriverInterface driver, ref Response response) {
-  response.setPayload(StatusCode.HeaderFieldsTooLarge, "431 - Request Header Fields Too Large\n", "text/plain");
-  driver.send(response, driver.socket);
-}
-
-// serve a 413 payload too large page
-void setPayloadTooLarge(ref DriverInterface driver, ref Response response) {
-  response.setPayload(StatusCode.PayloadTooLarge, "413 - Payload Too Large\n", "text/plain");
-  driver.send(response, driver.socket);
 }
 
 unittest {
