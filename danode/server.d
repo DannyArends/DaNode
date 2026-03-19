@@ -74,7 +74,7 @@ class Server {
         DriverInterface driver = null;
         if (!secure) driver = new HTTP(accepted, false);
         version(SSL) { if (secure) driver = new HTTPS(accepted, false); }
-        if (driver is null) { return(accepted.close()); }
+        if (driver is null) { accepted.close(); return; }
         if (!pool.push(driver, ip, isLoopback)) {
           log(Level.Always, "Rate limit or capacity exceeded [%s]", ip);
           driver.closeConnection();
