@@ -112,7 +112,9 @@ bool buildScriptHeader(ref Appender!(char[]) hdr, ref string connection, CGI scr
       hdr.put(format("%s %d %s\r\n", protocol, script.statuscode, script.statuscode.reason));
     }
     foreach (line; scriptheader.split("\n")) {
-      if (line.length > 0 && icmp(strip(line).split(":")[0], "connection") != 0){ hdr.put(line ~ "\n"); }
+      auto stripped = strip(line);
+      auto parts = stripped.split(":");
+      if (stripped.length > 0 && parts.length > 0 && icmp(parts[0], "connection") != 0) { hdr.put(line ~ "\n"); }
     }
     hdr.put(format("Connection: %s\r\n\r\n", connection));
     return true;
@@ -136,7 +138,7 @@ Response create(in Request request, Address address, in StatusCode statuscode = 
 
 bool setPayload(ref Response response, StatusCode code, string msg = "", in string mimetype = UNSUPPORTED_FILE) {
   response.payload = new Message(code, msg, mimetype);
-  return(response.ready = true);
+  return(response.ready = response.havepost = true);
 }
 
 // send a redirect permanently response

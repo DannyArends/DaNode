@@ -17,6 +17,9 @@ version(SSL) {
 
   alias size_t VERSION;
   immutable VERSION SSL23 = 0, SSL3 = 1, TLS1 = 2, DTLS1 = 3;
+  immutable int EVP_PKEY_RSA = 6;
+  immutable int EVP_PKEY_OP_KEYGEN = 8;
+  immutable int EVP_PKEY_CTRL_RSA_KEYGEN_BITS = 1;
 
   alias ExternC(T) = SetFunctionAttributes!(T, "C", functionAttributes!T);
 
@@ -29,21 +32,27 @@ version(SSL) {
       string hostname = to!(string)(cast(const(char*)) SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name));
       log(Level.Verbose, "SSL: [I] Looking for hostname: %s", hostname);
       if(hostname is null) { log(Level.Verbose, "SSL: [W] Client no SNI support, using default: contexts[0]"); return; }
-      ptrdiff_t idx = findContext(hostname);
-      if (idx >= 0) { 
-        log(Level.Verbose, "SSL: [I] Switching SSL context to %s", hostname); 
-        SSL_set_SSL_CTX(ssl, contexts[idx].context);
-      }else{ error("SSL: Callback failed to find certificate for %s", hostname); }
+      synchronized(contextsMutex) {
+        ptrdiff_t idx = findContext(hostname);
+        if (idx >= 0) { 
+          log(Level.Verbose, "SSL: [I] Switching SSL context to %s", hostname); 
+          SSL_set_SSL_CTX(ssl, contexts[idx].context);
+        }else{ error("SSL: Callback failed to find certificate for %s", hostname); }
+      }
     }
   }
+
+  __gshared Mutex contextsMutex;
+
+  shared static this() { contextsMutex = new Mutex(); }
 
   void generateKey(string path, int bits = 4096) {
     if (path.exists()) return;
     log(Level.Always, "SSL: Generating %d-bit RSA key at %s", bits, path);
-    EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new_id(6, null);  // 6 = EVP_PKEY_RSA
+    EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, null);
     scope(exit) EVP_PKEY_CTX_free(ctx);
     EVP_PKEY_keygen_init(ctx);
-    EVP_PKEY_CTX_ctrl(ctx, 6, 8, 1, bits, null);  // set_rsa_keygen_bits: op=KEYGEN(8), ctrl=KEYBITS(1)
+    EVP_PKEY_CTX_ctrl(ctx, EVP_PKEY_RSA, EVP_PKEY_OP_KEYGEN, EVP_PKEY_CTRL_RSA_KEYGEN_BITS, bits, null);
     EVP_PKEY* pkey;
     if (EVP_PKEY_keygen(ctx, &pkey) <= 0) { error("SSL: Keygen failed for %s", path); return; }
     scope(exit) EVP_PKEY_free(pkey);
@@ -54,7 +63,7 @@ version(SSL) {
 
   ptrdiff_t findContext(string hostname) {
     for (size_t x = 0; x < contexts.length; x++) {
-      if (hostname.endsWith(to!string(contexts[x].hostname.ptr))) return(x);
+      if (hostname.endsWith(fromStringz(contexts[x].hostname))) return(x);
     }
     return(-1);
   }
@@ -84,7 +93,8 @@ version(SSL) {
 
   // Does the hostname requested have a certificate ?
   bool hasCertificate(string hostname) {
-    bool found = (findContext(hostname) >= 0);
+    bool found;
+    synchronized(contextsMutex) { found = (findContext(hostname) >= 0); }
     log(Level.Trace, "SSL: [T] '%s' certificate? %s", hostname, found);
     return found;
   }
@@ -129,7 +139,7 @@ version(SSL) {
     foreach (DirEntry d; dirEntries(sslPath, SpanMode.shallow)) {
       if (d.name.endsWith(".chain")) {
         string hostname = baseName(d.name, ".chain");
-        if (hostname.length < 255) {
+        if (hostname.length < 254) {
           string chainFile = d.name;
           log(Level.Verbose, "SSL: [I] Reloading certificate at: '%s'", chainFile);
           auto lc = loadContext(chainFile, hostname, sslKey);
@@ -137,7 +147,7 @@ version(SSL) {
         }
       }
     }
-    contexts = localContexts;  // atomic single assignment
+    synchronized(contextsMutex) { contexts = localContexts; }
     log(Level.Always, "SSL: [I] Loaded %s SSL certificates", contexts.length);
   }
 
@@ -146,8 +156,10 @@ version(SSL) {
     log(Level.Verbose, "SSL: [I] Closing server SSL socket");
     socket.close();
     log(Level.Verbose, "SSL: [I] Cleaning up %d SSL contexts", contexts.length);
-    foreach (ref ctx; contexts) { SSL_CTX_free(ctx.context); }
-    contexts = null;
+    synchronized(contextsMutex) {
+      foreach (ref ctx; contexts) { SSL_CTX_free(ctx.context); }
+      contexts = null;
+    }
   }
 
   void sslAssert(bool ret) { if (!ret) { ERR_print_errors_fp(null); throw new Exception("SSL_ERROR"); } }

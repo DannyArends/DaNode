@@ -3,6 +3,8 @@
 module danode.http;
 
 import danode.imports;
+
+import danode.functions : sISelect;
 import danode.interfaces : DriverInterface;
 import danode.response : Response;
 import danode.log : log, tag, error, Level;
@@ -28,9 +30,7 @@ class HTTP : DriverInterface {
     override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096) {
       if (!socketReady()) return;
       // Wait until socket is writable before sending
-      SocketSet writeSet = new SocketSet();
-      writeSet.add(socket);
-      if (Socket.select(null, writeSet, null, dur!"msecs"(0)) <= 0) return;
+      if (socketSet.sISelect(socket, true, 0) <= 0) return;
       ptrdiff_t send = socket.send(response.bytes(maxsize));
       if (send > 0) {
         log(Level.Trace, "Send result=%d index=%d length=%d", send, response.index, response.length);

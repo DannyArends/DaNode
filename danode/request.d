@@ -93,9 +93,11 @@ struct Request {
     string r = headers.from("Range");
     if (r.length == 0 || !r.startsWith("bytes=")) return [-1, -1];
     string[] parts = r[6 .. $].split("-");
-    long start = parts[0].length > 0 ? to!long(parts[0]) : 0;
-    long end = (parts.length > 1 && parts[1].length > 0) ? to!long(parts[1]) : -1;
-    return [start, end];
+    try {
+      long start = parts[0].length > 0 ? to!long(parts[0]) : 0;
+      long end = (parts.length > 1 && parts[1].length > 0) ? to!long(parts[1]) : -1;
+      return [start, end];
+    } catch (Exception e) { return [-1, -1]; }
   }
 
   final @property @nogc bool hasRange() const nothrow { return headers.from("Range").startsWith("bytes="); }
@@ -165,7 +167,7 @@ struct Request {
   }
 
   final string[string] environ(string localpath) const {
-    string[string] env = environment.toAA();
+    string[string] env;
     env["REQUEST_METHOD"] = to!string(method);
     env["QUERY_STRING"] = query.length > 1 ? query[1 .. $] : "";
     env["REQUEST_URI"] = decodeComponent(uripath);
@@ -177,7 +179,8 @@ struct Request {
     env["HTTP_HOST"] = host;
     env["HTTPS"] = isSecure ? "on" : "";
     env["REDIRECT_STATUS"] = "200";
-    foreach (k, v; headers) env["HTTP_" ~ k.toUpper().replace("-", "_")] = v;
+    env["PATH"] = environment.get("PATH", "");
+    foreach (k, v; headers) { env["HTTP_" ~ k.toUpper().replace("-", "_")] = v; }
     return env;
   }
 
@@ -262,4 +265,8 @@ unittest {
   r10.headers["Accept-Encoding"] = "gzip, deflate";
   assert(r10.acceptsEncoding("deflate"), "deflate must be accepted");
   assert(!r10.acceptsEncoding("br"), "br must not be accepted");
+
+  Request r11;
+  r11.headers["Range"] = "bytes=abc-def";
+  assert(r11.range() == [-1, -1], "malformed range must return [-1, -1]");
 }
