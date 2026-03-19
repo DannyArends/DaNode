@@ -97,7 +97,7 @@ class Server {
     }
 
     @property bool alive() {
-      if (atomicLoad!(shutdownSignal)) return false;
+      if (atomicLoad(shutdownSignal)) return false;
       version(SSL) { return(socket.isAlive() && sslsocket.isAlive());
       } else { return(socket.isAlive()); }
     }
@@ -147,7 +147,7 @@ void main(string[] args) {
     loadSSL(server.sslPath, server.sslKey);                             // Load SSL certificates
     checkAndRenew(server.sslPath, server.sslKey, server.accountKey);    // checkAndRenew SSL certificates
   }
-  server.run();
+  return(server.run());
 }
 
 unittest {

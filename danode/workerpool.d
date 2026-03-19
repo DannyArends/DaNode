@@ -62,7 +62,7 @@ class WorkerPool {
       synchronized(mutex) { if (stopped) { return; } stopped = true; }
       foreach (i; 0 .. POOL_SIZE) sem.notify();   // wake all workers to exit
       foreach (t; workers) t.join();
-      log(Level.Always, "WorkerPool stopped");
+      log(Level.Trace, "WorkerPool stopped");
     }
 
   private:

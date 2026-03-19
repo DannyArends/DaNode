@@ -1,8 +1,8 @@
-/** danode/signals.d - POSIX signal handling: SIGPIPE suppression
+/** danode/signals.d - POSIX signal handling: SIGPIPE suppression & clean shutdown via SIGTERM, SIGINT
   * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.signals;
 
-__gshared bool shutdownSignal = false;
+shared bool shutdownSignal = false;
 
 version(Posix) {
   import danode.imports;
