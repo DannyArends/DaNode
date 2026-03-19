@@ -65,7 +65,7 @@ class FileSystem {
       // Remove files that no longer exist on disk
       foreach (k; domain.files.keys) { if (!exists(dname ~ k)) { domain.files.remove(k); } }
 
-      log(Level.Always, "Domain: '%s' files %s|%s", dname, domain.buffered, domain.entries);
+      log(Level.Verbose, "Domain: '%s' files %s|%s", dname, domain.buffered, domain.entries);
       log(Level.Verbose, "Domain: '%s' size %.2f/%.2f kB", dname, domain.buffersize / 1024.0, domain.size / 1024.0);
       return(domain);
     } }

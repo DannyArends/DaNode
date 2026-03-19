@@ -8,7 +8,6 @@ public import core.stdc.stdio : fileno;
 
 // Public imported structures and enums from core
 public import core.atomic;
-public import core.memory : GC;
 public import core.sync.semaphore : Semaphore;
 public import core.sync.mutex : Mutex;
 public import core.thread;

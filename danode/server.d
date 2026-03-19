@@ -126,7 +126,6 @@ class Server : Thread {
         } catch(Exception e) { error("Unspecified top level server exception: %s", e.msg);
         } catch(Error e) { error("Unspecified top level server error: %s", e.msg); }
       }
-      pool.stop();
       socket.close();
       version (SSL) { sslsocket.closeSSL(); }
     }
