@@ -16,11 +16,10 @@ version(SSL) {
   import danode.https : HTTPS;
 }
 
-class Server : Thread {
+class Server {
   private:
     Socket              socket;                 // The server socket
     SocketSet           set;                    // SocketSet for server socket and client listeners
-    bool                terminated;             // Server running
     SysTime             starttime;              // Start time of the server
     WorkerPool          pool;
 
@@ -47,7 +46,6 @@ class Server : Thread {
       }
       set = new SocketSet(1);                       // Create a server socket set
       log(Level.Always, "Server '%s' created backlog: %d", this.hostname(), backlog);
-      super(&run);
     }
 
     // Initialize the listening socket to a certain port and backlog
@@ -83,14 +81,8 @@ class Server : Thread {
       } catch(Error e) { error("Unable to accept connection, Error: %s", e.msg); }
     }
 
-    // is the server still running ?
-    final @property bool running() { synchronized {
-      version(SSL) { return(socket.isAlive() && sslsocket.isAlive() && !terminated);
-      } else { return(socket.isAlive() && !terminated); }
-    } }
-
     // Stop the pool and shutdown the server
-    final void stop(){ synchronized { pool.stop(); terminated = true; } }
+    final void stop(){ pool.stop(); }
 
      // Returns a Duration object holding the server uptime
     final @property Duration uptime() const { return(Clock.currTime() - starttime); }
@@ -107,7 +99,7 @@ class Server : Thread {
 
     final void run() {
       SysTime lastScan = Clock.currTime();
-      while(running) {
+      while(socket.isAlive()) {
         try {
           accept(socket);
           version (SSL) { accept(sslsocket, true); }
@@ -124,16 +116,10 @@ class Server : Thread {
     }
 }
 
-void parseKeyInput(ref Server server) {
-  string line = chomp(stdin.readln());
-  if (line.startsWith("quit")) server.stop();
-  if (line.startsWith("info")) server.info();
-}
-
 void main(string[] args) {
+  ushort port         = 80;
   int    backlog      = 100;
   int    verbose      = Level.Verbose;
-  bool   keyoff       = false;
   string wwwFolder    = "www/";
   string sslFolder    = ".ssl/";
   string sslKey       = "server.key";
@@ -141,31 +127,23 @@ void main(string[] args) {
 
   getopt(args, "port|p",      &port,         // Port to listen on
                "backlog|b",   &backlog,      // Backlog of clients supported
-               "keyoff|k",    &keyoff,       // Keyboard on or off
                "www",         &wwwFolder,    // Server www root folder
                "ssl",         &sslFolder,    // Location of SSL certificates
                "sslKey",      &sslKey,       // Server private key
                "accountKey",  &accountKey,   // Server Let's encrypt account key
                "verbose|v",   &verbose);     // Verbose level (via commandline)
   atomicStore(cv, verbose);
-  version(Posix) setupPosix();
-  version (Windows) {
-    log(Level.Always, "-k was set to true. However, keyboard input under windows is not supported");
-    keyoff = true;
+  version(Posix){ 
+    import danode.signals : setupPosix;
+    setupPosix();
   }
+
   auto server = new Server(port, backlog, wwwFolder, sslFolder, sslKey, accountKey);
   version (SSL) {
     loadSSL(server.sslPath, server.sslKey);                             // Load SSL certificates
     checkAndRenew(server.sslPath, server.sslKey, server.accountKey);    // checkAndRenew SSL certificates
   }
-  server.start();
-  while (server.running) {
-    if (!keyoff) { server.parseKeyInput(); }
-    stdout.flush();
-    Thread.sleep(dur!"msecs"(250));
-  }
-  log(Level.Always, "Server shutting down: %d", server.running);
-  server.info();
+  server.run();
 }
 
 unittest {
