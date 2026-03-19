@@ -19,7 +19,6 @@ immutable size_t MAX_REQUEST_SIZE = 1024 * 1024 * 2;    //   2MB Body
 immutable size_t MAX_UPLOAD_SIZE  = 1024 * 1024 * 100;  // 100MB Multipart uploads
 immutable size_t MAX_SSE_TIME = 60_000;                 // 60 seconds max SSE lifetime
 
-
 class Client : ClientInterface {
   private:
     Router              router;              /// Router class from server
@@ -93,7 +92,7 @@ class Client : ClientInterface {
 
     // Stop the client by setting the terminated flag
     final @property void stop() {
-      log(Level.Trace, "connection %s:%s stop called", ip, port);
+      log(Level.Trace, "Connection %s:%s stop called", ip, port);
       atomicStore(terminated, true);
     }
 

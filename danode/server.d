@@ -3,8 +3,7 @@
 module danode.server;
 
 import danode.imports;
-import danode.functions : from, Msecs, sISelect, resolveFolder;
-import danode.client : Client;
+import danode.functions : Msecs, sISelect, resolveFolder;
 import danode.interfaces : DriverInterface;
 import danode.http : HTTP;
 import danode.router : Router;
@@ -24,9 +23,6 @@ class Server : Thread {
     bool                terminated;             // Server running
     SysTime             starttime;              // Start time of the server
     WorkerPool          pool;
-
-  public:
-    string wwwFolder    = "www/";
 
     version(SSL) {
       private:
@@ -78,7 +74,7 @@ class Server : Thread {
         DriverInterface driver = null;
         if (!secure) driver = new HTTP(accepted, false);
         version(SSL) { if (secure) driver = new HTTPS(accepted, false); }
-        if (driver is null) { accepted.close(); return; }
+        if (driver is null) { return(accepted.close()); }
         if (!pool.push(driver, ip, isLoopback)) {
           log(Level.Always, "Rate limit or capacity exceeded [%s]", ip);
           driver.closeConnection();
@@ -88,12 +84,9 @@ class Server : Thread {
     }
 
     // is the server still running ?
-    final @property bool running(){ synchronized {
-      version(SSL) {
-        return(socket.isAlive() && sslsocket.isAlive() && !terminated);
-      } else {
-        return(socket.isAlive() && !terminated);
-      }
+    final @property bool running() { synchronized {
+      version(SSL) { return(socket.isAlive() && sslsocket.isAlive() && !terminated);
+      } else { return(socket.isAlive() && !terminated); }
     } }
 
     // Stop the pool and shutdown the server
@@ -137,19 +130,7 @@ void parseKeyInput(ref Server server) {
   if (line.startsWith("info")) server.info();
 }
 
-void setLimit() { version(Posix) {
-  import core.sys.posix.sys.resource;
-
-  rlimit rl;
-  getrlimit(RLIMIT_NOFILE, &rl);
-  rl.rlim_cur = rl.rlim_max;
-  auto res = setrlimit(RLIMIT_NOFILE, &rl);
-  log(Level.Always, "FD limit: %d [%d]", rl.rlim_cur, res);
-} }
-
 void main(string[] args) {
-  setLimit();
-  version(unittest){ ushort port = 8080; }else{ ushort port = 80; }
   int    backlog      = 100;
   int    verbose      = Level.Verbose;
   bool   keyoff       = false;
@@ -157,7 +138,7 @@ void main(string[] args) {
   string sslFolder    = ".ssl/";
   string sslKey       = "server.key";
   string accountKey   = "account.key";
-  
+
   getopt(args, "port|p",      &port,         // Port to listen on
                "backlog|b",   &backlog,      // Backlog of clients supported
                "keyoff|k",    &keyoff,       // Keyboard on or off
@@ -167,32 +148,24 @@ void main(string[] args) {
                "accountKey",  &accountKey,   // Server Let's encrypt account key
                "verbose|v",   &verbose);     // Verbose level (via commandline)
   atomicStore(cv, verbose);
-  version (unittest) {
-    // Do nothing, unittests will run
-  } else {
-    version (Posix) {
-      import core.sys.posix.signal : signal, SIGPIPE;
-      import danode.signals : handle_signal;
-      signal(SIGPIPE, &handle_signal);
-    }
-    version (Windows) {
-      log(Level.Always, "-k was set to true. However, keyboard input under windows is not supported");
-      keyoff = true;
-    }
-    auto server = new Server(port, backlog, wwwFolder, sslFolder, sslKey, accountKey);
-    version (SSL) {
-      loadSSL(server.sslPath, server.sslKey);                             // Load SSL certificates
-      checkAndRenew(server.sslPath, server.sslKey, server.accountKey);    // checkAndRenew SSL certificates
-    }
-    server.start();
-    while (server.running) {
-      if (!keyoff) { server.parseKeyInput(); }
-      stdout.flush();
-      Thread.sleep(dur!"msecs"(250));
-    }
-    log(Level.Always, "Server shutting down: %d", server.running);
-    server.info();
+  version(Posix) setupPosix();
+  version (Windows) {
+    log(Level.Always, "-k was set to true. However, keyboard input under windows is not supported");
+    keyoff = true;
   }
+  auto server = new Server(port, backlog, wwwFolder, sslFolder, sslKey, accountKey);
+  version (SSL) {
+    loadSSL(server.sslPath, server.sslKey);                             // Load SSL certificates
+    checkAndRenew(server.sslPath, server.sslKey, server.accountKey);    // checkAndRenew SSL certificates
+  }
+  server.start();
+  while (server.running) {
+    if (!keyoff) { server.parseKeyInput(); }
+    stdout.flush();
+    Thread.sleep(dur!"msecs"(250));
+  }
+  log(Level.Always, "Server shutting down: %d", server.running);
+  server.info();
 }
 
 unittest {
