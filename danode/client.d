@@ -88,7 +88,7 @@ class Client : ClientInterface {
     final @property bool running() const { return(!atomicLoad(terminated) && driver.socketReady()); }
 
     // Stop the client by setting the terminated flag
-    final @property void stop() {
+    final void stop() {
       log(Level.Trace, "Connection %s:%s stop called", ip, port);
       atomicStore(terminated, true);
     }
