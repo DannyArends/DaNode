@@ -97,9 +97,9 @@ class Server {
       final @property string accountKey() { return(sslPath ~ account); }
     }
 
-     @property bool alive() {
-      version(SSL) { return socket.isAlive() && sslsocket.isAlive();
-      } else { return socket.isAlive(); }
+    @property bool alive() {
+      version(SSL) { return(socket.isAlive() && sslsocket.isAlive());
+      } else { return(socket.isAlive()); }
     }
 
     final void run() {
