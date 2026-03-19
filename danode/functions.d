@@ -49,11 +49,14 @@ string safePath(in string root, in string path) {
   if (path.canFind("\0")) return null;
   string full = root ~ (path.startsWith("/") ? path : "/" ~ path);
   try {
+    string absroot = root.resolve();
+    if (!absroot.endsWith("/")) absroot ~= "/";
     if (exists(full)) {
       string resolved = full.resolve();
-      string absroot = root.resolve();
-      if (!absroot.endsWith("/")) absroot ~= "/";
       if (resolved != absroot[0..$-1] && !resolved.startsWith(absroot)) return null;
+    } else {
+      string parent = dirName(full).resolve();
+      if (parent != absroot[0..$-1] && !parent.startsWith(absroot)) return null;
     }
   } catch (Exception e) { return null; }
   return full;
