@@ -8,6 +8,7 @@ import danode.client : Client;
 import danode.interfaces : DriverInterface;
 import danode.http : HTTP;
 import danode.router : Router;
+import danode.workerpool : WorkerPool;
 import danode.log : cv, abort, log, tag, error, Level;
 
 version(SSL) {
@@ -16,18 +17,13 @@ version(SSL) {
   import danode.https : HTTPS;
 }
 
-immutable int MAX_CLIENTS = 2048;
-immutable int MAX_CLIENTS_PER_IP = 32;
-
 class Server : Thread {
   private:
     Socket              socket;                 // The server socket
     SocketSet           set;                    // SocketSet for server socket and client listeners
-    Client[]            clients;                // List of clients
     bool                terminated;             // Server running
     SysTime             starttime;              // Start time of the server
-    Router              router;                 // Router to route requests
-    long[string]        nAlivePerIP;
+    WorkerPool          pool;
 
   public:
     string wwwFolder    = "www/";
@@ -46,7 +42,7 @@ class Server : Thread {
          string sslFolder = ".ssl/", string sslKey = "server.key", string accountKey = "account.key") {
       starttime = Clock.currTime();                             // Start the timer
       socket = initialize(port, backlog);                       // Create the HTTP socket
-      router = new Router(wwwFolder, socket.localAddress());    // Start the router
+      pool = new WorkerPool(new Router(wwwFolder, socket.localAddress()));
       version(SSL) {
         sslPath = sslFolder.resolveFolder();
         ssl = sslKey;
@@ -73,20 +69,22 @@ class Server : Thread {
     }
 
     // Accept an incoming connection and create a client object
-    final void accept(ref Appender!(Client[]) persistent, Socket socket, bool secure = false) {
-      if (set.sISelect(socket, false, 5) <= 0 || nAlive >= MAX_CLIENTS) return;
-      log(Level.Trace, "Accepting %s request", secure ? "HTTPs" : "HTTP");
+    final void accept(Socket socket, bool secure = false) {
+      if (set.sISelect(socket, false, 5) <= 0) return;
       try {
-          DriverInterface driver = null;
-          if (!secure) driver = new HTTP(socket.accept(), false);
-          version(SSL) { if (secure) driver = new HTTPS(socket.accept(), false); }
-          if (driver is null) return;
-          Client client = new Client(router, driver);
-          client.start();
-          if (nAlivePerIP.from(client.ip, 0L) <= MAX_CLIENTS_PER_IP) {
-            persistent.put(client);
-          } else { log(Level.Always, "Rate limit exceeded [%s]", client.ip); client.stop(); }
-      } catch(Exception e) { error("Unable to accept connection: %s", e.msg); }
+        Socket accepted = socket.accept();
+        string ip = accepted.remoteAddress().toAddrString();
+        bool isLoopback = (ip == "127.0.0.1" || ip == "::1");
+        DriverInterface driver = null;
+        if (!secure) driver = new HTTP(accepted, false);
+        version(SSL) { if (secure) driver = new HTTPS(accepted, false); }
+        if (driver is null) { accepted.close(); return; }
+        if (!pool.push(driver, ip, isLoopback)) {
+          log(Level.Always, "Rate limit or capacity exceeded [%s]", ip);
+          driver.closeConnection();
+        }
+      } catch(Exception e) { error("Unable to accept connection, Exception: %s", e.msg);
+      } catch(Error e) { error("Unable to accept connection, Error: %s", e.msg); }
     }
 
     // is the server still running ?
@@ -98,19 +96,15 @@ class Server : Thread {
       }
     } }
 
-    // Stop all clients and shutdown the server
-    final void stop(){ synchronized {
-      foreach(ref Client client; clients){ client.stop(); } terminated = true;
-    } }
-
-    final @property long nAlive() { return nAlivePerIP.byValue.sum; }
+    // Stop the pool and shutdown the server
+    final void stop(){ synchronized { pool.stop(); terminated = true; } }
 
      // Returns a Duration object holding the server uptime
     final @property Duration uptime() const { return(Clock.currTime() - starttime); }
 
-     // Print some server information
-    final @property void info() { log(Level.Always, "Uptime %s, Connections: %d / %d", uptime, nAlive, clients.length); }
-    
+    // Print some server information
+    final @property void info() { log(Level.Always, "Uptime %s, Connections: %d / queued: %d", uptime, pool.nAlive, pool.queued); }
+
     // Hostname of the server
     final @property string hostname() { return(socket.hostName()); }
     version(SSL) {
@@ -119,42 +113,43 @@ class Server : Thread {
     }
 
     final void run() {
-      Appender!(Client[]) persistent;
       SysTime lastScan = Clock.currTime();
       while(running) {
         try {
-          Client[] previous = clients;                            // Slice reference
-          persistent.clear();                                     // Clear the Appender
-          accept(persistent, socket);
-          version (SSL) { accept(persistent, sslsocket, true); }
-
-          nAlivePerIP = null;
-          foreach (Client client; previous) {   // Foreach through the Slice reference
-            if(client.running) { nAlivePerIP[client.ip]++; persistent.put(client); }
-            else if(!client.isRunning) client.join();           // join finished threads
-          }
-          clients = persistent.data;
-          if (Msecs(lastScan) > 86_400_000) {   // Scan for deleted files & expiring certificates every day
-            router.scan();
+          accept(socket);
+          version (SSL) { accept(sslsocket, true); }
+          if (Msecs(lastScan) > 86_400_000) {
+            pool.scan();
             version(SSL) { checkAndRenew(sslPath, sslKey, accountKey); }
             lastScan = Clock.currTime();
           }
         } catch(Exception e) { error("Unspecified top level server exception: %s", e.msg);
         } catch(Error e) { error("Unspecified top level server error: %s", e.msg); }
       }
-      log(Level.Always, "Server socket closed, running: %s", running);
+      pool.stop();
       socket.close();
       version (SSL) { sslsocket.closeSSL(); }
     }
 }
 
-void parseKeyInput(ref Server server){
+void parseKeyInput(ref Server server) {
   string line = chomp(stdin.readln());
   if (line.startsWith("quit")) server.stop();
   if (line.startsWith("info")) server.info();
 }
 
+void setLimit() { version(Posix) {
+  import core.sys.posix.sys.resource;
+
+  rlimit rl;
+  getrlimit(RLIMIT_NOFILE, &rl);
+  rl.rlim_cur = rl.rlim_max;
+  auto res = setrlimit(RLIMIT_NOFILE, &rl);
+  log(Level.Always, "FD limit: %d [%d]", rl.rlim_cur, res);
+} }
+
 void main(string[] args) {
+  setLimit();
   version(unittest){ ushort port = 8080; }else{ ushort port = 80; }
   int    backlog      = 100;
   int    verbose      = Level.Verbose;

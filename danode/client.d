@@ -1,4 +1,4 @@
-/** danode/client.d - Per-connection thread: request/response lifecycle, keep-alive, timeouts
+/** danode/client.d - Per-connection handler: request/response lifecycle, keep-alive, timeouts
   * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.client;
 
@@ -20,7 +20,7 @@ immutable size_t MAX_UPLOAD_SIZE  = 1024 * 1024 * 100;  // 100MB Multipart uploa
 immutable size_t MAX_SSE_TIME = 60_000;                 // 60 seconds max SSE lifetime
 
 
-class Client : Thread, ClientInterface {
+class Client : ClientInterface {
   private:
     Router              router;              /// Router class from server
     DriverInterface     driver;              /// Driver
@@ -33,7 +33,6 @@ class Client : Thread, ClientInterface {
       this.router = router;
       this.driver = driver;
       this.maxtime = maxtime;
-      super(&run); // initialize the thread
     }
 
    final void run() {
@@ -85,7 +84,6 @@ class Client : Thread, ClientInterface {
         this.log(request, response);
       } catch(Exception e) { log(Level.Verbose, "Unknown Client Exception: %s", e); stop();
       } catch(Error e) { log(Level.Verbose, "Unknown Client Error: %s", e); stop(); }
-
       log(Level.Verbose, "Connection %s:%s (%s) closed. %d requests %s (%s msecs)", ip, port, (driver.isSecure() ? "SSL" : "HTTP"), 
                                                                                       driver.requests, driver.senddata, starttime);
     }

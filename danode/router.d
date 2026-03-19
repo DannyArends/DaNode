@@ -154,8 +154,7 @@ StringDriver runRequest(Router router, string request = "GET /dmd.d HTTP/1.1\nHo
   auto driver = new StringDriver(request);
   auto client = new Client(router, driver, maxtime);
   log(Level.Verbose, "Router: [I] %s:%s %s", client.ip(), client.port(), request.splitLines()[0]);
-  client.start();
-  client.join();
+  client.run();
   return driver;
 }
 
