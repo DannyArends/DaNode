@@ -8,27 +8,48 @@ import danode.functions : has, from;
 import danode.files : FilePayload;
 import danode.log : log, tag, Level;
 
-struct WebConfig {
+struct Config {
+  string[string] data;
+  SysTime mtime;
+}
+
+Config parseConfig(string content, string def = "no") {
+  Config config;
+  foreach (line; split(content, "\n")) {
+    if (chomp(strip(line)) == "" || line[0] == '#') continue;
+    auto parts = line.split("=");
+    string key = toLower(chomp(strip(parts[0])));
+    if (parts.length == 1) {
+      config.data[key] = def;
+    } else if (parts.length >= 2) {
+      config.data[key] = toLower(chomp(strip(join(parts[1 .. $], "="))));
+    }
+  }
+  return config;
+}
+
+struct ServerConfig {
   private:
-    string[string] data;
-    SysTime mtime;
+    Config config;
+    alias config this;
 
   public:
+    this(string path) {
+      if (!exists(path)) { log(Level.Trace, "No server.config at: '%s'", path); return; }
+      config = parseConfig(readText(path));
+      config.mtime = timeLastModified(path);
+    }
+}
 
+struct WebConfig {
+  private:
+    Config config;
+    alias config this;
+
+  public:
     this(FilePayload file, string def = "no") {
-      mtime = file.mtime;
-      string[] elements;
-      foreach (line; split(file.content, "\n")) {
-        if (chomp(strip(line)) != "" && line[0] != '#') {
-          elements = split(line, "=");
-          string key = toLower(chomp(strip(elements[0])));
-          if (elements.length == 1) {
-            data[key] = def;
-          }else if (elements.length >= 2) {
-            data[key] = toLower(chomp(strip(join(elements[1 .. $], "="))));
-          }
-        }
-      }
+      config = parseConfig(file.content, def);
+      config.mtime = file.mtime;
     }
 
   private @nogc bool flag(string key, string def, string match) const nothrow { return data.from(key, def) == match; }
@@ -89,17 +110,17 @@ unittest {
   WebConfig config = WebConfig(fp);
 
   // localhost web.config has: shorturl=yes, allowcgi=yes, redirect=dmd.d, allowdirs=ddoc/,test/
-  assert(config.allowcgi,                          "allowcgi must be yes");
-  assert(config.redirect(),                        "redirect must be set");
+  assert(config.allowcgi, "allowcgi must be yes");
+  assert(config.redirect(), "redirect must be set");
   assert(config.domain("localhost") == "localhost", "shorturl=yes must return shorthost");
-  assert(config.index() == "/dmd.d",               "index must be /dmd.d");
-  assert(!config.redirectdir(),                    "redirectdir must be no");
+  assert(config.index() == "/dmd.d", "index must be /dmd.d");
+  assert(!config.redirectdir(), "redirectdir must be no");
 
   // dirAllowed
   string localroot = fs.localroot("localhost");
-  assert(config.dirAllowed(localroot, localroot),            "root dir must be allowed");
-  assert(config.dirAllowed(localroot, localroot ~ "test/"),  "test/ must be allowed");
-  assert(!config.dirAllowed(localroot, localroot ~ "etc/"),  "etc/ must not be allowed");
+  assert(config.dirAllowed(localroot, localroot), "root dir must be allowed");
+  assert(config.dirAllowed(localroot, localroot ~ "test/"), "test/ must be allowed");
+  assert(!config.dirAllowed(localroot, localroot ~ "etc/"), "etc/ must not be allowed");
 
   // shorturl=no → www. prefix
   WebConfig noShort = WebConfig(fp);
