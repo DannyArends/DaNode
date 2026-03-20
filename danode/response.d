@@ -159,25 +159,21 @@ void domainNotFound(ref Response response) {
 }
 
 // serve a the output of an external script 
-void serveCGI(ref Response response, in Request request, in WebConfig config, in FileSystem fs, bool removeInput = true) {
+void serveCGI(ref Response response, in Request request, in WebConfig config, in FileSystem fs, string localpath, bool removeInput = true) {
   log(Level.Trace, "Requested a cgi file, execution allowed");
-  string localroot = fs.localroot(request.shorthost());
-  string localpath = config.localpath(localroot, request.path);
   if (!response.routed) { // Store POST data (could fail multiple times)
     log(Level.Trace, "Writing server variables");
     fs.serverAPI(config, request, response);
     log(Level.Trace, "Creating CGI payload");
-    response.payload = new CGI(request.command(localpath), request.inputfile(fs), request.environ(localpath), removeInput, request.maxtime-5);
+    response.payload = new CGI(request.command(localpath), request.inputfile(fs), request.environ(localpath), removeInput, request.maxtime);
     response.ready = true;
   }
 }
 
 // serve a directory browsing request, via a message
-void serveDirectory(ref Response response, ref Request request, in WebConfig config, in FileSystem fs) {
+void serveDirectory(ref Response response, ref Request request, in WebConfig config, in FileSystem fs, string localpath) {
   log(Level.Trace, "Sending browse directory");
-  string localroot = fs.localroot(request.shorthost());
-  string localpath = config.localpath(localroot, request.path);
-  response.setPayload(StatusCode.Ok, browseDir(localroot, localpath), "text/html");
+  response.setPayload(StatusCode.Ok, browseDir(fs.localroot(request.shorthost()), localpath), "text/html");
 }
 
 // serve a forbidden page

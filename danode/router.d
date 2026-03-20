@@ -87,7 +87,7 @@ class Router {
         log(Level.Trace, "Router: [T] allowcgi: %s, localpath %s exists", config.allowcgi, localpath);
         if (pathIsCGI && config.allowcgi) {
           log(Level.Trace, "Router: [T] localpath %s is a CGI file", localpath);
-          return(response.serveCGI(request, config, filesystem));
+          return(response.serveCGI(request, config, filesystem, localpath));
         }
         if (pathIsFILE && !pathIsCGI && pathAllowed) {
           log(Level.Trace, "Router: [T] localpath %s is a normal file", localpath);
@@ -100,7 +100,7 @@ class Router {
             if (!config.allowcgi) return(response.notFound());
             return(redirectCanonical(config, request, response));
           }
-          return(response.serveDirectory(request, config, filesystem));
+          return(response.serveDirectory(request, config, filesystem, localpath));
         }
         return(response.forbidden());
       }
