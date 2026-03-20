@@ -51,7 +51,7 @@ class Client {
               if (driver.inbuffer.data.length > limit) { driver.sendPayloadTooLarge(response); stop(); continue; }
             }
             // Parse the data and try to create a response (Could fail multiple times)
-            if (!response.ready) { router.route(driver, request, response, maxtime); }
+            if (!response.ready) { router.route(driver, request, response); }
           }
           if (response.ready && !response.completed) {      // We know what to respond, but haven't send all of it yet
             driver.send(response, driver.socket);           // Send the response, hit multiple times, send what you can and return

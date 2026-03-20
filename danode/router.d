@@ -33,18 +33,18 @@ class Router {
     }
 
     // Parse the header of a request, or receive additional post data when the user is uploading
-    final bool parse(in DriverInterface driver, ref Request request, ref Response response, long maxtime = 4500) {
+    final bool parse(in DriverInterface driver, ref Request request, ref Response response) {
       if (!driver.hasHeader()) return(false);
       if (!response.created) {
-        request.initialize(driver, maxtime);
+        request.initialize(driver);
         response = request.create(this.address);
       } else { request.update(driver.body); }
       return(true);
     }
 
     // Route a request based on the request header
-    final void route(DriverInterface driver, ref Request request, ref Response response, long maxtime = 4500) {
-      if (!response.routed && parse(driver, request, response, maxtime)) {
+    final void route(DriverInterface driver, ref Request request, ref Response response) {
+      if (!response.routed && parse(driver, request, response)) {
         if (request.parsePost(response, filesystem)) { deliver(request, response); }
       }
     }

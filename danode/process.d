@@ -62,12 +62,12 @@ class Process : Thread {
     Appender!(char[])  errbuffer;           /// Error appender buffer
 
   public:
-    this(string[] command, string inputfile, string[string] environ, bool removeInput = true, long maxtime = 4500) {
+    this(string[] command, string inputfile, string[string] environ, bool removeInput = true) {
       this.command = command;
       this.inputfile = inputfile;
       this.environ = environ;
       this.removeInput = removeInput;
-      this.maxtime = maxtime;
+      this.maxtime = serverConfig.get("cgi_timeout", 4500L);
       this.starttime = Clock.currTime();
       this.modified = Clock.currTime();
       this.outbuffer = appender!(char[])();

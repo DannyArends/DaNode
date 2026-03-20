@@ -165,7 +165,7 @@ void serveCGI(ref Response response, in Request request, in WebConfig config, in
     log(Level.Trace, "Writing server variables");
     fs.serverAPI(config, request, response);
     log(Level.Trace, "Creating CGI payload");
-    response.payload = new CGI(request.command(localpath), request.inputfile(fs), request.environ(localpath), removeInput, request.maxtime);
+    response.payload = new CGI(request.command(localpath), request.inputfile(fs), request.environ(localpath), removeInput);
     response.ready = true;
   }
 }
