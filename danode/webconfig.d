@@ -45,15 +45,15 @@ struct ServerConfig {
       config.mtime = timeLastModified(path);
     }
 
-    @property int maxClients() const { return to!int(data.from("max_clients",        "2048")); }
+    @property int maxClients() const { return to!int(data.from("max_clients", "2048")); }
     @property int maxClientsPerIP() const { return to!int(data.from("max_clients_per_ip", "32")); }
-    @property int poolSize() const { return to!int(data.from("pool_size",          "200")); }
-    @property size_t maxHeaderSize() const { return to!size_t(data.from("max_header_size",  "32768")); }
+    @property int poolSize() const { return to!int(data.from("pool_size", "200")); }
+    @property size_t maxHeaderSize() const { return to!size_t(data.from("max_header_size", "32768")); }
     @property size_t maxRequestSize() const { return to!size_t(data.from("max_request_size", "2097152")); }
-    @property size_t maxUploadSize() const { return to!size_t(data.from("max_upload_size",  "104857600")); }
-    @property size_t maxSSETime() const { return to!size_t(data.from("max_sse_time",     "60000")); }
-    @property size_t maxCGIOutput() const { return to!size_t(data.from("max_cgi_output",   "10485760")); }
-    @property long handshakeTimeout() const { return to!long(data.from("handshake_timeout",  "5000")); }
+    @property size_t maxUploadSize() const { return to!size_t(data.from("max_upload_size", "104857600")); }
+    @property size_t maxSSETime() const { return to!size_t(data.from("max_sse_time", "60000")); }
+    @property size_t maxCGIOutput() const { return to!size_t(data.from("max_cgi_output", "10485760")); }
+    @property long handshakeTimeout() const { return to!long(data.from("handshake_timeout", "5000")); }
     @property string serverInfo() const { return data.from("serverinfo", "DaNode/0.0.3"); }
     @property string userEmail() const { return data.from("user_email", ""); }
 
@@ -77,9 +77,9 @@ struct WebConfig {
     }
 
     @property string domain(string shorthost) const { return flag("shorturl", "yes", "yes") ? shorthost : format("www.%s", shorthost); }
-    @property @nogc bool allowcgi() const nothrow { return flag("allowcgi",    "no", "yes"); }
+    @property @nogc bool allowcgi() const nothrow { return flag("allowcgi", "no", "yes"); }
     @property string localpath(in string localroot, in string path) const { return(format("%s%s", localroot, path)); }
-    @property @nogc bool redirect() const nothrow { return !flag("redirect",   "/",  "/"); }
+    @property @nogc bool redirect() const nothrow { return !flag("redirect", "/",  "/"); }
     @property @nogc bool redirectdir() const nothrow { return !flag("redirectdir","no", "no"); }
     @property string index() const { string to = data.from("redirect", "/"); if (to[0] != '/') { return(format("/%s", to)); } return(to); }
     @property string[] allowdirs() const nothrow { return(data.from("allowdirs", "/").split(",")); }
@@ -90,9 +90,7 @@ struct WebConfig {
       string p = path.startsWith(root) ? path : path.replace(localroot, root);
       if (p.length <= root.length) return true;
       string npath = p[root.length .. $];
-      foreach (d; allowdirs) {
-        if (indexOf(strip(npath), strip(d)) == 0) return true;
-      }
+      foreach (d; allowdirs) { if (indexOf(strip(npath), strip(d)) == 0) return true; }
       return false;
     }
 }
@@ -129,9 +127,9 @@ unittest {
   assert(noShort.domain("localhost") == "www.localhost", "shorturl=no must add www.");
 
   ServerConfig sc = ServerConfig("nonexistent.config");
-  assert(sc.maxClients()      == 2048,           "default maxClients must be 2048");
-  assert(sc.maxClientsPerIP() == 32,             "default maxClientsPerIP must be 32");
-  assert(sc.poolSize()        == 200,            "default poolSize must be 200");
+  assert(sc.maxClients()      == 2048, "default maxClients must be 2048");
+  assert(sc.maxClientsPerIP() == 32, "default maxClientsPerIP must be 32");
+  assert(sc.poolSize()        == 200, "default poolSize must be 200");
   assert(sc.serverInfo()      == "DaNode/0.0.3", "default serverInfo must be set");
 }
 
