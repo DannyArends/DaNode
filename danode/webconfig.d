@@ -8,6 +8,11 @@ import danode.functions : has, from;
 import danode.files : FilePayload;
 import danode.log : log, tag, Level;
 
+__gshared ServerConfig serverConfig;
+__gshared Mutex serverConfigMutex;
+
+shared static this() { serverConfigMutex = new Mutex(); }
+
 struct Config {
   string[string] data;
   SysTime mtime;
@@ -39,6 +44,23 @@ struct ServerConfig {
       config = parseConfig(readText(path));
       config.mtime = timeLastModified(path);
     }
+
+    @property int maxClients() const { return to!int(data.from("max_clients",        "2048")); }
+    @property int maxClientsPerIP() const { return to!int(data.from("max_clients_per_ip", "32")); }
+    @property int poolSize() const { return to!int(data.from("pool_size",          "200")); }
+    @property size_t maxHeaderSize() const { return to!size_t(data.from("max_header_size",  "32768")); }
+    @property size_t maxRequestSize() const { return to!size_t(data.from("max_request_size", "2097152")); }
+    @property size_t maxUploadSize() const { return to!size_t(data.from("max_upload_size",  "104857600")); }
+    @property size_t maxSSETime() const { return to!size_t(data.from("max_sse_time",     "60000")); }
+    @property size_t maxCGIOutput() const { return to!size_t(data.from("max_cgi_output",   "10485760")); }
+    @property long handshakeTimeout() const { return to!long(data.from("handshake_timeout",  "5000")); }
+    @property string serverInfo() const { return data.from("serverinfo", "DaNode/0.0.3"); }
+    @property string userEmail() const { return data.from("user_email", ""); }
+
+    T get(T)(string key, T def) { synchronized(serverConfigMutex) {
+      try { return to!T(data.from(key, to!string(def))); }
+      catch (Exception e) { return def; }
+    } }
 }
 
 struct WebConfig {
@@ -126,5 +148,11 @@ unittest {
   WebConfig noShort = WebConfig(fp);
   noShort.data["shorturl"] = "no";
   assert(noShort.domain("localhost") == "www.localhost", "shorturl=no must add www.");
+
+  ServerConfig sc = ServerConfig("nonexistent.config");
+  assert(sc.maxClients()      == 2048,           "default maxClients must be 2048");
+  assert(sc.maxClientsPerIP() == 32,             "default maxClientsPerIP must be 32");
+  assert(sc.poolSize()        == 200,            "default poolSize must be 200");
+  assert(sc.serverInfo()      == "DaNode/0.0.3", "default serverInfo must be set");
 }
 

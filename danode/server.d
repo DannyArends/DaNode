@@ -11,6 +11,7 @@ import danode.http : HTTP;
 import danode.router : Router;
 import danode.signals : shutdownSignal;
 import danode.workerpool : WorkerPool;
+import danode.webconfig : serverConfig;
 
 version(SSL) {
   import danode.acme : checkAndRenew;
@@ -137,6 +138,7 @@ void main(string[] args) {
                "accountKey",  &accountKey,   // Server Let's encrypt account key
                "verbose|v",   &verbose);     // Verbose level (via commandline)
   atomicStore(cv, verbose);
+  synchronized(serverConfigMutex) {  ServerConfig(wwwFolder ~ "server.config"); }
   version(Posix) {
     import danode.signals : setupPosix;
     setupPosix();

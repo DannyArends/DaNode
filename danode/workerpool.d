@@ -3,14 +3,11 @@
 module danode.workerpool;
 
 import danode.imports;
-import danode.client     : Client;
+import danode.client : Client;
 import danode.interfaces : DriverInterface;
-import danode.router     : Router;
-import danode.log        : log, error, Level;
-
-immutable int MAX_CLIENTS = 2048;         /// Maximum number of queued connections before dropping
-immutable int MAX_CLIENTS_PER_IP = 32;    /// Maximum concurrent connections per remote IP
-immutable int POOL_SIZE = 200;            /// Number of pre-allocated worker threads
+import danode.router : Router;
+import danode.log : log, error, Level;
+import danode.webconfig : serverConfig;
 
 class WorkerPool {
   private:
@@ -27,21 +24,21 @@ class WorkerPool {
       this.router  = router;
       this.mutex   = new Mutex();
       this.sem     = new Semaphore(0);
-      foreach (i; 0 .. POOL_SIZE) {
+      foreach (i; 0 .. serverConfig.get("pool_size", 200)) {
         auto t = new Thread(&workerLoop, 256 * 1024);
         t.isDaemon = true;
         t.start();
         workers ~= t;
       }
-      log(Level.Always, "WorkerPool started with %d threads", POOL_SIZE);
+      log(Level.Always, "WorkerPool started with %d threads", serverConfig.get("pool_size", 200));
     }
 
     /* Enqueue a new connection driver for handling by the next available worker.
        Returns false if the connection should be rejected (rate limit or capacity exceeded). */
     bool push(DriverInterface driver, string ip, bool isLoopback) {
       synchronized(mutex) {
-        if (!isLoopback && nAlivePerIP.get(ip, 0L) >= MAX_CLIENTS_PER_IP) return(false);
-        if (queue.length >= MAX_CLIENTS) return(false);
+        if (!isLoopback && nAlivePerIP.get(ip, 0L) >= serverConfig.get("max_clients_per_ip", 32)) return(false);
+        if (queue.length >= serverConfig.get("max_clients", 2048)) return(false);
         queue ~= driver;
       }
       sem.notify();
@@ -60,7 +57,7 @@ class WorkerPool {
     // Signal all workers to exit and join them
     void stop() {
       synchronized(mutex) { if (stopped) { return; } stopped = true; }
-      foreach (i; 0 .. POOL_SIZE) sem.notify();   // wake all workers to exit
+      foreach (i; 0 .. serverConfig.get("pool_size", 200)) sem.notify();   // wake all workers to exit
       foreach (t; workers) t.join();
       log(Level.Trace, "WorkerPool stopped");
     }
