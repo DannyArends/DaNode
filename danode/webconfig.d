@@ -46,8 +46,7 @@ struct ServerConfig {
     }
 
     T get(T)(string key, T def) { synchronized(serverConfigMutex) {
-      try { return to!T(data.from(key, to!string(def))); }
-      catch (Exception e) { return def; }
+      try { return to!T(data.from(key, to!string(def))); }catch (Exception e) { return def; }
     } }
 }
 
@@ -82,6 +81,8 @@ struct WebConfig {
     }
 }
 
+/* Returns a cached WebConfig for the given domain, reloading from disk if the file has been
+   modified since the last load. Enables hot-reload of per-domain web.config without restart. */
 WebConfig getConfig(ref WebConfig[string] configs, FilePayload fp, string key) {
   if (key !in configs || fp.mtime > configs[key].mtime) { configs[key] = WebConfig(fp); }
   return configs[key];
