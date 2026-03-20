@@ -1,4 +1,4 @@
-/** danode/webconfig.d - Per-domain web.config parsing: CGI, redirects, directory access control
+/** danode/webconfig.d - Server configuration and per-domain web.config parsing: CGI, redirects, directory access control
   * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.webconfig;
 
@@ -68,54 +68,33 @@ struct WebConfig {
     Config config;
     alias config this;
 
+    @nogc bool flag(string key, string def, string match) const nothrow { return data.from(key, def) == match; }
+
   public:
     this(FilePayload file, string def = "no") {
       config = parseConfig(file.content, def);
       config.mtime = file.mtime;
     }
 
-  private @nogc bool flag(string key, string def, string match) const nothrow { return data.from(key, def) == match; }
+    @property string domain(string shorthost) const { return flag("shorturl", "yes", "yes") ? shorthost : format("www.%s", shorthost); }
+    @property @nogc bool allowcgi() const nothrow { return flag("allowcgi",    "no", "yes"); }
+    @property string localpath(in string localroot, in string path) const { return(format("%s%s", localroot, path)); }
+    @property @nogc bool redirect() const nothrow { return !flag("redirect",   "/",  "/"); }
+    @property @nogc bool redirectdir() const nothrow { return !flag("redirectdir","no", "no"); }
+    @property string index() const { string to = data.from("redirect", "/"); if (to[0] != '/') { return(format("/%s", to)); } return(to); }
+    @property string[] allowdirs() const nothrow { return(data.from("allowdirs", "/").split(",")); }
 
-  // Which domain is the prefered domain to be used: http://www.xxx.nl or http://xxx.nl
-  @property string domain(string shorthost) const { return flag("shorturl", "yes", "yes") ? shorthost : format("www.%s", shorthost); }
-
-  // Is CGI allowed ?
-  @property @nogc bool allowcgi()    const nothrow { return flag("allowcgi",    "no", "yes"); }
-
-  // concats localroot with the path specified
-  @property string localpath(in string localroot, in string path) const {
-    return(format("%s%s", localroot, path));
-  }
-
-  // Should redirection be performed ?
-  @property @nogc bool redirect() const nothrow { return !flag("redirect",   "/",  "/"); }
-
-  // Should directories be redirected to the index page ?
-  @property @nogc bool redirectdir() const nothrow { return !flag("redirectdir","no", "no"); }
-
-  // What index page is specified in the 'redirect' option in the web.config file
-  @property string index() const {
-    string to = data.from("redirect", "/");
-    if (to[0] != '/') return(format("/%s", to));
-    return(to);
-  }
-
-  // All directories listed in the allowdirs option in the web.config file
-  @property string[] allowdirs() const nothrow { 
-    return(data.from("allowdirs", "/").split(","));
-  }
-
-  // Is the directory allowed to be viewed ?
-  @property bool dirAllowed(in string localroot, in string path) const {
-    string root = localroot.endsWith("/") ? localroot : localroot ~ "/";
-    string p = path.startsWith(root) ? path : path.replace(localroot, root);
-    if (p.length <= root.length) return true;
-    string npath = p[root.length .. $];
-    foreach (d; allowdirs) {
-      if (indexOf(strip(npath), strip(d)) == 0) return true;
+    // Is the directory allowed to be viewed ?
+    @property bool dirAllowed(in string localroot, in string path) const {
+      string root = localroot.endsWith("/") ? localroot : localroot ~ "/";
+      string p = path.startsWith(root) ? path : path.replace(localroot, root);
+      if (p.length <= root.length) return true;
+      string npath = p[root.length .. $];
+      foreach (d; allowdirs) {
+        if (indexOf(strip(npath), strip(d)) == 0) return true;
+      }
+      return false;
     }
-    return false;
-  }
 }
 
 WebConfig getConfig(ref WebConfig[string] configs, FilePayload fp, string key) {
