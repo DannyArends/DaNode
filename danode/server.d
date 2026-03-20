@@ -11,7 +11,7 @@ import danode.http : HTTP;
 import danode.router : Router;
 import danode.signals : shutdownSignal;
 import danode.workerpool : WorkerPool;
-import danode.webconfig : serverConfig;
+import danode.webconfig : serverConfig, serverConfigMutex;
 
 version(SSL) {
   import danode.acme : checkAndRenew;
