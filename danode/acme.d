@@ -8,7 +8,7 @@ version(SSL) {
 
   import danode.log : log, error, Level;
   import danode.ssl : loadSSL, generateKey;
-  import danode.functions : writeFile;
+  import danode.functions : writeFile, isFILE;
   import danode.webconfig : serverConfig;
 
   immutable string ACME_DIR_PROD = "https://acme-v02.api.letsencrypt.org/directory";
@@ -80,7 +80,7 @@ version(SSL) {
 
     // Check cert expiry and renew if < 30 days remaining
   void checkAndRenew(string certDir = ".ssl/", string keyFile = ".ssl/server.key", string accountKey = ".ssl/account.key", bool staging = false) {
-    if (!exists(accountKey) || !isFile(accountKey)) { accountKey.generateKey(); }
+    if (!isFILE(accountKey)) { accountKey.generateKey(); }
     new Thread({
       try {
         log(Level.Always, "checkAndRenew called on '%s' with key '%s'", certDir, accountKey);
