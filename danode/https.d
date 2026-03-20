@@ -10,9 +10,8 @@ version(SSL) {
   import danode.response : Response;
   import danode.log : tag, log, error, Level;
   import danode.interfaces : DriverInterface;
-  import danode.ssl;
-
-  immutable long HANDSHAKE_TIMEOUT = 5000;  // 5 seconds
+  import danode.ssl : checkForError, contexts;
+  import danode.webconfig : serverConfig;
 
   class HTTPS : DriverInterface {
     private:
@@ -26,7 +25,7 @@ version(SSL) {
       bool performHandshake() {
         log(Level.Trace, "Performing handshake");
         int rA, rE;
-        while (starttime < HANDSHAKE_TIMEOUT) {
+        while (starttime < serverConfig.get("handshake_timeout", 5000L)) {
           rA = SSL_accept(ssl);
           if (rA == 1) return(true);    // Success
           if (rA == 0) return(false);   // Controlled failure: Not retryable

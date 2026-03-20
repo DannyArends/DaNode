@@ -7,7 +7,7 @@ import danode.imports;
 import danode.filesystem : FileSystem;
 import danode.interfaces : DriverInterface;
 import danode.functions : interpreter, from, parseHtmlDate, parseQueryString;
-import danode.webconfig : WebConfig;
+import danode.webconfig : WebConfig, serverConfig;
 import danode.post : PostItem, PostType;
 import danode.log : log, tag, error, Level;
 
@@ -55,13 +55,13 @@ struct Request {
   long maxtime;  /// Maximum time in ms before the request is discarded
 
   // Start a new Request, and parseHeader on the DriverInterface
-  final void initialize(const DriverInterface driver, long maxtime = 4500) {
+  final void initialize(const DriverInterface driver) {
     this.ip = driver.ip;
     this.port = driver.port;
     this.body = driver.body;
     this.isSecure = driver.isSecure;
     this.starttime = Clock.currTime();
-    this.maxtime = maxtime;
+    this.maxtime = serverConfig.get("request_timeout", 5000L);
     this.id = md5UUID(format("%s:%d-%s", driver.ip, driver.port, starttime));
     this.isValid = this.parseHeader(driver.header);
     log(Level.Verbose, "request: %s to %s from %s:%d - %s", method, uri, this.ip, this.port, this.id);

@@ -6,6 +6,7 @@ version(SSL) {
   import danode.imports;
   import danode.includes;
 
+  import danode.functions : isFILE, isDIR;
   import danode.log : log, tag, error, Level;
 
   // SSL context structure, stored relation between hostname 
@@ -79,7 +80,7 @@ version(SSL) {
     SSL_CTX_set_options(ctx, 0x00400000U); //SSL_OP_CIPHER_SERVER_PREFERENCE
     SSL_CTX_set1_groups_list(ctx, "X25519:P-256:P-384");
 
-    if (exists(chainFile) && isFile(chainFile)) {
+    if (isFILE(chainFile)) {
       log(Level.Verbose, "SSL: [I] Loading certificate+chain from file: %s", chainFile);
       sslAssert(SSL_CTX_use_certificate_chain_file(ctx, cast(const char*) toStringz(chainFile)) > 0);
     } else {
@@ -132,17 +133,16 @@ version(SSL) {
   // Reload all SSL contexts from sslPath without restarting the server
   void loadSSL(string sslPath = ".ssl/", string sslKey = ".ssl/server.key") {
     log(Level.Verbose, "SSL: [I] loading sslPath: %s, sslKey: %s", sslPath, sslKey);
-    if (!exists(sslPath) || !isDir(sslPath)) { error("SSL: sslPath '%s' not found", sslPath); return; }
-    if (!exists(sslKey) || !isFile(sslKey)) { sslKey.generateKey(); }
+    if (!isDIR(sslPath)) { error("SSL: sslPath '%s' not found", sslPath); return; }
+    if (!isFILE(sslKey)) { sslKey.generateKey(); }
 
     SSLcontext[] localContexts;
     foreach (DirEntry d; dirEntries(sslPath, SpanMode.shallow)) {
       if (d.name.endsWith(".chain")) {
         string hostname = baseName(d.name, ".chain");
         if (hostname.length < 254) {
-          string chainFile = d.name;
-          log(Level.Verbose, "SSL: [I] Reloading certificate at: '%s'", chainFile);
-          auto lc = loadContext(chainFile, hostname, sslKey);
+          log(Level.Verbose, "SSL: [I] Reloading certificate at: '%s'", d.name);
+          auto lc = loadContext(d.name, hostname, sslKey);
           if (lc.context !is null) localContexts ~= lc;
         }
       }

@@ -7,7 +7,7 @@ import danode.imports;
 import danode.statuscode : StatusCode;
 import danode.payload : PayloadType;
 import danode.files : FilePayload, FileStream;
-import danode.functions : has;
+import danode.functions : has, isFILE, isDIR;
 import danode.log : log, tag, error, Level;
 
 /* Domain name structure containing files in that domain
@@ -40,7 +40,7 @@ class FileSystem {
 
     /* Scan the whole filesystem for changes */
     final void scan(){ synchronized {
-      foreach (DirEntry d; dirEntries(root, SpanMode.shallow)){ if(d.isDir()){
+      foreach (DirEntry d; dirEntries(root, SpanMode.shallow)){ if(d.name.isDIR()){
         domains[d.name] = scan(d.name);
       } }
       // Remove domains that no longer exist on disk
@@ -50,18 +50,20 @@ class FileSystem {
     /* Scan a single folder */
     final Domain scan(string dname){ synchronized {
       Domain domain;
-      foreach (DirEntry f; dirEntries(dname, SpanMode.depth)) {
-        if (f.isFile()) {
-          string shortname = replace(f.name[dname.length .. $], "\\", "/");
-          if (shortname.endsWith(".in") || shortname.endsWith(".up")) continue;
-          log(Level.Trace, "File: '%s' as '%s'", f.name, shortname);
-          if (!domain.files.has(shortname)) {
-            domain.files[shortname] = new FilePayload(f.name, maxsize);
-            domain.entries++;
-            if(domain.files[shortname].buffer()) { domain.buffered++; }
+      try {
+        foreach (DirEntry f; dirEntries(dname, SpanMode.depth)) {
+          if (f.isFILE()) {
+            string shortname = replace(f.name[dname.length .. $], "\\", "/");
+            if (shortname.endsWith(".in") || shortname.endsWith(".up")) continue;
+            log(Level.Trace, "File: '%s' as '%s'", f.name, shortname);
+            if (!domain.files.has(shortname)) {
+              domain.files[shortname] = new FilePayload(f.name, maxsize);
+              domain.entries++;
+              if(domain.files[shortname].buffer()) { domain.buffered++; }
+            }
           }
         }
-      }
+      } catch (Exception e) { log(Level.Trace, "scan: directory iteration interrupted: %s", e.msg); }
       // Remove files that no longer exist on disk
       foreach (k; domain.files.keys) { if (!exists(dname ~ k)) { domain.files.remove(k); } }
 

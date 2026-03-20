@@ -3,10 +3,10 @@
 module danode.process;
 
 import danode.imports;
+
 import danode.functions : Msecs;
 import danode.log : log, tag, error, Level;
-
-immutable size_t MAX_CGI_OUTPUT = 1024 * 1024 * 10; // 10MB script output limit
+import danode.webconfig : serverConfig;
 
 struct WaitResult {
   bool terminated; /// Is the process terminated
@@ -62,12 +62,12 @@ class Process : Thread {
     Appender!(char[])  errbuffer;           /// Error appender buffer
 
   public:
-    this(string[] command, string inputfile, string[string] environ, bool removeInput = true, long maxtime = 4500) {
+    this(string[] command, string inputfile, string[string] environ, bool removeInput = true) {
       this.command = command;
       this.inputfile = inputfile;
       this.environ = environ;
       this.removeInput = removeInput;
-      this.maxtime = maxtime;
+      this.maxtime = serverConfig.get("cgi_timeout", 4500L);
       this.starttime = Clock.currTime();
       this.modified = Clock.currTime();
       this.outbuffer = appender!(char[])();
@@ -117,14 +117,13 @@ class Process : Thread {
         char[4096] tmp;
         auto fp = file.getFP();
         ptrdiff_t n;
-        while (lastmodified < maxtime && buffer.data.length < MAX_CGI_OUTPUT) {
+        auto maxOutput = serverConfig.get("max_cgi_output", 10 * 1024 * 1024);
+        while (lastmodified < maxtime && buffer.data.length < maxOutput) {
           n = fread(tmp.ptr, 1, tmp.sizeof, fp);
           if (n > 0) {
             modified = Clock.currTime();
             buffer.put(tmp[0 .. n]);
-          } else {
-            break;
-          }
+          } else { break; }
         }
       } catch (Exception e) { error("Exception during readpipe command: %s", e); file.close();
       } catch (Error e) { error("Error during readpipe command: %s", e); file.close();

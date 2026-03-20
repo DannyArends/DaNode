@@ -11,12 +11,10 @@ import danode.request : Request;
 import danode.mimetypes : UNSUPPORTED_FILE;
 import danode.payload : Payload, PayloadType, HeaderType, Message;
 import danode.log : tag, log, Level;
-import danode.webconfig;
+import danode.webconfig : WebConfig, serverConfig;
 import danode.filesystem : FileSystem;
 import danode.post : serverAPI;
 import danode.functions : browseDir;
-
-immutable string SERVERINFO = "DaNode/0.0.3";
 
 struct Response {
   string            protocol = "HTTP/1.1";
@@ -128,7 +126,7 @@ bool buildScriptHeader(ref Appender!(char[]) hdr, ref string connection, CGI scr
 Response create(in Request request, Address address, in StatusCode statuscode = StatusCode.Ok, in string mimetype = UNSUPPORTED_FILE){
   Response response = Response(request.protocol);
   response.address = address;
-  response.customheader("Server", SERVERINFO);
+  response.customheader("Server", serverConfig.get("serverinfo", "DaNode/0.0.3"));
   response.customheader("X-Powered-By", format("%s %s.%s", name, version_major, version_minor));
   response.payload = new Message(statuscode, "", mimetype);
   response.connection = request.keepalive ? "Keep-Alive" : "Close";
@@ -161,25 +159,21 @@ void domainNotFound(ref Response response) {
 }
 
 // serve a the output of an external script 
-void serveCGI(ref Response response, in Request request, in WebConfig config, in FileSystem fs, bool removeInput = true) {
+void serveCGI(ref Response response, in Request request, in WebConfig config, in FileSystem fs, string localpath, bool removeInput = true) {
   log(Level.Trace, "Requested a cgi file, execution allowed");
-  string localroot = fs.localroot(request.shorthost());
-  string localpath = config.localpath(localroot, request.path);
   if (!response.routed) { // Store POST data (could fail multiple times)
     log(Level.Trace, "Writing server variables");
     fs.serverAPI(config, request, response);
     log(Level.Trace, "Creating CGI payload");
-    response.payload = new CGI(request.command(localpath), request.inputfile(fs), request.environ(localpath), removeInput, request.maxtime-5);
+    response.payload = new CGI(request.command(localpath), request.inputfile(fs), request.environ(localpath), removeInput);
     response.ready = true;
   }
 }
 
 // serve a directory browsing request, via a message
-void serveDirectory(ref Response response, ref Request request, in WebConfig config, in FileSystem fs) {
+void serveDirectory(ref Response response, ref Request request, in WebConfig config, in FileSystem fs, string localpath) {
   log(Level.Trace, "Sending browse directory");
-  string localroot = fs.localroot(request.shorthost());
-  string localpath = config.localpath(localroot, request.path);
-  response.setPayload(StatusCode.Ok, browseDir(localroot, localpath), "text/html");
+  response.setPayload(StatusCode.Ok, browseDir(fs.localroot(request.shorthost()), localpath), "text/html");
 }
 
 // serve a forbidden page

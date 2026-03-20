@@ -106,40 +106,6 @@ class FilePayload : Payload {
       return(buffered = true);
     } }
 
-    /* Whole file content served via the bytes function */
-    final @property string content(){ return( to!string(bytes(0, length)) ); }
-    /* Is the file a real file (i.e. does it exist on disk) */
-    final @property bool realfile() const { return(path.exists()); }
-    /* Do we have a gzip encoded version */
-    final @property bool hasEncodedVersion() const { return(encbuf !is null); }
-    /* Is the file defined as static in mimetypes.d ? */
-    final @property bool isStaticFile() { return(!path.isCGI()); }
-    /* Time the file was last modified ? */
-    final @property SysTime mtime() const { if(!realfile){ return btime; } return path.timeLastModified(); }
-    /* Files are always assumed ready to be handled (unlike Common Gate Way threads)  */
-    final @property long ready() { return(true); }
-    /* Payload type delivered to the client  */
-    final @property PayloadType type() const { return(PayloadType.File); }
-    /* Size of the file, -1 if it does not exist  */
-    final @property ptrdiff_t fileSize() const { if(!realfile){ return -1; } return to!ptrdiff_t(path.getSize()); }
-    /* Length of the buffer  */
-    final @property long buffersize() const { return cast(long)(buf.length); }
-    /* Mimetype of the file  */
-    final @property string mimetype() const { return mime(path); }
-    /* Buffer status of the file  */
-    final @property bool isBuffered() const { return buffered; }
-    /* Path of the file  */
-    final @property string filePath() const { return path; }
-    /* Status code for file is StatusCode.Ok ? */
-    final @property StatusCode statuscode() const { 
-      return realfile ? StatusCode.Ok : StatusCode.NotFound; 
-    }
-    /* Get the number of bytes that the client response has, based on encoding */
-    final @property ptrdiff_t length() const {
-      if(hasEncodedVersion && gzip) return(encbuf.length);
-      return(fileSize());
-    }
-
     /* Get bytes in a lockfree manner from the correct underlying buffer */
     final const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 4096, bool isRange = false, long start = 0, long end = -1) { synchronized {
       if (!realfile) { return []; }
@@ -154,6 +120,21 @@ class FilePayload : Payload {
       log(Level.Verbose, "FilePayload.bytes() called on unbuffered file '%s', this should not happen", path);
       return([]);
     } }
+
+    final @property string content(){ return( to!string(bytes(0, length)) ); }
+    final @property bool realfile() const { return(path.exists()); }
+    final @property bool hasEncodedVersion() const { return(encbuf !is null); }
+    final @property bool isStaticFile() { return(!path.isCGI()); }
+    final @property SysTime mtime() const { try { return path.timeLastModified(); }catch (Exception e) { return btime; } }
+    final @property long ready() { return(true); }
+    final @property PayloadType type() const { return(PayloadType.File); }
+    final @property ptrdiff_t fileSize() const { if(!realfile){ return -1; } return to!ptrdiff_t(path.getSize()); }
+    final @property long buffersize() const { return cast(long)(buf.length); }
+    final @property string mimetype() const { return mime(path); }
+    final @property bool isBuffered() const { return buffered; }
+    final @property string filePath() const { return path; }
+    final @property StatusCode statuscode() const { return realfile ? StatusCode.Ok : StatusCode.NotFound; }
+    final @property ptrdiff_t length() const { if(hasEncodedVersion && gzip) { return(encbuf.length); } return(fileSize()); }
 }
 
 // Compute the Range

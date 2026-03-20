@@ -5,16 +5,16 @@ module danode.post;
 import danode.imports;
 
 import danode.cgi : CGI;
-import danode.client : MAX_REQUEST_SIZE;
 import danode.statuscode : StatusCode;
 import danode.interfaces : StringDriver;
 import danode.request : Request, RequestMethod;
-import danode.response : SERVERINFO, Response, setPayload;
+import danode.response : Response, setPayload;
 import danode.webconfig : WebConfig;
 import danode.mimetypes : mime;
 import danode.filesystem : FileSystem;
 import danode.functions : from, writeFile, parseQueryString;
 import danode.log : log, tag, error, Level;
+import danode.webconfig : serverConfig;
 
 immutable string      MPHEADER         = "multipart/form-data";                     /// Multipart header id
 immutable string      XFORMHEADER      = "application/x-www-form-urlencoded";       /// X-form header id
@@ -46,7 +46,7 @@ final bool parsePost(ref Request request, ref Response response, in FileSystem f
   if (expectedlength == 0) {
     log(Level.Trace, "Post: [T] Content-Length not specified (or 0), length: %s", content.length);
     return(response.havepost = true); // When we don't receive any post data it is meaningless to scan for any content
-  } else if (expectedlength > MAX_REQUEST_SIZE) {
+  } else if (expectedlength > serverConfig.get("max_request_size", 2   * 1024 * 1024)) {
     log(Level.Verbose, "Post: [W] Upload too large: %d bytes from %s", expectedlength, request.ip);
     return(response.setPayload(StatusCode.PayloadTooLarge, "413 - Payload Too Large\n", "text/plain"));
   }
@@ -146,7 +146,7 @@ final void serverAPI(in FileSystem filesystem, in WebConfig config, in Request r
 
   // Give HTTP_COOKIES to CGI
   foreach (c; request.cookies.split("; ")) { content.put(format("C=%s\n", chomp(c)) ); }
-  content.put(format("S=SERVER_SOFTWARE=%s\n", SERVERINFO));
+  content.put(format("S=SERVER_SOFTWARE=%s\n", serverConfig.get("serverinfo", "DaNode/0.0.3")));
   try{
     content.put(format("S=SERVER_NAME=%s\n", (response.address)? response.address.toHostNameString() : "localhost"));
   }catch(Exception e){

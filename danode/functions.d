@@ -49,11 +49,14 @@ string safePath(in string root, in string path) {
   if (path.canFind("\0")) return null;
   string full = root ~ (path.startsWith("/") ? path : "/" ~ path);
   try {
+    string absroot = root.resolve();
+    if (!absroot.endsWith("/")) absroot ~= "/";
     if (exists(full)) {
       string resolved = full.resolve();
-      string absroot = root.resolve();
-      if (!absroot.endsWith("/")) absroot ~= "/";
       if (resolved != absroot[0..$-1] && !resolved.startsWith(absroot)) return null;
+    } else {
+      string parent = dirName(full).resolve();
+      if (parent != absroot[0..$-1] && !parent.startsWith(absroot)) return null;
     }
   } catch (Exception e) { return null; }
   return full;
@@ -207,6 +210,7 @@ unittest {
   assert(safePath("www/localhost", "/\0etc/passwd") is null, "null byte must be blocked");
   assert(safePath("www/localhost", "/test.txt") !is null, "valid path must be allowed");
   assert(safePath("www/localhost", "/test/1.txt") !is null, "valid subpath must be allowed");
+  assert(safePath("www/localhost", "/nonexistent.txt") !is null, "non-existent valid path must be allowed");
 
   // htmlEscape - XSS critical
   assert(htmlEscape("<script>") == "&lt;script&gt;", "< and > must be escaped");
