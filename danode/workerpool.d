@@ -57,7 +57,7 @@ class WorkerPool {
     // Signal all workers to exit and join them
     void stop() {
       synchronized(mutex) { if (stopped) { return; } stopped = true; }
-      foreach (i; 0 .. serverConfig.get("pool_size", 200)) sem.notify();   // wake all workers to exit
+      foreach (i; 0 .. workers.length) sem.notify();   // wake all workers to exit
       foreach (t; workers) t.join();
       log(Level.Trace, "WorkerPool stopped");
     }

@@ -11,7 +11,7 @@ import danode.request : Request;
 import danode.mimetypes : UNSUPPORTED_FILE;
 import danode.payload : Payload, PayloadType, HeaderType, Message;
 import danode.log : tag, log, Level;
-import danode.webconfig;
+import danode.webconfig : WebConfig, serverConfig;
 import danode.filesystem : FileSystem;
 import danode.post : serverAPI;
 import danode.functions : browseDir;

@@ -138,7 +138,7 @@ void main(string[] args) {
                "accountKey",  &accountKey,   // Server Let's encrypt account key
                "verbose|v",   &verbose);     // Verbose level (via commandline)
   atomicStore(cv, verbose);
-  synchronized(serverConfigMutex) {  ServerConfig(wwwFolder ~ "server.config"); }
+  synchronized(serverConfigMutex) { serverConfig = ServerConfig(wwwFolder ~ "server.config"); }
   version(Posix) {
     import danode.signals : setupPosix;
     setupPosix();
