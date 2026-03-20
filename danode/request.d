@@ -7,10 +7,9 @@ import danode.imports;
 import danode.filesystem : FileSystem;
 import danode.interfaces : DriverInterface;
 import danode.functions : interpreter, from, parseHtmlDate, parseQueryString;
-import danode.webconfig : WebConfig;
+import danode.webconfig : WebConfig, serverConfig;
 import danode.post : PostItem, PostType;
 import danode.log : log, tag, error, Level;
-import danode.webconfig : serverConfig;
 
 // The Request-Method indicates which method is to be performed on the specified resource
 enum RequestMethod : string {

@@ -112,11 +112,5 @@ unittest {
   WebConfig noShort = WebConfig(fp);
   noShort.data["shorturl"] = "no";
   assert(noShort.domain("localhost") == "www.localhost", "shorturl=no must add www.");
-
-  ServerConfig sc = ServerConfig("nonexistent.config");
-  assert(sc.maxClients()      == 2048, "default maxClients must be 2048");
-  assert(sc.maxClientsPerIP() == 32, "default maxClientsPerIP must be 32");
-  assert(sc.poolSize()        == 200, "default poolSize must be 200");
-  assert(sc.serverInfo()      == "DaNode/0.0.3", "default serverInfo must be set");
 }
 

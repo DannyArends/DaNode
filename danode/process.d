@@ -117,14 +117,13 @@ class Process : Thread {
         char[4096] tmp;
         auto fp = file.getFP();
         ptrdiff_t n;
-        while (lastmodified < maxtime && buffer.data.length < serverConfig.get("max_cgi_output", 10 * 1024 * 1024)) {
+        auto maxOutput = serverConfig.get("max_cgi_output", 10 * 1024 * 1024);
+        while (lastmodified < maxtime && buffer.data.length < maxOutput) {
           n = fread(tmp.ptr, 1, tmp.sizeof, fp);
           if (n > 0) {
             modified = Clock.currTime();
             buffer.put(tmp[0 .. n]);
-          } else {
-            break;
-          }
+          } else { break; }
         }
       } catch (Exception e) { error("Exception during readpipe command: %s", e); file.close();
       } catch (Error e) { error("Error during readpipe command: %s", e); file.close();
