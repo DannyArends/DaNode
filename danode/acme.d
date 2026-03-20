@@ -10,7 +10,8 @@ version(SSL) {
   import danode.ssl : loadSSL, generateKey;
   import danode.functions : writeFile;
 
-  immutable string ACME_DIR_PROD    = "https://acme-v02.api.letsencrypt.org/directory";
+  immutable string USER_EMAIL = "Danny.Arends@gmail.com";
+  immutable string ACME_DIR_PROD = "https://acme-v02.api.letsencrypt.org/directory";
   immutable string ACME_DIR_STAGING = "https://acme-staging-v02.api.letsencrypt.org/directory";
 
   __gshared string[string] acmeChallenges; // Shared challenge store: token -> keyAuthorization
@@ -89,7 +90,7 @@ version(SSL) {
           string chainPath = certDir ~ domain ~ ".chain";
 
           if (!exists(chainPath)) { log(Level.Always, "ACME: no chain found for %s, bootstrapping", domain);
-            if (renewCert(domain, "Danny.Arends@gmail.com", d.name, chainPath, accountKey, staging)) { loadSSL(certDir, keyFile); }
+            if (renewCert(domain, USER_EMAIL, d.name, chainPath, accountKey, staging)) { loadSSL(certDir, keyFile); }
             continue;
           }
 
@@ -105,7 +106,7 @@ version(SSL) {
 
           log(Level.Verbose, "ACME: chain %s expires in %d days", domain, days);
           if (days < 30) { log(Level.Verbose, "ACME: renewing chain for %s", domain);
-            if (renewCert(domain, "Danny.Arends@gmail.com", d.name, chainPath, accountKey, staging)) { loadSSL(certDir, keyFile); }
+            if (renewCert(domain, USER_EMAIL, d.name, chainPath, accountKey, staging)) { loadSSL(certDir, keyFile); }
           }
         }
       }
