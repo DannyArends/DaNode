@@ -16,8 +16,6 @@ import danode.filesystem : FileSystem;
 import danode.post : serverAPI;
 import danode.functions : browseDir;
 
-immutable string SERVERINFO = "DaNode/0.0.3";
-
 struct Response {
   string            protocol = "HTTP/1.1";
   string            connection = "Close";
@@ -128,7 +126,7 @@ bool buildScriptHeader(ref Appender!(char[]) hdr, ref string connection, CGI scr
 Response create(in Request request, Address address, in StatusCode statuscode = StatusCode.Ok, in string mimetype = UNSUPPORTED_FILE){
   Response response = Response(request.protocol);
   response.address = address;
-  response.customheader("Server", SERVERINFO);
+  response.customheader("Server", serverConfig.get("serverinfo", "DaNode/0.0.3"));
   response.customheader("X-Powered-By", format("%s %s.%s", name, version_major, version_minor));
   response.payload = new Message(statuscode, "", mimetype);
   response.connection = request.keepalive ? "Keep-Alive" : "Close";

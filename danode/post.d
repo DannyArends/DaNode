@@ -8,7 +8,7 @@ import danode.cgi : CGI;
 import danode.statuscode : StatusCode;
 import danode.interfaces : StringDriver;
 import danode.request : Request, RequestMethod;
-import danode.response : SERVERINFO, Response, setPayload;
+import danode.response : Response, setPayload;
 import danode.webconfig : WebConfig;
 import danode.mimetypes : mime;
 import danode.filesystem : FileSystem;
@@ -146,7 +146,7 @@ final void serverAPI(in FileSystem filesystem, in WebConfig config, in Request r
 
   // Give HTTP_COOKIES to CGI
   foreach (c; request.cookies.split("; ")) { content.put(format("C=%s\n", chomp(c)) ); }
-  content.put(format("S=SERVER_SOFTWARE=%s\n", SERVERINFO));
+  content.put(format("S=SERVER_SOFTWARE=%s\n", serverConfig.get("serverinfo", "DaNode/0.0.3")));
   try{
     content.put(format("S=SERVER_NAME=%s\n", (response.address)? response.address.toHostNameString() : "localhost"));
   }catch(Exception e){

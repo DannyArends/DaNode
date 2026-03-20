@@ -3,10 +3,10 @@
 module danode.process;
 
 import danode.imports;
+
 import danode.functions : Msecs;
 import danode.log : log, tag, error, Level;
-
-immutable size_t MAX_CGI_OUTPUT = 1024 * 1024 * 10; // 10MB script output limit
+import danode.webconfig : serverConfig;
 
 struct WaitResult {
   bool terminated; /// Is the process terminated
@@ -117,7 +117,7 @@ class Process : Thread {
         char[4096] tmp;
         auto fp = file.getFP();
         ptrdiff_t n;
-        while (lastmodified < maxtime && buffer.data.length < MAX_CGI_OUTPUT) {
+        while (lastmodified < maxtime && buffer.data.length < serverConfig.get("max_cgi_output", 10 * 1024 * 1024)) {
           n = fread(tmp.ptr, 1, tmp.sizeof, fp);
           if (n > 0) {
             modified = Clock.currTime();
