@@ -7,7 +7,7 @@ import danode.imports;
 import danode.statuscode : StatusCode;
 import danode.payload : PayloadType;
 import danode.files : FilePayload, FileStream;
-import danode.functions : has, isFILE;
+import danode.functions : has, isFILE, isDIR;
 import danode.log : log, tag, error, Level;
 
 /* Domain name structure containing files in that domain
@@ -40,7 +40,7 @@ class FileSystem {
 
     /* Scan the whole filesystem for changes */
     final void scan(){ synchronized {
-      foreach (DirEntry d; dirEntries(root, SpanMode.shallow)){ if(d.isDir()){
+      foreach (DirEntry d; dirEntries(root, SpanMode.shallow)){ if(d.name.isDIR()){
         domains[d.name] = scan(d.name);
       } }
       // Remove domains that no longer exist on disk
