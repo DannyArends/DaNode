@@ -11,11 +11,7 @@ import danode.router : Router, runRequest;
 import danode.response : Response;
 import danode.request : Request;
 import danode.log : log, tag, Level;
-
-immutable size_t MAX_HEADER_SIZE  = 1024 * 32;          ///  32KB Header
-immutable size_t MAX_REQUEST_SIZE = 1024 * 1024 * 2;    ///   2MB Body
-immutable size_t MAX_UPLOAD_SIZE  = 1024 * 1024 * 100;  /// 100MB Multipart uploads
-immutable size_t MAX_SSE_TIME = 60_000;                 /// 60 seconds max SSE lifetime
+import danode.webconfig : serverConfig;
 
 class Client {
   private:
@@ -42,13 +38,16 @@ class Client {
           request.clearUploadFiles();                           // Clean uploaded files
           response.kill();                                      // kill any running CGI process
         }
+        size_t headerLimit  = serverConfig.get("max_header_size", 32 * 1024);
+        size_t uploadLimit  = serverConfig.get("max_upload_size",  100 * 1024 * 1024);
+        size_t requestLimit = serverConfig.get("max_request_size", 2   * 1024 * 1024);
         while (running) {
           if (driver.receive(driver.socket) > 0) { // We've received new data
             if (!driver.hasHeader()) {
-              if (driver.inbuffer.data.length > MAX_HEADER_SIZE) { driver.sendHeaderTooLarge(response); stop(); continue; }
+              if (driver.inbuffer.data.length > headerLimit) { driver.sendHeaderTooLarge(response); stop(); continue; }
             } else {
-              if (driver.endOfHeader > MAX_HEADER_SIZE) { driver.sendHeaderTooLarge(response); stop(); continue; }
-              size_t limit = (driver.header.indexOf("multipart/") >= 0) ? MAX_UPLOAD_SIZE : MAX_REQUEST_SIZE;
+              if (driver.endOfHeader > headerLimit) { driver.sendHeaderTooLarge(response); stop(); continue; }
+              size_t limit = (driver.header.indexOf("multipart/") >= 0)? uploadLimit: requestLimit;
               if (driver.inbuffer.data.length > limit) { driver.sendPayloadTooLarge(response); stop(); continue; }
             }
             // Parse the data and try to create a response (Could fail multiple times)
@@ -58,7 +57,7 @@ class Client {
             driver.send(response, driver.socket);           // Send the response, hit multiple times, send what you can and return
             if (response.isSSE) {
               if (response.scriptCompleted) { response.completed = true; stop(); continue; }
-              if (starttime >= MAX_SSE_TIME) { log(Level.Verbose, "SSE max lifetime reached"); stop(); continue; }
+              if (starttime >= serverConfig.get("max_sse_time", 60_000)) { log(Level.Verbose, "SSE max lifetime reached"); stop(); continue; }
             }
           }
           if (response.ready && response.completed) {       // We've completed the request, response cycle
