@@ -121,7 +121,7 @@ class Process : Thread {
         while (lastmodified < maxtime && buffer.data.length < maxOutput) {
           n = fread(tmp.ptr, 1, tmp.sizeof, fp);
           if (n > 0) {
-            modified = Clock.currTime();
+            synchronized { modified = Clock.currTime(); }
             buffer.put(tmp[0 .. n]);
           } else { break; }
         }
@@ -144,8 +144,7 @@ class Process : Thread {
       try {
         if( !exists(inputfile) ) {
           log(Level.Verbose, "no input path: %s", inputfile);
-          this.process.terminated = true;
-          this.completed = true;
+          synchronized { this.process.terminated = true; this.completed = true; }
           return;
         }
         fStdIn = File(inputfile, "r");
@@ -162,7 +161,7 @@ class Process : Thread {
 
         while (running && lastmodified < maxtime) {
           drainPipes();
-          process = cast(WaitResult) tryWait(cpid);
+          synchronized { process = cast(WaitResult) tryWait(cpid); }
           Thread.sleep(msecs(1));
         }
         if (!process.terminated) {
