@@ -182,14 +182,14 @@ unittest {
   FileSystem fs = new FileSystem("./www/");
 
   // extractQuoted
-  assert(extractQuoted("name=\"hello\"", "name") == "hello",            "extractQuoted must get name");
+  assert(extractQuoted("name=\"hello\"", "name") == "hello", "extractQuoted must get name");
   assert(extractQuoted("filename=\"test.txt\"", "filename") == "test.txt", "extractQuoted must get filename");
-  assert(extractQuoted("name=\"\"", "name") == "",                      "extractQuoted empty value");
-  assert(extractQuoted("nothing here", "name") == "",                   "extractQuoted missing key");
+  assert(extractQuoted("name=\"\"", "name") == "", "extractQuoted empty value");
+  assert(extractQuoted("nothing here", "name") == "", "extractQuoted missing key");
 
   // findBodyLine
   assert(findBodyLine(["Content-Disposition: form-data", "", "value"]) == 2, "findBodyLine must find blank line");
-  assert(findBodyLine(["Content-Disposition: form-data"]) == -1,             "findBodyLine no blank must return -1");
+  assert(findBodyLine(["Content-Disposition: form-data"]) == -1, "findBodyLine no blank must return -1");
 
   // parseXform via runRequest
   auto router = new Router("./www/", Address.init);
