@@ -42,7 +42,9 @@ struct MultipartParser {
         case MPState.INIT:          // Find opening boundary
           ptrdiff_t i = indexOf(data, boundary ~ "\r\n");
           if (i < 0) { return(saveTail(data));  }
-          data = data[i + boundary.length + 2 .. $];
+          ptrdiff_t next = i + boundary.length + 2;
+          if (next > data.length) { return(saveTail(data[i .. $])); }
+          data = data[next .. $];
           state = MPState.HEADER;
           break;
         case MPState.HEADER:        // Accumulate until \r\n\r\n
@@ -216,5 +218,60 @@ unittest {
     string written = cast(string) read(r.postinfo["bin"].value);
     assert(written == binaryContent, "binary content must be preserved exactly");
     if (r.postinfo["bin"].value.exists) remove(r.postinfo["bin"].value);
+  }
+  {  // Test 6: header split across chunks
+    Request r;
+    r.id = md5UUID("test6");
+    auto parser = MultipartParser("--" ~ boundary, uploadDir);
+    string mp = buildMultipart(boundary, [["field", "value"]], []);
+    // Find the \r\n\r\n and split there
+    ptrdiff_t split = mp.indexOf("\r\n\r\n") + 2; // split mid-header-terminator
+    bool done = parser.feed(r, mp[0..split]);
+    if (!done) done = parser.feed(r, mp[split..$]);
+    assert(done, "header split across chunks must complete");
+    assert(r.postinfo["field"].value == "value", "header split value must be correct");
+  }
+  {  // Test 7: empty file upload
+    Request r;
+    r.id = md5UUID("test7");
+    auto parser = MultipartParser("--" ~ boundary, uploadDir);
+    string mp = buildMultipart(boundary, [], [["file", "empty.txt", ""]]);
+    assert(parser.feed(r, mp), "empty file must complete");
+    assert(r.postinfo["file"].size == 0, "empty file size must be 0");
+    if (r.postinfo["file"].value.exists) remove(r.postinfo["file"].value);
+  }
+  {  // Test 8: multiple text fields
+    Request r;
+    r.id = md5UUID("test8");
+    auto parser = MultipartParser("--" ~ boundary, uploadDir);
+    string mp = buildMultipart(boundary, [["a", "1"], ["b", "2"], ["c", "3"]], []);
+    assert(parser.feed(r, mp), "multiple text fields must complete");
+    assert(r.postinfo["a"].value == "1", "field a must be 1");
+    assert(r.postinfo["b"].value == "2", "field b must be 2");
+    assert(r.postinfo["c"].value == "3", "field c must be 3");
+  }
+  {  // Test 9: value containing boundary-like content 
+    Request r;
+    r.id = md5UUID("test9");
+    auto parser = MultipartParser("--" ~ boundary, uploadDir);
+    string mp = buildMultipart(boundary, [["field", "--notaboundary--"]], []);
+    assert(parser.feed(r, mp), "boundary-like value must complete");
+    assert(r.postinfo["field"].value == "--notaboundary--", "boundary-like value must be preserved");
+  }
+  {  // Test 10: large file in chunks
+    Request r;
+    r.id = md5UUID("test10");
+    auto parser = MultipartParser("--" ~ boundary, uploadDir);
+    string fileContent = "x".replicate(1024 * 100); // 100KB
+    string mp = buildMultipart(boundary, [], [["file", "large.bin", fileContent]]);
+    // Feed in 4KB chunks
+    bool done = false;
+    for (size_t pos = 0; pos < mp.length && !done; pos += 4096) {
+      size_t end = min(pos + 4096, mp.length);
+      done = parser.feed(r, mp[pos..end]);
+    }
+    assert(done, "large file must complete");
+    assert(r.postinfo["file"].size == fileContent.length, "large file size must match");
+    if (r.postinfo["file"].value.exists) remove(r.postinfo["file"].value);
   }
 }
