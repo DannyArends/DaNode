@@ -11,17 +11,18 @@ import danode.log : log, tag, error, Level;
 enum MPState { INIT, HEADER, BODY }
 
 struct MultipartParser {
-  string        boundary;       /// "--boundary"
-  string        uploadDir;      /// directory for .up files
-  MPState       state = MPState.INIT;
-  char[]        tail;           /// leftover bytes from previous chunk (boundary detection)
-  File          outfile;        /// current open output file
-  string        currentPath;    /// current .up file path
-  string        currentMime;    /// current part mime type
-  string        currentName;    /// current field name
-  string        currentFname;   /// current filename
+  string            boundary;       /// "--boundary"
+  string            uploadDir;      /// directory for .up files
+  MPState           state = MPState.INIT;
+  char[]            tail;           /// leftover bytes from previous chunk (boundary detection)
+  File              outfile;        /// current open output file
+  string            currentPath;    /// current .up file path
+  string            currentMime;    /// current part mime type
+  string            currentName;    /// current field name
+  string            currentFname;   /// current filename
   Appender!(char[]) hdrbuf;     /// accumulating part header bytes
-  bool          done = false;   /// final boundary seen
+  bool              done = false;   /// final boundary seen
+  Appender!(char[]) valuebuf;  // accumulates plain field value
 
   @property bool isActive() const { return boundary.length > 0; }
 
@@ -39,35 +40,43 @@ struct MultipartParser {
           state = MPState.HEADER;
           break;
 
-        case MPState.HEADER:        // Accumulate until \r\n\r\n
-          ptrdiff_t i = indexOf(data, "\r\n\r\n");
-          if (i < 0) { hdrbuf.put(data); tail = []; return(false); }
-          hdrbuf.put(data[0 .. i]);
-          data = data[i + 4 .. $];
-          // Parse headers
-          parsePartHeader(request);
-          hdrbuf.clear();
-          state = MPState.BODY;
-          break;
+          case MPState.HEADER:        // Accumulate until \r\n\r\n
+            hdrbuf.put(data);
+            ptrdiff_t i = indexOf(cast(string)hdrbuf.data, "\r\n\r\n");
+            if (i < 0) { tail = []; return(false); }
+            data = hdrbuf.data[i + 4 .. $].dup;
+            hdrbuf.shrinkTo(i);
+            parsePartHeader(request);
+            hdrbuf.clear();
+            state = MPState.BODY;
+            break;
 
         case MPState.BODY:          // Look for \r\n--boundary
           string delim = "\r\n" ~ boundary;
           ptrdiff_t i = indexOf(data, delim);
           if (i < 0) { // No boundary found - write all but tail
-            ptrdiff_t safe = cast(ptrdiff_t)data.length - cast(ptrdiff_t)delim.length;
-            if (safe > 0) { writeChunk(data[0 .. safe]); data = data[safe .. $]; }
-            tail = data.dup;
+            ptrdiff_t keep = 0;
+            foreach_reverse (k; 1 .. min(delim.length, data.length) + 1) {
+              if (data[$ - k .. $] == delim[0 .. k]) { keep = k; break; }
+            }
+            ptrdiff_t safe = cast(ptrdiff_t)data.length - keep;
+            if (safe > 0) { writeChunk(data[0 .. safe]); }
+            tail = data[safe .. $].dup;
             return(false);
           }
+          if (i + delim.length + 2 > data.length) { tail = data[i .. $].dup; if (i > 0) writeChunk(data[0 .. i]); return false; }
           // Boundary found - write up to it and close part
           writeChunk(data[0 .. i]);
           closePart(request);
+          //writefln("POST-BOUNDARY data='%s' len=%d", data, data.length);
           data = data[i + delim.length .. $];
-          // Check for final boundary (--)  or next part (\r\n)
+          // Check for final boundary (--) or next part (\r\n)
+          if (data.length == 0) { tail = cast(char[])[]; return false; }
           if (data.length >= 2 && data[0..2] == "--") { return(done = true); }
-          if (data.length >= 2 && data[0..2] == "\r\n") { data = data[2..$]; }
+          if (data[0] == '-') { tail = data.dup; return false; }
+          if (data.length >= 2 && data[0..2] == "\r\n") { data = data[2..$]; state = MPState.HEADER; break; }
+          else if (data[0] == '\r') { tail = data.dup; return false; }
           state = MPState.HEADER;
-          break;
       }
     }
     return done;
@@ -91,8 +100,8 @@ struct MultipartParser {
 
   private void writeChunk(const(char)[] chunk) {
     if (currentFname.length > 0 && outfile.isOpen()) {
-      try { outfile.rawWrite(chunk); }catch(Exception e) { error("MultipartParser: write failed: %s", e.msg); }
-    }
+      try { outfile.rawWrite(chunk); } catch(Exception e) { error("MultipartParser: write failed: %s", e.msg); }
+    } else if (currentFname.length == 0 && currentName.length > 0) { valuebuf.put(chunk); }
   }
 
   private void closePart(ref Request request) {
@@ -102,8 +111,9 @@ struct MultipartParser {
       request.postinfo[currentName] = PostItem(PostType.File, currentName, currentFname, currentPath, currentMime, sz);
       log(Level.Verbose, "MPART: [I] closed file %s, %d bytes", currentPath, sz);
       currentPath = ""; currentFname = ""; currentMime = "";
-    } else if (currentName.length > 0) {  // Plain input field - body was accumulated in tail, store as value
-      request.postinfo[currentName] = PostItem(PostType.Input, currentName, "", to!string(hdrbuf.data));
+    } else if (currentName.length > 0) {  // Plain input field -accumulated valuebuf
+      request.postinfo[currentName] = PostItem(PostType.Input, currentName, "", to!string(valuebuf.data));
+      valuebuf.clear();
     }
     currentName = "";
   }
@@ -119,6 +129,9 @@ pure string extractQuoted(string s, string key) nothrow {
 }
 
 unittest {
+  import danode.request : Request;
+  import danode.filesystem : FileSystem;
+
   tag(Level.Always, "FILE", "%s", __FILE__);
 
   // extractQuoted
@@ -126,4 +139,95 @@ unittest {
   assert(extractQuoted("filename=\"test.txt\"", "filename") == "test.txt", "extractQuoted must get filename");
   assert(extractQuoted("name=\"\"", "name") == "", "extractQuoted empty value");
   assert(extractQuoted("nothing here", "name") == "", "extractQuoted missing key");
+  
+  // Helper to build a multipart body
+  string buildMultipart(string boundary, string[2][] textFields, string[3][] fileFields) {
+    string body;
+    foreach (f; textFields) {
+      body ~= "--" ~ boundary ~ "\r\n";
+      body ~= "Content-Disposition: form-data; name=\"" ~ f[0] ~ "\"\r\n\r\n";
+      body ~= f[1] ~ "\r\n";
+    }
+    foreach (f; fileFields) {
+      body ~= "--" ~ boundary ~ "\r\n";
+      body ~= "Content-Disposition: form-data; name=\"" ~ f[0] ~ "\"; filename=\"" ~ f[1] ~ "\"\r\n";
+      body ~= "Content-Type: application/octet-stream\r\n\r\n";
+      body ~= f[2] ~ "\r\n";
+    }
+    body ~= "--" ~ boundary ~ "--\r\n";
+    return body;
+  }
+
+  FileSystem fs = new FileSystem("./www/");
+  string uploadDir = fs.localroot("localhost") ~ "/";
+  string boundary = "testboundary123";
+
+  // Test 1: single text field
+  {
+    Request r;
+    r.id = md5UUID("test1");
+    auto parser = MultipartParser("--" ~ boundary, uploadDir);
+    string body = buildMultipart(boundary, [["name", "danny"]], []);
+    //writefln("TEST1 body='%s' len=%d", body, body.length);
+    bool result = parser.feed(r, body);
+    //writefln("TEST1 result=%s state=%s done=%s postinfo=%s", result, parser.state, parser.done, r.postinfo);
+    assert(result, "single text field must complete");
+  }
+
+  // Test 2: single file upload
+  {
+    Request r;
+    r.id = md5UUID("test2");
+    auto parser = MultipartParser("--" ~ boundary, uploadDir);
+    string body = buildMultipart(boundary, [], [["file", "test.txt", "hello world"]]);
+    assert(parser.feed(r, body), "single file must complete");
+    assert("file" in r.postinfo, "file must be in postinfo");
+    assert(r.postinfo["file"].type == PostType.File, "must be File type");
+    assert(r.postinfo["file"].filename == "test.txt", "filename must match");
+    assert(r.postinfo["file"].size == "hello world".length, "size must match");
+    // cleanup
+    if (r.postinfo["file"].value.exists) remove(r.postinfo["file"].value);
+  }
+
+  // Test 3: mixed text + file
+  {
+    Request r;
+    r.id = md5UUID("test3");
+    auto parser = MultipartParser("--" ~ boundary, uploadDir);
+    string body = buildMultipart(boundary, [["name", "danny"]], [["file", "data.bin", "binarydata"]]);
+    assert(parser.feed(r, body), "mixed must complete");
+    assert(r.postinfo["name"].value == "danny", "text field must parse");
+    assert(r.postinfo["file"].type == PostType.File, "file field must parse");
+    if (r.postinfo["file"].value.exists) remove(r.postinfo["file"].value);
+  }
+
+  // Test 4: cross-chunk boundary detection - feed 1 byte at a time
+  {
+    Request r;
+    r.id = md5UUID("test4");
+    auto parser = MultipartParser("--" ~ boundary, uploadDir);
+    string body = buildMultipart(boundary, [["field", "value"]], []);
+    bool done = false;
+    foreach (i; 0 .. body.length) {
+      done = parser.feed(r, body[i..i+1]);
+      //writefln("byte %d '%s' state=%s tail='%s' done=%s", i, body[i], parser.state, parser.tail, done);
+      if (done) break;
+    }
+    //writefln("final state=%s postinfo=%s", parser.state, r.postinfo);
+    assert(done, "byte-by-byte feed must complete");
+  }
+
+  // Test 5: binary file with = and \r\n in content
+  {
+    Request r;
+    r.id = md5UUID("test5");
+    auto parser = MultipartParser("--" ~ boundary, uploadDir);
+    string binaryContent = "data=with=equals\r\nand newlines\r\nmore data";
+    string body = buildMultipart(boundary, [], [["bin", "binary.bin", binaryContent]]);
+    assert(parser.feed(r, body), "binary content must complete");
+    assert(r.postinfo["bin"].size == binaryContent.length, "binary size must match");
+    string written = cast(string) read(r.postinfo["bin"].value);
+    assert(written == binaryContent, "binary content must be preserved exactly");
+    if (r.postinfo["bin"].value.exists) remove(r.postinfo["bin"].value);
+  }
 }
