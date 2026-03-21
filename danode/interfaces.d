@@ -22,12 +22,10 @@ abstract class DriverInterface {
     SysTime             systime;             /// Time in ms since this process came alive
     SysTime             modtime;             /// Time in ms since this process was last modified
     Address             address;             /// Private address field
-    bool                blocking = false;    /// Blocking communication ?
 
-    this(Socket socket, bool blocking = false) {
+    this(Socket socket) {
       this.socket = socket;
       this.socketSet = new SocketSet();
-      this.blocking = blocking;
       systime = Clock.currTime();
       touch(); 
     }
@@ -51,7 +49,7 @@ abstract class DriverInterface {
     }
 
     long receiveData(ref char[] buffer);
-    bool openConnection();
+    bool openConnection(bool blocking = false);
     void closeConnection();
     @nogc bool isSecure() const nothrow;
 
@@ -104,7 +102,7 @@ class StringDriver : DriverInterface {
 
   public:
     this(string input) { super(null); inbuffer ~= input; }
-    override bool openConnection() { return(true); }
+    override bool openConnection(bool blocking = false) { return(true); }
     override void closeConnection() nothrow { }
     override bool socketReady() const { return inbuffer.data.length > 0; }
     @nogc override bool isSecure() const nothrow { return(false); }

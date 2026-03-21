@@ -16,9 +16,9 @@ import danode.log : log, tag, error, Level;
    Note 2: ./www/localhost existing is required for unit testing */
 struct Domain {
   FilePayload[string] files;
-  long entries;
-  long buffered;
 
+  @property long entries() const { return files.length; }
+  @property long buffered() const { long n = 0; foreach(ref f; files.byValue) { if(f.isBuffered) n++; } return n; }
   @property long buffersize() const { long sum = 0; foreach(ref f; files.byKey){ sum += files[f].buffersize(); } return sum; }
   @property long size() const { long sum = 0; foreach(ref f; files.byKey){ sum += files[f].length(); } return sum; }
 }
@@ -58,8 +58,6 @@ class FileSystem {
             log(Level.Trace, "File: '%s' as '%s'", f.name, shortname);
             if (!domain.files.has(shortname)) {
               domain.files[shortname] = new FilePayload(f.name, maxsize);
-              domain.entries++;
-              if(domain.files[shortname].buffer()) { domain.buffered++; }
             }
           }
         }

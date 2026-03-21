@@ -11,10 +11,10 @@ import danode.log : log, tag, error, Level;
 
 class HTTP : DriverInterface {
   public:
-    this(Socket socket, bool blocking = false) { super(socket, blocking); }
+    this(Socket socket) { super(socket); }
 
     // Open the connection by setting the socket to non blocking I/O, and registering the origin address
-    override bool openConnection() {
+    override bool openConnection(bool blocking = false) {
       try {
         socket.blocking = blocking;
       } catch(Exception e) { error("Unable to accept socket: %s", e.msg); return(false); }

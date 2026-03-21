@@ -52,7 +52,6 @@ struct Request {
   string[string] headers; /// Associative array holding the header values
   SysTime starttime; /// start time of the Request
   PostItem[string] postinfo; /// Associative array holding the post parameters and values
-  long maxtime; /// Maximum time in ms before the request is discarded
 
   // Start a new Request, and parseHeader on the DriverInterface
   final void initialize(const DriverInterface driver) {
@@ -61,7 +60,6 @@ struct Request {
     this.body = driver.body;
     this.isSecure = driver.isSecure;
     this.starttime = Clock.currTime();
-    this.maxtime = serverConfig.get("request_timeout", 5000L);
     this.id = md5UUID(format("%s:%d-%s", driver.ip, driver.port, starttime));
     this.isValid = this.parseHeader(driver.header);
     log(Level.Verbose, "request: %s to %s from %s:%d - %s", method, uri, this.ip, this.port, this.id);

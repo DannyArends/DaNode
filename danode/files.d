@@ -68,6 +68,7 @@ class FilePayload : Payload {
     this(string path, size_t buffermaxsize) {
       this.path = path;
       this.buffermaxsize = buffermaxsize;
+      this.buffer();
     }
 
     /* Does the file require to be updated before sending ? */

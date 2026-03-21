@@ -19,7 +19,7 @@ version(SSL) {
       SSL* ssl = null;
 
     public:
-      this(Socket socket, bool blocking = false) { super(socket, blocking); }
+      this(Socket socket) { super(socket); }
 
       // Perform the SSL handshake
       bool performHandshake() {
@@ -40,7 +40,7 @@ version(SSL) {
       }
 
       // Open the connection by setting the socket to non blocking I/O, and registering the origin address
-      override bool openConnection() {
+      override bool openConnection(bool blocking = false) {
         log(Level.Verbose, "Opening HTTPS connection");
         if (contexts.length > 0) {
           log(Level.Trace, "Number of SSL contexts: %d", contexts.length);
