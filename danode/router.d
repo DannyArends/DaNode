@@ -143,7 +143,7 @@ class Router {
     // Perform a canonical redirect of a non-existing page to the index script
     void redirectCanonical(WebConfig config, ref Request request, ref Response response){
       log(Level.Trace, "Router: [T] Redirecting canonical url to the index page");
-      request.url  = format("%s?%s", config.index, request.query);
+      request.url = config.index ~ request.query;
       return deliver(request, response, true);
     }
 }
