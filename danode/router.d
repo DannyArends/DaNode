@@ -91,7 +91,7 @@ class Router {
         }
         if (pathIsFILE && !pathIsCGI && pathAllowed) {
           log(Level.Trace, "Router: [T] localpath %s is a normal file", localpath);
-          return(response.serveStaticFile(request, filesystem));
+          return(response.serveStaticFile(request, filesystem.file(filesystem.localroot(request.shorthost()), request.path)));
         }
         if (pathIsDIR && config.dirAllowed(localroot, localpath)) {
           log(Level.Trace, "Router: [T] localpath %s is a directory [%s,%s]", localpath, config.redirectdir(), config.index());

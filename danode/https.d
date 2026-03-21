@@ -6,7 +6,6 @@ version(SSL) {
   import danode.imports;
   import danode.includes;
 
-  import danode.functions : sISelect;
   import danode.response : Response;
   import danode.log : tag, log, error, Level;
   import danode.interfaces : DriverInterface;
@@ -87,7 +86,7 @@ version(SSL) {
       // Send upto maxsize bytes from the response to the client
       override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096){
         if (!socketReady()) return;
-        if (socketSet.sISelect(socket, true, 0) <= 0) return;
+        if (sISelect(true, 0) <= 0) return;
         // SSL requires retrying with exact same buffer on WANT_WRITE
         if (pending.length == 0) pending = response.bytes(maxsize).dup;
         if (pending.length == 0) return;

@@ -5,7 +5,7 @@ module danode.webconfig;
 import danode.imports;
 
 import danode.functions : has, from;
-import danode.files : FilePayload;
+import danode.filesystem : FilePayload;
 import danode.log : log, tag, Level;
 
 __gshared ServerConfig serverConfig;

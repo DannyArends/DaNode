@@ -6,7 +6,7 @@ version(SSL) {
   import danode.imports;
   import danode.includes;
 
-  import danode.functions : isFILE, isDIR;
+  import danode.filesystem : isFILE, isDIR;
   import danode.log : log, tag, error, Level;
 
   // SSL context structure, stored relation between hostname 

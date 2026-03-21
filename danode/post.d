@@ -11,15 +11,14 @@ import danode.request : Request, RequestMethod;
 import danode.response : Response, setPayload;
 import danode.webconfig : WebConfig;
 import danode.mimetypes : mime;
-import danode.filesystem : FileSystem;
-import danode.functions : from, writeFile, parseQueryString;
+import danode.filesystem : FileSystem, writeFile;
+import danode.functions : from, parseQueryString;
 import danode.log : log, tag, error, Level;
 import danode.webconfig : serverConfig;
 import danode.multipart : MultipartParser;
 
-immutable string      MPHEADER         = "multipart/form-data";                     /// Multipart header id
-immutable string      XFORMHEADER      = "application/x-www-form-urlencoded";       /// X-form header id
-immutable string      JSON             = "application/json"; /// json input
+immutable string MPHEADER = "multipart/form-data";                    /// Multipart header mime
+immutable string XFORMHEADER = "application/x-www-form-urlencoded";   /// X-form header mime
 enum PostType { Input, File };
 
 struct PostItem {
@@ -72,7 +71,7 @@ final bool parsePost(ref Request request, ref Response response, in FileSystem f
 
   if (contenttype.indexOf(XFORMHEADER) >= 0) {
     request.parseXform(request.content);
-  } else if (contenttype.indexOf(JSON) >= 0) {
+  } else if (contenttype.indexOf(mime(".json")) >= 0) {
     log(Level.Verbose, "JSON: [I] passing %d bytes raw to script", expectedlength);
   } else {
     error("parsePost: Unsupported POST content type: %s [%s]", contenttype, expectedlength);

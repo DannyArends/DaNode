@@ -68,15 +68,6 @@ string[string] parseQueryString(const string query) {
   return(*p);
 }
 
-void writeFile(in string localpath, in string content) {
-  try {
-    auto fp = File(localpath, "wb");
-    fp.rawWrite(content);
-    fp.close();
-    log(Level.Trace, "writeFile: %d bytes to: %s", content.length, localpath);
-  } catch(Exception e) { error("writeFile: I/O exception '%s'", e.msg); }
-}
-
 string htmltime(in SysTime d = Clock.currTime()) {
   auto utc = d.toUTC();
   return format("%s %s %s %02d:%02d:%02d GMT", utc.day(), months[utc.month()], utc.year(), utc.hour(), utc.minute(), utc.second());
