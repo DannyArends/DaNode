@@ -5,7 +5,7 @@ module danode.interfaces;
 import danode.imports;
 
 import danode.cgi : CGI;
-import danode.functions : Msecs, sISelect, bodystart, endofheader, fullheader;
+import danode.functions : Msecs;
 import danode.payload : PayloadType;
 import danode.response : Response, setPayload;
 import danode.statuscode : StatusCode;
@@ -16,23 +16,23 @@ abstract class DriverInterface {
   public:
     Appender!(char[])   inbuffer;            /// Input appender buffer
     Socket              socket;              /// Client socket for reading and writing
-    SocketSet           socketSet;           /// SocketSet used for non-blocking select on this connection
+    SocketSet           set;                 /// SocketSet used for non-blocking select on this connection
     long                requests = 0;        /// Number of requests we handled
     long[long]          senddata;            /// Size of data send per request
     SysTime             systime;             /// Time in ms since this process came alive
     SysTime             modtime;             /// Time in ms since this process was last modified
     Address             address;             /// Private address field
 
-    this(Socket socket) {
-      this.socket = socket;
-      this.socketSet = new SocketSet();
+    this(Socket s) {
+      socket = s;
+      set = new SocketSet();
       systime = Clock.currTime();
       touch(); 
     }
     bool socketReady() const { if (socket !is null) { return socket.isAlive(); } return false; }; /// Is the connection alive ?
     void touch() { modtime = Clock.currTime(); }
     private ptrdiff_t readSocket(ref char[] tmpbuffer) {
-      if (!socketReady() || socketSet.sISelect(socket, false, 25) <= 0) return 0;
+      if (!socketReady() || sISelect(false, 25) <= 0) return 0;
       ptrdiff_t received = receiveData(tmpbuffer);
       if (received > 0) { touch(); log(Level.Trace, "Received %d bytes of data", received); }
       return received;
@@ -85,6 +85,13 @@ abstract class DriverInterface {
       if (bodyStart < 0 || bodyStart > inbuffer.data.length) return("");
       return(to!string(inbuffer.data[bodyStart() .. $]));
     }
+    
+    // Reset the socketset and add a server socket to the set
+    int sISelect(bool write = false, int timeout = 25) {
+      set.reset();
+      set.add(socket);
+      return(write ? Socket.select(null, set, null, dur!"msecs"(timeout)) : Socket.select(set, null, null, dur!"msecs"(timeout)));
+    }
 
     final @property ptrdiff_t endOfHeader() const { return(endofheader(inbuffer.data)); }
     final @property ptrdiff_t bodyStart() const { return(bodystart(inbuffer.data)); }
@@ -108,6 +115,30 @@ void sendHeaderTooLarge(ref DriverInterface driver, ref Response response) {
 void sendPayloadTooLarge(ref DriverInterface driver, ref Response response) {
   response.setPayload(StatusCode.PayloadTooLarge, "413 - Payload Too Large\n", "text/plain");
   driver.send(response, driver.socket);
+}
+
+// get the HTTP header contained in the buffer (including the \r\n\r\n)
+pure string fullheader(T)(const(T) buffer) {
+  auto i = bodystart(buffer);
+  if (i > 0 && i <= buffer.length) { return(to!string(buffer[0 .. i])); }
+  return [];
+}
+
+// Where does the HTTP request header end ?
+@nogc pure ptrdiff_t endofheader(T)(const(T) buffer) nothrow {
+  ptrdiff_t len = buffer.length;
+  for (ptrdiff_t i = 0; i < len - 1; i++) {
+    if (i < len - 3 && buffer[i] == '\r' && buffer[i+1] == '\n' && buffer[i+2] == '\r' && buffer[i+3] == '\n') return i;
+    if (buffer[i] == '\n' && buffer[i+1] == '\n') return i;
+  }
+  return -1;
+}
+
+// Where does the HTTP request body start ?
+@nogc pure ptrdiff_t bodystart(T)(const(T) buffer) nothrow {
+  ptrdiff_t i = endofheader(buffer);
+  if (i < 0) return -1;
+  return((i + 3 < buffer.length && buffer[i] == '\r' && buffer[i+1] == '\n') ? i + 4 : i + 2);
 }
 
 class StringDriver : DriverInterface {

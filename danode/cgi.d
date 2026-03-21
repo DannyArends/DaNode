@@ -4,7 +4,7 @@ module danode.cgi;
 
 import danode.imports;
 
-import danode.functions : bodystart, endofheader, fullheader;
+import danode.interfaces : bodystart, endofheader, fullheader;
 import danode.log : log, tag, error, Level;
 import danode.process : Process;
 import danode.statuscode : StatusCode;

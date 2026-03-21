@@ -82,37 +82,6 @@ string htmltime(in SysTime d = Clock.currTime()) {
   return format("%s %s %s %02d:%02d:%02d GMT", utc.day(), months[utc.month()], utc.year(), utc.hour(), utc.minute(), utc.second());
 }
 
-// Where does the HTTP request header end ?
-@nogc pure ptrdiff_t endofheader(T)(const(T) buffer) nothrow {
-  ptrdiff_t len = buffer.length;
-  for (ptrdiff_t i = 0; i < len - 1; i++) {
-    if (i < len - 3 && buffer[i] == '\r' && buffer[i+1] == '\n' && buffer[i+2] == '\r' && buffer[i+3] == '\n') return i;
-    if (buffer[i] == '\n' && buffer[i+1] == '\n') return i;
-  }
-  return -1;
-}
-
-// Where does the HTTP request body start ?
-@nogc pure ptrdiff_t bodystart(T)(const(T) buffer) nothrow {
-  ptrdiff_t i = endofheader(buffer);
-  if (i < 0) return -1;
-  return((i + 3 < buffer.length && buffer[i] == '\r' && buffer[i+1] == '\n') ? i + 4 : i + 2);
-}
-
-// get the HTTP header contained in the buffer (including the \r\n\r\n)
-pure string fullheader(T)(const(T) buffer) {
-  auto i = bodystart(buffer);
-  if (i > 0 && i <= buffer.length) { return(to!string(buffer[0 .. i])); }
-  return [];
-}
-
-// Reset the socketset and add a server socket to the set
-int sISelect(SocketSet set, Socket socket, bool write = false, int timeout = 25) {
-  set.reset();
-  set.add(socket);
-  return(write ? Socket.select(null, set, null, dur!"msecs"(timeout)) : Socket.select(set, null, null, dur!"msecs"(timeout)));
-}
-
 unittest {
   tag(Level.Always, "FILE", "%s", __FILE__);
 
@@ -135,19 +104,6 @@ unittest {
   assert(qs["b"] == "2", "second value must parse");
   assert(qs["c"] == "hello world", "plus must decode to space");
   assert(parseQueryString("").length == 0, "empty query must return empty");
-  // endofheader
-  assert(endofheader("GET / HTTP/1.1\r\nHost: x\r\n\r\n") >= 0, "\\r\\n\\r\\n header must be found");
-  assert(endofheader("GET / HTTP/1.1\nHost: x\n\n") >= 0, "\\n\\n header must be found");
-  assert(endofheader("incomplete header") == -1, "no terminator must return -1");
-  assert(endofheader("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\nbody content") == 40, "\\r\\n\\r\\n position must be 40");
-  assert(endofheader("HTTP/1.1 200 OK\nContent-Type: text/html\n\nbody content") == 39,  "\\n\\n position must be 39");
-  assert(endofheader("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n") == -1, "incomplete must return -1");
-  assert(endofheader("") == -1, "empty must return -1");
-  // bodystart
-  assert(bodystart("GET / HTTP/1.1\nHost: x\n\nbody") > 0, "bodystart must be positive");
-  assert(bodystart("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\nbody content") == 44, "\\r\\n\\r\\n bodystart must be 44");
-  assert(bodystart("HTTP/1.1 200 OK\nContent-Type: text/html\n\nbody content") == 41,  "\\n\\n bodystart must be 41");
-  assert(bodystart("incomplete") == -1, "no terminator must return -1");
   // Msecs unittest
   assert(Msecs(SysTime.init) == -1, "SysTime.init must return -1");
   assert(Msecs(Clock.currTime()) >= 0, "current time must return >= 0");
