@@ -9,7 +9,7 @@ import danode.functions : Msecs, sISelect, resolveFolder;
 import danode.interfaces : DriverInterface;
 import danode.http : HTTP;
 import danode.router : Router;
-import danode.signals : shutdownSignal;
+import danode.signals : shutdownSignal, registerExitHandler;
 import danode.workerpool : WorkerPool;
 import danode.webconfig : serverConfig, ServerConfig, serverConfigMutex;
 
@@ -139,10 +139,7 @@ void main(string[] args) {
                "verbose|v",   &verbose);     // Verbose level (via commandline)
   atomicStore(cv, verbose);
   synchronized(serverConfigMutex) { serverConfig = ServerConfig(wwwFolder ~ "server.config"); }
-  version(Posix) {
-    import danode.signals : setupPosix;
-    setupPosix();
-  }
+  registerExitHandler();
 
   auto server = new Server(port, backlog, wwwFolder, sslFolder, sslKey, accountKey);
   version (SSL) {
