@@ -6,8 +6,9 @@ import danode.imports;
 
 import danode.statuscode : StatusCode;
 import danode.payload : PayloadType;
+import danode.mimetypes : mime, CGI_FILE, UNSUPPORTED_FILE;
 import danode.files : FilePayload, FileStream;
-import danode.functions : has, isFILE, isDIR;
+import danode.functions : has;
 import danode.log : log, tag, error, Level;
 
 /* Domain name structure containing files in that domain
@@ -99,23 +100,88 @@ class FileSystem {
     } }
 }
 
-/* Basic unit-tests should be extended */
+pure bool isAllowed(in string path) { return(mime(path) != UNSUPPORTED_FILE); }
+bool isFILE(in string path) { try { return(isFile(path)); } catch(Exception e) { error("isFILE: I/O exception '%s'", e.msg); } return false; }
+bool isDIR(in string path) { try { return(isDir(path)); } catch(Exception e) { error("isDIR: I/O exception '%s'", e.msg); } return false; }
+bool isCGI(in string path) {
+  try { return(isFile(path) && mime(path).indexOf(CGI_FILE) >= 0);
+  }catch(Exception e) { error("isCGI: I/O exception '%s'", e.msg); }
+  return false;
+}
+
+// Which interpreter (if any) should be used for the path ?
+string interpreter(in string path) {
+  if (!isCGI(path)) return [];
+  string[] parts = mime(path).split("/");
+  if(parts.length > 1) return(parts[1]);
+  return [];
+}
+
+pure string resolve(string path) { return(buildNormalizedPath(absolutePath(path)).replace("\\", "/")); }
+
+string resolveFolder(string path) {
+  path = path.resolve();
+  path = (path.endsWith("/"))? path : path ~ "/";
+  if (!exists(path)) mkdirRecurse(path);
+  return(path);
+}
+
+// Returns null if path escapes root
+string safePath(in string root, in string path) {
+  if (path.canFind("..")) return null;
+  if (path.canFind("\0")) return null;
+  string full = root ~ (path.startsWith("/") ? path : "/" ~ path);
+  try {
+    string absroot = root.resolve();
+    if (!absroot.endsWith("/")) absroot ~= "/";
+    if (exists(full)) {
+      string resolved = full.resolve();
+      if (resolved != absroot[0..$-1] && !resolved.startsWith(absroot)) return null;
+    } else {
+      string parent = dirName(full).resolve();
+      if (parent != absroot[0..$-1] && !parent.startsWith(absroot)) return null;
+    }
+  } catch (Exception e) { return null; }
+  return full;
+}
+
 unittest {
   tag(Level.Always, "FILE", "%s", __FILE__);
   FileSystem fs = new FileSystem("./www/");
 
+  // Local root
   assert(fs.localroot("localhost").length > 0, "localroot must resolve");
-
+  // Domains
   Domain localdomain = fs.scan("www/localhost");
   assert(localdomain.buffersize() > 0, "buffersize must be positive");
-  assert(localdomain.size() > 0,       "size must be positive");
-
+  assert(localdomain.size() > 0, "size must be positive");
+  // Files
   auto fp = fs.file(fs.localroot("localhost"), "/dmd.d");
   auto stream = new FileStream(fp);
-  assert(stream.bytes(0, 6).length == 6,    "FileStream must read 6 bytes");
-  assert(fp.statuscode() == StatusCode.Ok,  "file statuscode must be Ok");
-  assert(fp.mimetype().length > 0,          "file must have mimetype");
-  assert(fp.type() == PayloadType.File,     "type must be File");
-  assert(fp.ready() > 0,                    "file must be ready");
+  assert(stream.bytes(0, 6).length == 6, "FileStream must read 6 bytes");
+  assert(fp.statuscode() == StatusCode.Ok, "file statuscode must be Ok");
+  assert(fp.mimetype().length > 0, "file must have mimetype");
+  assert(fp.type() == PayloadType.File, "type must be File");
+  assert(fp.ready() > 0, "file must be ready");
+  // isFILE / isDIR / isCGI
+  assert(isFILE("danode/functions.d"), "functions.d must be a file");
+  assert(!isFILE("danode"), "directory must not be a file");
+  assert(isDIR("danode"), "danode must be a directory");
+  assert(!isDIR("danode/functions.d"), "file must not be a directory");
+  assert(isCGI("www/localhost/dmd.d"), "dmd.d must be CGI");
+  assert(!isCGI("www/localhost/test.txt"),"txt must not be CGI");
+  // interpreter
+  assert(interpreter("www/localhost/dmd.d").length > 0, "dmd.d must have interpreter");
+  assert(interpreter("www/localhost/php.php").length > 0, "php must have interpreter");
+  assert(interpreter("www/localhost/test.txt").length == 0,"txt must have no interpreter");
+  // safePath - security critical
+  assert(safePath("www/localhost", "/../etc/passwd") is null, "path traversal .. must be blocked");
+  assert(safePath("www/localhost", "/\0etc/passwd") is null, "null byte must be blocked");
+  assert(safePath("www/localhost", "/test.txt") !is null, "valid path must be allowed");
+  assert(safePath("www/localhost", "/test/1.txt") !is null, "valid subpath must be allowed");
+  assert(safePath("www/localhost", "/nonexistent.txt") !is null, "non-existent valid path must be allowed");
+  // isAllowed / isAllowedFile
+  assert(isAllowed("test.html"), "html must be allowed");
+  assert(isAllowed("test.txt"), "txt must be allowed");
+  assert(!isAllowed("test.ill"), "unknown extension must be blocked");
 }
-

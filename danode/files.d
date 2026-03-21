@@ -4,13 +4,13 @@ module danode.files;
 
 import danode.imports;
 import danode.statuscode : StatusCode;
-import danode.mimetypes : mime;
+import danode.mimetypes : mime, UNSUPPORTED_FILE;
 import danode.payload : Payload, PayloadType, Message;
 import danode.log : log, tag, error, Level;
-import danode.functions : isCGI, htmltime;
+import danode.functions : htmltime;
 import danode.request : Request;
 import danode.response : Response, notModified;
-import danode.filesystem : FileSystem;
+import danode.filesystem : FileSystem, isCGI;
 
 /* Per-client streaming wrapper around a shared FilePayload.
    Keeps its own File handle open for the duration of streaming,

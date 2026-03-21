@@ -5,7 +5,7 @@ module danode.response;
 import danode.imports;
 
 import danode.cgi : CGI;
-import danode.functions : htmltime;
+import danode.functions : htmltime, htmlEscape;
 import danode.statuscode : StatusCode, noBody;
 import danode.request : Request;
 import danode.mimetypes : UNSUPPORTED_FILE;
@@ -14,7 +14,6 @@ import danode.log : tag, log, Level;
 import danode.webconfig : WebConfig, serverConfig;
 import danode.filesystem : FileSystem;
 import danode.post : serverAPI;
-import danode.functions : browseDir;
 
 struct Response {
   string            protocol = "HTTP/1.1";
@@ -144,6 +143,19 @@ bool setPayload(ref Response response, StatusCode code, string msg = "", in stri
   return(response.ready = true);
 }
 
+// Browse the content of a directory, generate a rudimentairy HTML file
+string browseDir(in string root, in string localpath) {
+  Appender!(string) content;
+  content.put(format("Content of: %s<br>\n", htmlEscape(localpath)));
+  foreach (DirEntry d; dirEntries(localpath, SpanMode.shallow)) {
+    string name = d.name[root.length .. $].replace("\\", "/");
+    if (name.endsWith(".in") || name.endsWith(".up")) continue;
+    string escaped = htmlEscape(name);
+    content.put(format("<a href='%s'>%s</a><br>", escaped, escaped));
+  }
+  return(format("<html><head><title>200 - Allowed directory</title></head><body>%s</body></html>", content.data));
+}
+
 // send a redirect permanently response
 void redirect(ref Response response, in Request request, in string fqdn, bool isSecure = false) {
   log(Level.Trace, "Redirecting request to %s", fqdn);
@@ -198,35 +210,27 @@ void notFound(ref Response response) {
 
 unittest {
   tag(Level.Always, "FILE", "%s", __FILE__);
+  Response r;
 
   // setPayload
-  Response r;
   r.setPayload(StatusCode.Ok, "hello", "text/plain");
   assert(r.ready, "setPayload must set ready");
   assert(r.statuscode == StatusCode.Ok, "setPayload must set statuscode");
   assert(r.payload.mimetype == "text/plain", "setPayload must set mimetype");
-
   // notFound
-  Response r2;
-  r2.notFound();
-  assert(r2.ready, "notFound must set ready");
-  assert(r2.statuscode == StatusCode.NotFound, "notFound must be 404");
-
+  r.notFound();
+  assert(r.ready, "notFound must set ready");
+  assert(r.statuscode == StatusCode.NotFound, "notFound must be 404");
   // forbidden
-  Response r3;
-  r3.forbidden();
-  assert(r3.ready, "forbidden must set ready");
-  assert(r3.statuscode == StatusCode.Forbidden, "forbidden must be 403");
-
+  r.forbidden();
+  assert(r.ready, "forbidden must set ready");
+  assert(r.statuscode == StatusCode.Forbidden, "forbidden must be 403");
   // badRequest
-  Response r4;
-  r4.badRequest();
-  assert(r4.ready, "badRequest must set ready");
-  assert(r4.statuscode == StatusCode.BadRequest, "badRequest must be 400");
-
+  r.badRequest();
+  assert(r.ready, "badRequest must set ready");
+  assert(r.statuscode == StatusCode.BadRequest, "badRequest must be 400");
   // domainNotFound
-  Response r5;
-  r5.domainNotFound();
-  assert(r5.ready, "domainNotFound must set ready");
-  assert(r5.statuscode == StatusCode.NotFound, "domainNotFound must be 404");
+  r.domainNotFound();
+  assert(r.ready, "domainNotFound must set ready");
+  assert(r.statuscode == StatusCode.NotFound, "domainNotFound must be 404");
 }

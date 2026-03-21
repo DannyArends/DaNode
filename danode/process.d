@@ -4,7 +4,7 @@ module danode.process;
 
 import danode.imports;
 
-import danode.functions : Msecs, safeClose, safeRemove;
+import danode.functions : Msecs;
 import danode.log : log, tag, error, Level;
 import danode.webconfig : serverConfig;
 
@@ -26,6 +26,9 @@ bool nonblocking(ref File file) {
     return(SetNamedPipeHandleState(file.windowsHandle(), &x, null, null) != 0);
   }
 }
+
+void safeClose(ref File f) nothrow { try { if (f.isOpen()) { f.close(); } } catch(Exception e) {} }
+void safeRemove(string path) nothrow { try { if (exists(path)) { remove(path); } } catch(Exception e) {} }
 
 version(Posix) {
   alias kill killProcess;

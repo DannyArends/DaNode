@@ -5,7 +5,6 @@ module danode.functions;
 import danode.imports;
 
 import danode.log : log, tag, error, Level;
-import danode.mimetypes : CGI_FILE, mime, UNSUPPORTED_FILE;
 
 immutable string[int] months; 
 shared static this(){
@@ -32,37 +31,6 @@ SysTime parseHtmlDate(const string datestr) {
 
 pure string htmlEscape(string s) nothrow {
   return(s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&#39;"));
-}
-
-pure string resolve(string path) { return(buildNormalizedPath(absolutePath(path)).replace("\\", "/")); }
-
-string resolveFolder(string path) {
-  path = path.resolve();
-  path = (path.endsWith("/"))? path : path ~ "/";
-  if (!exists(path)) mkdirRecurse(path);
-  return(path);
-}
-
-void safeClose(ref File f) nothrow { try { if (f.isOpen()) { f.close(); } } catch(Exception e) {} }
-void safeRemove(string path) nothrow { try { if (exists(path)) { remove(path); } } catch(Exception e) {} }
-
-// Returns null if path escapes root
-string safePath(in string root, in string path) {
-  if (path.canFind("..")) return null;
-  if (path.canFind("\0")) return null;
-  string full = root ~ (path.startsWith("/") ? path : "/" ~ path);
-  try {
-    string absroot = root.resolve();
-    if (!absroot.endsWith("/")) absroot ~= "/";
-    if (exists(full)) {
-      string resolved = full.resolve();
-      if (resolved != absroot[0..$-1] && !resolved.startsWith(absroot)) return null;
-    } else {
-      string parent = dirName(full).resolve();
-      if (parent != absroot[0..$-1] && !parent.startsWith(absroot)) return null;
-    }
-  } catch (Exception e) { return null; }
-  return full;
 }
 
 // Month to index of the year
@@ -114,23 +82,6 @@ string htmltime(in SysTime d = Clock.currTime()) {
   return format("%s %s %s %02d:%02d:%02d GMT", utc.day(), months[utc.month()], utc.year(), utc.hour(), utc.minute(), utc.second());
 }
 
-bool isFILE(in string path) {
-  try { return(isFile(path)); } catch(Exception e) { error("isFILE: I/O exception '%s'", e.msg); } return false;
-}
-
-bool isDIR(in string path) {
-  try { return(isDir(path)); } catch(Exception e) { error("isDIR: I/O exception '%s'", e.msg); }
-  return false;
-}
-
-bool isCGI(in string path) {
-  try { return(isFile(path) && mime(path).indexOf(CGI_FILE) >= 0); }
-  catch(Exception e) { error("isCGI: I/O exception '%s'", e.msg); }
-  return false;
-}
-
-pure bool isAllowed(in string path) { return(mime(path) != UNSUPPORTED_FILE); }
-
 // Where does the HTTP request header end ?
 @nogc pure ptrdiff_t endofheader(T)(const(T) buffer) nothrow {
   ptrdiff_t len = buffer.length;
@@ -155,27 +106,6 @@ pure string fullheader(T)(const(T) buffer) {
   return [];
 }
 
-// Which interpreter (if any) should be used for the path ?
-string interpreter(in string path) {
-  if (!isCGI(path)) return [];
-  string[] parts = mime(path).split("/");
-  if(parts.length > 1) return(parts[1]);
-  return [];
-}
-
-// Browse the content of a directory, generate a rudimentairy HTML file
-string browseDir(in string root, in string localpath) {
-  Appender!(string) content;
-  content.put(format("Content of: %s<br>\n", htmlEscape(localpath)));
-  foreach (DirEntry d; dirEntries(localpath, SpanMode.shallow)) {
-    string name = d.name[root.length .. $].replace("\\", "/");
-    if (name.endsWith(".in") || name.endsWith(".up")) continue;
-    string escaped = htmlEscape(name);
-    content.put(format("<a href='%s'>%s</a><br>", escaped, escaped));
-  }
-  return(format("<html><head><title>200 - Allowed directory</title></head><body>%s</body></html>", content.data));
-}
-
 // Reset the socketset and add a server socket to the set
 int sISelect(SocketSet set, Socket socket, bool write = false, int timeout = 25) {
   set.reset();
@@ -191,72 +121,34 @@ unittest {
   assert(monthToIndex("Jan") == 1,  "Jan must be month 1");
   assert(monthToIndex("Dec") == 12, "Dec must be month 12");
   assert(monthToIndex("xyz") == -1, "invalid month must return -1");
-
   // htmltime
   assert(htmltime().length > 0, "htmltime must return non-empty string");
-
-  // isFILE / isDIR / isCGI
-  assert(isFILE("danode/functions.d"),    "functions.d must be a file");
-  assert(!isFILE("danode"),               "directory must not be a file");
-  assert(isDIR("danode"),                 "danode must be a directory");
-  assert(!isDIR("danode/functions.d"),    "file must not be a directory");
-  assert(isCGI("www/localhost/dmd.d"),    "dmd.d must be CGI");
-  assert(!isCGI("www/localhost/test.txt"),"txt must not be CGI");
-
-  // interpreter
-  assert(interpreter("www/localhost/dmd.d").length > 0,   "dmd.d must have interpreter");
-  assert(interpreter("www/localhost/php.php").length > 0,  "php must have interpreter");
-  assert(interpreter("www/localhost/test.txt").length == 0,"txt must have no interpreter");
-
-  // safePath - security critical
-  assert(safePath("www/localhost", "/../etc/passwd") is null, "path traversal .. must be blocked");
-  assert(safePath("www/localhost", "/\0etc/passwd") is null, "null byte must be blocked");
-  assert(safePath("www/localhost", "/test.txt") !is null, "valid path must be allowed");
-  assert(safePath("www/localhost", "/test/1.txt") !is null, "valid subpath must be allowed");
-  assert(safePath("www/localhost", "/nonexistent.txt") !is null, "non-existent valid path must be allowed");
-
   // htmlEscape - XSS critical
   assert(htmlEscape("<script>") == "&lt;script&gt;", "< and > must be escaped");
   assert(htmlEscape("\"quoted\"") == "&quot;quoted&quot;", "quotes must be escaped");
   assert(htmlEscape("a&b") == "a&amp;b", "& must be escaped");
   assert(htmlEscape("it's") == "it&#39;s", "apostrophe must be escaped");
   assert(htmlEscape("safe") == "safe", "safe string must pass through");
-
   // parseQueryString
   auto qs = parseQueryString("a=1&b=2&c=hello+world");
   assert(qs["a"] == "1", "simple value must parse");
   assert(qs["b"] == "2", "second value must parse");
   assert(qs["c"] == "hello world", "plus must decode to space");
   assert(parseQueryString("").length == 0, "empty query must return empty");
-
-  // isAllowed / isAllowedFile
-  assert(isAllowed("test.html"), "html must be allowed");
-  assert(isAllowed("test.txt"), "txt must be allowed");
-  assert(!isAllowed("test.ill"), "unknown extension must be blocked");
-
-  // bodystart / endofheader
+  // endofheader
   assert(endofheader("GET / HTTP/1.1\r\nHost: x\r\n\r\n") >= 0, "\\r\\n\\r\\n header must be found");
   assert(endofheader("GET / HTTP/1.1\nHost: x\n\n") >= 0, "\\n\\n header must be found");
   assert(endofheader("incomplete header") == -1, "no terminator must return -1");
-  assert(bodystart("GET / HTTP/1.1\nHost: x\n\nbody") > 0, "bodystart must be positive");
-
-  // endofheader - \r\n\r\n &  \n\n
   assert(endofheader("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\nbody content") == 40, "\\r\\n\\r\\n position must be 40");
   assert(endofheader("HTTP/1.1 200 OK\nContent-Type: text/html\n\nbody content") == 39,  "\\n\\n position must be 39");
-
-  // endofheader - no terminator
   assert(endofheader("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n") == -1, "incomplete must return -1");
   assert(endofheader("") == -1, "empty must return -1");
-
-  // bodystart - \r\n\r\n & \n\n
+  // bodystart
+  assert(bodystart("GET / HTTP/1.1\nHost: x\n\nbody") > 0, "bodystart must be positive");
   assert(bodystart("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\nbody content") == 44, "\\r\\n\\r\\n bodystart must be 44");
   assert(bodystart("HTTP/1.1 200 OK\nContent-Type: text/html\n\nbody content") == 41,  "\\n\\n bodystart must be 41");
-
-  // bodystart - no body
   assert(bodystart("incomplete") == -1, "no terminator must return -1");
-
-  // functions.d unittest
+  // Msecs unittest
   assert(Msecs(SysTime.init) == -1, "SysTime.init must return -1");
   assert(Msecs(Clock.currTime()) >= 0, "current time must return >= 0");
 }
-
