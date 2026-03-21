@@ -37,29 +37,32 @@ struct Response {
 
   // Generate a HTTP header for the response
   @property final char[] header() {
-    if (hdr.data) { return(hdr.data); /* Header was constructed */ }
+    if (hdr.data) { return(hdr.data); } // Header was already constructed
 
     // Scripts are allowed to have/send their own header
     if (payload.type == PayloadType.Script) {
       CGI script = to!CGI(payload);
+      if (buildScriptHeader(hdr, connection, script, protocol)) return(hdr.data);
+      // Fallback: Populate headers from script output
       foreach (line; script.fullHeader().split("\n")) {
         auto v = line.split(": ");
-        if(v.length == 2) this.headers[v[0]] = chomp(v[1]);
+        if(v.length == 2) headers[v[0]] = chomp(v[1]);
       }
-      if (buildScriptHeader(hdr, connection, script, protocol)) return(hdr.data);
     }
-    // Server-generated header
+    // Server always owns these, overwrite anything the script has set
+    headers["Connection"] = connection;
+    headers["Date"] = htmltime();
+    if (payload.mtime != SysTime.init) headers["Last-Modified"] = htmltime(payload.mtime);
+    if (payload.type != PayloadType.Script && !noBody(statuscode)) {
+      headers["Content-Length"] = to!string(isRange ? (rangeEnd - rangeStart + 1) : payload.length);
+      headers["Content-Type"] = payload.mimetype;
+      if (maxage > 0) headers["Cache-Control"] = format("max-age=%d, public", maxage);
+    }
+
+    // Header emit loop
     hdr.put(format("%s %d %s\r\n", protocol, statuscode, statuscode.reason));
     foreach (key, value; headers) { hdr.put(format("%s: %s\r\n", key, value)); }
-    hdr.put(format("Date: %s\r\n", htmltime()));
-    if (payload.type != PayloadType.Script && !noBody(statuscode)) {
-      long contentLength = isRange ? (rangeEnd - rangeStart + 1) : payload.length;
-      hdr.put(format("Content-Length: %d\r\n", contentLength));
-      hdr.put(format("Content-Type: %s\r\n", payload.mimetype));
-      if (maxage > 0) { hdr.put(format("Cache-Control: max-age=%d, public\r\n", maxage)); }
-    }
-    if (payload.mtime != SysTime.init) { hdr.put(format("Last-Modified: %s\r\n", htmltime(payload.mtime))); }
-    hdr.put(format("Connection: %s\r\n\r\n", connection));
+    hdr.put("\r\n");
     return(hdr.data);
   }
 
