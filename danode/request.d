@@ -52,6 +52,7 @@ struct Request {
   string[string] headers; /// Associative array holding the header values
   SysTime starttime; /// start time of the Request
   PostItem[string] postinfo; /// Associative array holding the post parameters and values
+  bool postParsed = false;
 
   // Start a new Request, and parseHeader on the DriverInterface
   final void initialize(const DriverInterface driver) {

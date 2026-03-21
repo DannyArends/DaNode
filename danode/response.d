@@ -24,7 +24,6 @@ struct Response {
   string[string]    headers;
   Payload           payload;
   bool              created = false;
-  bool              havepost = false;
   bool              routed = false;
   bool              completed = false;
   Appender!(char[]) hdr;
@@ -142,7 +141,7 @@ Response create(in Request request, Address address, in StatusCode statuscode = 
 
 bool setPayload(ref Response response, StatusCode code, string msg = "", in string mimetype = UNSUPPORTED_FILE) {
   response.payload = new Message(code, msg, mimetype);
-  return(response.ready = response.havepost = true);
+  return(response.ready = true);
 }
 
 // send a redirect permanently response
