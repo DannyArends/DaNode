@@ -31,6 +31,12 @@ abstract class DriverInterface {
     }
     bool socketReady() const { if (socket !is null) { return socket.isAlive(); } return false; }; /// Is the connection alive ?
     void touch() { modtime = Clock.currTime(); }
+    private ptrdiff_t readSocket(ref char[] tmpbuffer) {
+      if (!socketReady() || socketSet.sISelect(socket, false, 25) <= 0) return 0;
+      ptrdiff_t received = receiveData(tmpbuffer);
+      if (received > 0) { touch(); log(Level.Trace, "Received %d bytes of data", received); }
+      return received;
+    }
     void closeSocket() {
       try {
         if (socket !is null) { if (socket.isAlive()) { socket.shutdown(SocketShutdown.BOTH); } socket.close(); }
@@ -39,33 +45,24 @@ abstract class DriverInterface {
 
     // Receive a raw chunk without buffering into inbuffer - for streaming use
     final const(char)[] receiveChunk(ptrdiff_t maxsize = 65536) {
-      // Drain any body bytes already in inbuffer first
       ptrdiff_t bs = bodyStart();
-      if (bs >= 0 && bs < inbuffer.data.length) {
+      if (bs > 0 && bs < inbuffer.data.length) {
         auto buffered = inbuffer.data[bs .. $].dup;
-        if (bs  > 0 && bs  <= inbuffer.data.length) {
-          auto header = inbuffer.data[0 .. bs].dup;
-          inbuffer.clear();
-          inbuffer.put(header);
-        }
-        return buffered;
+        auto header = inbuffer.data[0 .. bs].dup;
+        inbuffer.clear();
+        inbuffer.put(header);
+        return(buffered);
       }
-      if (!socketReady()) return [];
-      if (socketSet.sISelect(socket, false, 25) <= 0) return [];
       char[] tmpbuffer = new char[](maxsize);
-      ptrdiff_t received = receiveData(tmpbuffer);
-      if (received > 0) { touch(); return tmpbuffer[0 .. received]; }
-      return [];
+      ptrdiff_t received = readSocket(tmpbuffer);
+      return(received > 0 ? tmpbuffer[0 .. received] : []);
     }
 
     // Receive upto maxsize of bytes from the client into the input buffer
-    ptrdiff_t receive(Socket socket, ptrdiff_t maxsize = 4096) {
-      if (!socketReady()) return(-1);
-      if (socketSet.sISelect(socket, false, 25) <= 0) return(0);
-      ptrdiff_t received;
+    ptrdiff_t receive(ptrdiff_t maxsize = 4096) {
       char[] tmpbuffer = new char[](maxsize);
-      if ((received = receiveData(tmpbuffer)) > 0) { inbuffer.put(tmpbuffer[0 .. received]); touch(); }
-      if(received > 0) log(Level.Trace, "Received %d bytes of data", received);
+      ptrdiff_t received = readSocket(tmpbuffer);
+      if (received > 0) inbuffer.put(tmpbuffer[0 .. received]);
       return(inbuffer.data.length);
     }
 
@@ -128,7 +125,7 @@ class StringDriver : DriverInterface {
     override bool socketReady() const { return inbuffer.data.length > 0; }
     @nogc override bool isSecure() const nothrow { return(false); }
     override long receiveData(ref char[] buffer) { return(0); }  // unused - overriding receive() directly
-    override ptrdiff_t receive(Socket socket, ptrdiff_t maxsize = 4096) {
+    override ptrdiff_t receive(ptrdiff_t maxsize = 4096) {
       if (inbuffer.data.length != 0) touch();
       return(inbuffer.data.length);
     }

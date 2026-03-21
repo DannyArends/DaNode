@@ -41,7 +41,7 @@ class Client {
         if (!driver.openConnection()) { log(Level.Verbose, "WARN: Unable to open connection"); return; }
         size_t headerLimit = serverConfig.get("max_header_size", 32 * 1024);
         while (running) {
-          if (driver.receive(driver.socket) > 0) { // We've received new data
+          if (driver.receive() > 0) { // We've received new data
             if (!driver.hasHeader()) {
               if (driver.inbuffer.data.length > headerLimit) { driver.sendHeaderTooLarge(response); stop(); continue; }
             } else {

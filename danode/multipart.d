@@ -123,10 +123,10 @@ struct MultipartParser {
 // Extract value from: name="value" or filename="value"
 pure string extractQuoted(string s, string key) nothrow {
   ptrdiff_t i = s.indexOf(key ~ "=\"");
-  if (i < 0) return "";
+  if (i < 0) return("");
   i += key.length + 2;
   ptrdiff_t j = s.indexOf("\"", i);
-  return j > i ? s[i .. j] : "";
+  return(j > i ? s[i .. j] : "");
 }
 
 unittest {
