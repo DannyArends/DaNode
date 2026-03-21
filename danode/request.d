@@ -10,6 +10,7 @@ import danode.functions : interpreter, from, parseHtmlDate, parseQueryString;
 import danode.webconfig : WebConfig, serverConfig;
 import danode.post : PostItem, PostType;
 import danode.log : log, tag, error, Level;
+import danode.multipart : MultipartParser;
 
 // The Request-Method indicates which method is to be performed on the specified resource
 enum RequestMethod : string {
@@ -53,7 +54,8 @@ struct Request {
   SysTime starttime; /// start time of the Request
   PostItem[string] postinfo; /// Associative array holding the post parameters and values
   bool postParsed = false;
-
+  MultipartParser mpParser;  /// streaming multipart parser
+  
   // Start a new Request, and parseHeader on the DriverInterface
   final void initialize(const DriverInterface driver) {
     this.ip = driver.ip;

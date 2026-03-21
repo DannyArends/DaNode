@@ -46,7 +46,7 @@ class Router {
     // Route a request based on the request header
     final void route(DriverInterface driver, ref Request request, ref Response response) {
       if (!response.routed && parse(driver, request, response)) {
-        if (request.parsePost(response, filesystem)) { deliver(request, response); }
+        if (request.parsePost(response, filesystem, driver)) { deliver(request, response); }
       }
     }
 

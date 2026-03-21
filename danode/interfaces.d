@@ -37,6 +37,15 @@ abstract class DriverInterface {
       } catch(Exception e) { error("Exception closing socket: %s", e.msg); }
     }
 
+    final void trimToHeader() {
+      ptrdiff_t hsize = bodyStart();
+      if (hsize > 0 && hsize <= inbuffer.data.length) {
+        auto header = inbuffer.data[0 .. hsize].dup;
+        inbuffer.clear();
+        inbuffer.put(header);
+      }
+    }
+
     // Receive upto maxsize of bytes from the client into the input buffer
     ptrdiff_t receive(Socket socket, ptrdiff_t maxsize = 4096) {
       if (!socketReady()) return(-1);
