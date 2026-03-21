@@ -15,6 +15,7 @@ import danode.functions : isCGI, isFILE, isDIR, isAllowed, safePath;
 import danode.filesystem : FileSystem;
 import danode.post : parsePost;
 import danode.log : log, tag, Level;
+import danode.signals : shutdownSignal;
 
 version(SSL) {
   import danode.ssl : hasCertificate;
@@ -150,6 +151,7 @@ class Router {
 
 // Helper function used to make calls during a unittest, setup a driver, a client and run the request
 StringDriver runRequest(Router router, string request = "GET /dmd.d HTTP/1.1\nHost: localhost\n\n", long maxtime = 1000) {
+  if(atomicLoad(shutdownSignal)) { exit(1); }
   tag(Level.Verbose, "runRequest", "%s", request);
   auto driver = new StringDriver(request);
   auto client = new Client(router, driver, maxtime);

@@ -68,7 +68,11 @@ struct Response {
 
   // Propagate shutdown through the chain to kill Process
   final void kill() {
-    if (payload !is null && payload.type == PayloadType.Script) { to!CGI(payload).notifyovertime(); }
+    if (payload !is null && payload.type == PayloadType.Script) { 
+      auto cgi = to!CGI(payload);
+      cgi.notifyovertime();
+      cgi.joinThread();
+    }
   }
 
   @property final StatusCode statuscode() const {

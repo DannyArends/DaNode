@@ -67,9 +67,8 @@ class CGI : Payload {
       return(def);
     }
 
-    private const(char)[] rawOutput() const {
-      return cast(const(char)[]) external.output(0);
-    }
+    private const(char)[] rawOutput() const { return cast(const(char)[]) external.output(0); }
+    void joinThread() { external.join(); }
 
     // Type of header returned by the script: FastCGI, HTTP10, HTTP11
     @property final HeaderType headerType() const {

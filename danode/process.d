@@ -142,7 +142,7 @@ class Process : Thread {
     // inputfile is removed when the run() returns succesfully, on error, it is kept
     final void run() {
       scope(exit) {
-        log(Level.Always, "Removing process input file %s ? %s", inputfile, removeInput);
+        log(Level.Verbose, "Removing process input file %s ? %s", inputfile, removeInput);
         safeClose(fStdIn);
         if (removeInput) safeRemove(inputfile);
         synchronized { this.completed = true; }
