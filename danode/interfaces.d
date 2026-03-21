@@ -77,7 +77,7 @@ abstract class DriverInterface {
 
 // serve a 408 connection timed out page
 void sendTimedOut(ref DriverInterface driver, ref Response response) {
-  if(response.payload && response.payload.type == PayloadType.Script){ to!CGI(response.payload).notifyovertime(); }
+  if(response.payload !is null && response.payload.type == PayloadType.Script){ to!CGI(response.payload).notifyovertime(); }
   response.setPayload(StatusCode.TimedOut, "408 - Connection Timed Out\n", "text/plain");
   driver.send(response, driver.socket);
 }

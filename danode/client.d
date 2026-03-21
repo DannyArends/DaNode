@@ -85,8 +85,8 @@ class Client {
       if(rq.starttime == SysTime.init) return;
       string uri;
       try { uri = decodeComponent(rq.uri); } catch (Exception e) { uri = rq.uri; }
-      long bytes = (rs.payload && rs.isRange) ? (rs.rangeEnd - rs.rangeStart + 1) : (rs.payload ? rs.payload.length : 0);
-      int code = cast(int)(rs.payload ? rs.statuscode.code : 0);
+      long bytes = (rs.payload !is null && rs.isRange) ? (rs.rangeEnd - rs.rangeStart + 1) : (rs.payload ? rs.payload.length : 0);
+      int code = cast(int)((rs.payload !is null)? rs.statuscode.code : 0);
       long ms = rq.starttime == SysTime.init ? -1 : Msecs(rq.starttime);
       tag(Level.Always, format("%d", code),
           "%s %s:%s %s%s [%d] %.1fkb in %s ms ", htmltime(), ip, port, rq.shorthost, uri.replace("%", "%%"), requests, bytes/1024f, ms);

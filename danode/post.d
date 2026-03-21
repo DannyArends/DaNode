@@ -148,13 +148,13 @@ final void serverAPI(in FileSystem filesystem, in WebConfig config, in Request r
   foreach (c; request.cookies.split("; ")) { content.put(format("C=%s\n", chomp(c)) ); }
   content.put(format("S=SERVER_SOFTWARE=%s\n", serverConfig.get("serverinfo", "DaNode/0.0.3")));
   try{
-    content.put(format("S=SERVER_NAME=%s\n", (response.address)? response.address.toHostNameString() : "localhost"));
+    content.put(format("S=SERVER_NAME=%s\n", (response.address !is null)? response.address.toHostNameString() : "localhost"));
   }catch(Exception e){
     error("Exception while trying to call: toHostNameString()");
     content.put("S=SERVER_NAME=localhost\n");
   }
-  content.put(format("S=SERVER_ADDR=%s\n", (response.address)? response.address.toAddrString() : "127.0.0.1"));
-  content.put(format("S=SERVER_PORT=%s\n", (response.address)? response.address.toPortString() : "80"));
+  content.put(format("S=SERVER_ADDR=%s\n", (response.address !is null)? response.address.toAddrString() : "127.0.0.1"));
+  content.put(format("S=SERVER_PORT=%s\n", (response.address !is null)? response.address.toPortString() : "80"));
   content.put(format("S=DOCUMENT_ROOT=%s\n", filesystem.localroot(request.shorthost())));
   content.put(format("S=GATEWAY_INTERFACE=%s\n", "CGI/1.1"));
   content.put(format("S=PHP_SELF=%s\n", request.path));
