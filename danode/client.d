@@ -39,15 +39,13 @@ class Client {
           response.kill();                                      // kill any running CGI process
         }
         size_t headerLimit  = serverConfig.get("max_header_size", 32 * 1024);
-        size_t uploadLimit  = serverConfig.get("max_upload_size",  100 * 1024 * 1024);
-        size_t requestLimit = serverConfig.get("max_request_size", 2   * 1024 * 1024);
         while (running) {
           if (driver.receive(driver.socket) > 0) { // We've received new data
             if (!driver.hasHeader()) {
               if (driver.inbuffer.data.length > headerLimit) { driver.sendHeaderTooLarge(response); stop(); continue; }
             } else {
               if (driver.endOfHeader > headerLimit) { driver.sendHeaderTooLarge(response); stop(); continue; }
-              size_t limit = (driver.header.indexOf("multipart/") >= 0)? uploadLimit: requestLimit;
+              size_t limit = (driver.header.indexOf("multipart/") >= 0)? serverConfig.maxUploadSize : serverConfig.maxRequestSize;
               if (driver.inbuffer.data.length > limit) { driver.sendPayloadTooLarge(response); stop(); continue; }
             }
             // Parse the data and try to create a response (Could fail multiple times)

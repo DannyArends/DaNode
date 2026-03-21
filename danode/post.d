@@ -43,18 +43,18 @@ final bool parsePost(ref Request request, ref Response response, in FileSystem f
     return(response.setPayload(StatusCode.BadRequest, "400 - Bad Request\n", "text/plain"));
   }
   string content = request.body;
+  string contenttype = from(request.headers, "Content-Type");
+  log(Level.Trace, "content type: %s", contenttype);
+  size_t limit = (contenttype.indexOf("multipart/") >= 0)? serverConfig.maxUploadSize : serverConfig.maxRequestSize;
   if (expectedlength == 0) {
     log(Level.Trace, "Post: [T] Content-Length not specified (or 0), length: %s", content.length);
     return(response.havepost = true); // When we don't receive any post data it is meaningless to scan for any content
-  } else if (expectedlength > serverConfig.get("max_request_size", 2   * 1024 * 1024)) {
+  } else if (expectedlength > limit) {
     log(Level.Verbose, "Post: [W] Upload too large: %d bytes from %s", expectedlength, request.ip);
     return(response.setPayload(StatusCode.PayloadTooLarge, "413 - Payload Too Large\n", "text/plain"));
   }
   log(Level.Trace, "Post: [T] Received %s of %s", content.length, expectedlength);
   if(content.length < expectedlength) return(false);
-
-  string contenttype = from(request.headers, "Content-Type");
-  log(Level.Trace, "content type: %s", contenttype);
 
   if (contenttype.indexOf(XFORMHEADER) >= 0) {
     log(Level.Verbose, "XFORM: [I] parsing %d bytes", expectedlength);
