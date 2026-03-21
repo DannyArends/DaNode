@@ -11,31 +11,37 @@ import danode.log : log, tag, error, Level;
 enum MPState { INIT, HEADER, BODY }
 
 struct MultipartParser {
-  string            boundary;       /// "--boundary"
-  string            uploadDir;      /// directory for .up files
-  MPState           state = MPState.INIT;
-  char[]            tail;           /// leftover bytes from previous chunk (boundary detection)
-  File              outfile;        /// current open output file
-  string            currentPath;    /// current .up file path
-  string            currentMime;    /// current part mime type
-  string            currentName;    /// current field name
-  string            currentFname;   /// current filename
-  Appender!(char[]) hdrbuf;     /// accumulating part header bytes
-  bool              done = false;   /// final boundary seen
-  Appender!(char[]) valuebuf;  // accumulates plain field value
+  string            boundary;               /// "--boundary"
+  string            uploadDir;              /// directory for .up files
+  MPState           state = MPState.INIT;   /// State of the parser
+  char[]            tail;                   /// leftover bytes from previous chunk (boundary detection)
+  File              outfile;                /// current open output file
+  string            currentPath;            /// current .up file path
+  string            currentMime;            /// current part mime type
+  string            currentName;            /// current field name
+  string            currentFname;           /// current filename
+  Appender!(char[]) hdrbuf;                 /// accumulating part header bytes
+  bool              done = false;           /// final boundary seen
+  string            delim;                  /// "\r\n--boundary", cached
+  Appender!(char[]) valuebuf;               /// accumulates plain field value
+
+  this (string boundary, string uploadDir) {
+    this.boundary = boundary;
+    this.uploadDir = uploadDir;
+    this.delim = "\r\n" ~ boundary;
+  }
 
   @property bool isActive() const { return boundary.length > 0; }
 
   bool feed(ref Request request, const(char)[] chunk) {
-    // Prepend any leftover tail from previous chunk
-    char[] data = tail ~ chunk;
+    char[] data = tail ~ chunk;    // Prepend any leftover tail from previous chunk
     tail = [];
 
     while (data.length > 0 && !done) {
       final switch (state) {
         case MPState.INIT:          // Find opening boundary
           ptrdiff_t i = indexOf(data, boundary ~ "\r\n");
-          if (i < 0) { tail = data.dup; return(false); }
+          if (i < 0) { return(saveTail(data));  }
           data = data[i + boundary.length + 2 .. $];
           state = MPState.HEADER;
           break;
@@ -52,7 +58,6 @@ struct MultipartParser {
             break;
 
         case MPState.BODY:          // Look for \r\n--boundary
-          string delim = "\r\n" ~ boundary;
           ptrdiff_t i = indexOf(data, delim);
           if (i < 0) { // No boundary found - write all but tail
             ptrdiff_t keep = 0;
@@ -61,25 +66,24 @@ struct MultipartParser {
             }
             ptrdiff_t safe = cast(ptrdiff_t)data.length - keep;
             if (safe > 0) { writeChunk(data[0 .. safe]); }
-            tail = data[safe .. $].dup;
-            return(false);
+            return(saveTail(data)); 
           }
           if (i + delim.length + 2 > data.length) { tail = data[i .. $].dup; if (i > 0) writeChunk(data[0 .. i]); return false; }
           // Boundary found - write up to it and close part
           writeChunk(data[0 .. i]);
           closePart(request);
           data = data[i + delim.length .. $];
-          // Check for final boundary (--) or next part (\r\n)
-          if (data.length == 0) { tail = cast(char[])[]; return false; }
-          if (data.length >= 2 && data[0..2] == "--") { return(done = true); }
-          if (data[0] == '-') { tail = data.dup; return false; }
-          if (data.length >= 2 && data[0..2] == "\r\n") { data = data[2..$]; state = MPState.HEADER; break; }
-          else if (data[0] == '\r') { tail = data.dup; return false; }
+          if (data.length < 2) { return saveTail(data); }
+          if (data[0..2] == "--") { return(done = true); }
+          if (data[0..2] == "\r\n") { data = data[2..$]; }
+          else { return saveTail(data); }
           state = MPState.HEADER;
       }
     }
     return done;
   }
+
+  private bool saveTail(char[] d) { tail = d.dup; return false; }
 
   private void parsePartHeader(ref Request request) {
     string header = to!string(hdrbuf.data);

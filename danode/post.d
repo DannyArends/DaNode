@@ -54,17 +54,14 @@ final bool parsePost(ref Request request, ref Response response, in FileSystem f
   if (contenttype.indexOf(MPHEADER) >= 0) {
     auto parts = split(contenttype, "boundary=");
     if (parts.length < 2) return(request.postParsed = true);
-    // Initialize parser on first call
     if (!request.mpParser.isActive) {
       string mpid = "--" ~ parts[1];
       request.mpParser = MultipartParser(mpid, filesystem.localroot(request.shorthost()) ~ "/");
       log(Level.Verbose, "MPART: [I] streaming mode activated, boundary: %s", mpid);
     }
-    // Feed current body bytes to parser
     if (driver !is null) {
-      auto bodyData = driver.inbuffer.data[driver.bodyStart .. $];
-      if (request.mpParser.feed(request, bodyData)) { return(request.postParsed = true); }
-      driver.trimToHeader();
+      auto chunk = driver.receiveChunk();
+      if (chunk.length > 0 && request.mpParser.feed(request, chunk)) return(request.postParsed = true);
       return false;
     }
   }

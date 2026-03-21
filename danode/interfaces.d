@@ -37,13 +37,26 @@ abstract class DriverInterface {
       } catch(Exception e) { error("Exception closing socket: %s", e.msg); }
     }
 
-    final void trimToHeader() {
-      ptrdiff_t hsize = bodyStart();
-      if (hsize > 0 && hsize <= inbuffer.data.length) {
-        auto header = inbuffer.data[0 .. hsize].dup;
-        inbuffer.clear();
-        inbuffer.put(header);
+    // Receive a raw chunk without buffering into inbuffer - for streaming use
+    final const(char)[] receiveChunk(ptrdiff_t maxsize = 65536) {
+      // Drain any body bytes already in inbuffer first
+      ptrdiff_t bs = bodyStart();
+      if (bs >= 0 && bs < inbuffer.data.length) {
+        auto buffered = inbuffer.data[bs .. $].dup;
+        ptrdiff_t hsize = bodyStart();
+        if (hsize > 0 && hsize <= inbuffer.data.length) {
+          auto header = inbuffer.data[0 .. hsize].dup;
+          inbuffer.clear();
+          inbuffer.put(header);
+        }
+        return buffered;
       }
+      if (!socketReady()) return [];
+      if (socketSet.sISelect(socket, false, 25) <= 0) return [];
+      char[] tmpbuffer = new char[](maxsize);
+      ptrdiff_t received = receiveData(tmpbuffer);
+      if (received > 0) { touch(); return tmpbuffer[0 .. received]; }
+      return [];
     }
 
     // Receive upto maxsize of bytes from the client into the input buffer
