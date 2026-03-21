@@ -81,7 +81,7 @@ abstract class DriverInterface {
     final @property string header() const { return(fullheader(inbuffer.data)); }
 
     // Byte input converted to body as string
-    final @property string body() const {
+    final @property string content() const {
       if (bodyStart < 0 || bodyStart > inbuffer.data.length) return("");
       return(to!string(inbuffer.data[bodyStart() .. $]));
     }

@@ -41,7 +41,7 @@ pure bool parseRequestLine(ref Request request, const string line) {
 struct Request {
   string ip; /// IP location of the client
   long port; /// Port at which the client is connected
-  string body; /// the body of the HTTP request
+  string content; /// the content of the HTTP request
   bool isSecure; /// was a secure request made
   bool isValid; /// Is the header valid ?
   UUID id; /// md5UUID for this request
@@ -60,7 +60,7 @@ struct Request {
   final void initialize(const DriverInterface driver) {
     this.ip = driver.ip;
     this.port = driver.port;
-    this.body = driver.body;
+    this.content = driver.content;
     this.isSecure = driver.isSecure;
     this.starttime = Clock.currTime();
     this.id = md5UUID(format("%s:%d-%s", driver.ip, driver.port, starttime));
@@ -87,7 +87,7 @@ struct Request {
   }
 
   // New input was obtained and / or the driver has been changed, update the driver
-  final void update(string body) { this.body = body; }
+  final void update(string content) { this.content = content; }
 
   // Parse Range header: "bytes=start-end" or "bytes=start-"
   final @property long[2] range() const {

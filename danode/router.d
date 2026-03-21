@@ -39,7 +39,7 @@ class Router {
       if (!response.created) {
         request.initialize(driver);
         response = request.create(this.address);
-      } else { request.update(driver.body); }
+      } else { request.update(driver.content); }
       return(true);
     }
 

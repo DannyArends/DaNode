@@ -67,17 +67,16 @@ final bool parsePost(ref Request request, ref Response response, in FileSystem f
   }
 
   // Non-multipart: wait for full body as before
-  string content = request.body;
-  log(Level.Trace, "Post: [T] Received %s of %s", content.length, expectedlength);
-  if(content.length < expectedlength) return(false);
+  log(Level.Trace, "Post: [T] Received %s of %s", request.content.length, expectedlength);
+  if(request.content.length < expectedlength) return(false);
 
   if (contenttype.indexOf(XFORMHEADER) >= 0) {
-    request.parseXform(content);
+    request.parseXform(request.content);
   } else if (contenttype.indexOf(JSON) >= 0) {
     log(Level.Verbose, "JSON: [I] passing %d bytes raw to script", expectedlength);
   } else {
     error("parsePost: Unsupported POST content type: %s [%s]", contenttype, expectedlength);
-    request.parseXform(content);
+    request.parseXform(request.content);
   }
   return(request.postParsed = true);
 }

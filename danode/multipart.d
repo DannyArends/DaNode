@@ -143,20 +143,20 @@ unittest {
   
   // Helper to build a multipart body
   string buildMultipart(string boundary, string[2][] textFields, string[3][] fileFields) {
-    string body;
+    string mp;
     foreach (f; textFields) {
-      body ~= "--" ~ boundary ~ "\r\n";
-      body ~= "Content-Disposition: form-data; name=\"" ~ f[0] ~ "\"\r\n\r\n";
-      body ~= f[1] ~ "\r\n";
+      mp ~= "--" ~ boundary ~ "\r\n";
+      mp ~= "Content-Disposition: form-data; name=\"" ~ f[0] ~ "\"\r\n\r\n";
+      mp ~= f[1] ~ "\r\n";
     }
     foreach (f; fileFields) {
-      body ~= "--" ~ boundary ~ "\r\n";
-      body ~= "Content-Disposition: form-data; name=\"" ~ f[0] ~ "\"; filename=\"" ~ f[1] ~ "\"\r\n";
-      body ~= "Content-Type: application/octet-stream\r\n\r\n";
-      body ~= f[2] ~ "\r\n";
+      mp ~= "--" ~ boundary ~ "\r\n";
+      mp ~= "Content-Disposition: form-data; name=\"" ~ f[0] ~ "\"; filename=\"" ~ f[1] ~ "\"\r\n";
+      mp ~= "Content-Type: application/octet-stream\r\n\r\n";
+      mp ~= f[2] ~ "\r\n";
     }
-    body ~= "--" ~ boundary ~ "--\r\n";
-    return body;
+    mp ~= "--" ~ boundary ~ "--\r\n";
+    return mp;
   }
 
   FileSystem fs = new FileSystem("./www/");
@@ -168,8 +168,8 @@ unittest {
     Request r;
     r.id = md5UUID("test1");
     auto parser = MultipartParser("--" ~ boundary, uploadDir);
-    string body = buildMultipart(boundary, [["name", "danny"]], []);
-    bool result = parser.feed(r, body);
+    string mp = buildMultipart(boundary, [["name", "danny"]], []);
+    bool result = parser.feed(r, mp);
     assert(result, "single text field must complete");
   }
 
@@ -178,8 +178,8 @@ unittest {
     Request r;
     r.id = md5UUID("test2");
     auto parser = MultipartParser("--" ~ boundary, uploadDir);
-    string body = buildMultipart(boundary, [], [["file", "test.txt", "hello world"]]);
-    assert(parser.feed(r, body), "single file must complete");
+    string mp = buildMultipart(boundary, [], [["file", "test.txt", "hello world"]]);
+    assert(parser.feed(r, mp), "single file must complete");
     assert("file" in r.postinfo, "file must be in postinfo");
     assert(r.postinfo["file"].type == PostType.File, "must be File type");
     assert(r.postinfo["file"].filename == "test.txt", "filename must match");
@@ -193,8 +193,8 @@ unittest {
     Request r;
     r.id = md5UUID("test3");
     auto parser = MultipartParser("--" ~ boundary, uploadDir);
-    string body = buildMultipart(boundary, [["name", "danny"]], [["file", "data.bin", "binarydata"]]);
-    assert(parser.feed(r, body), "mixed must complete");
+    string mp = buildMultipart(boundary, [["name", "danny"]], [["file", "data.bin", "binarydata"]]);
+    assert(parser.feed(r, mp), "mixed must complete");
     assert(r.postinfo["name"].value == "danny", "text field must parse");
     assert(r.postinfo["file"].type == PostType.File, "file field must parse");
     if (r.postinfo["file"].value.exists) remove(r.postinfo["file"].value);
@@ -205,10 +205,10 @@ unittest {
     Request r;
     r.id = md5UUID("test4");
     auto parser = MultipartParser("--" ~ boundary, uploadDir);
-    string body = buildMultipart(boundary, [["field", "value"]], []);
+    string mp = buildMultipart(boundary, [["field", "value"]], []);
     bool done = false;
-    foreach (i; 0 .. body.length) {
-      done = parser.feed(r, body[i..i+1]);
+    foreach (i; 0 .. mp.length) {
+      done = parser.feed(r, mp[i..i+1]);
       if (done) break;
     }
     assert(done, "byte-by-byte feed must complete");
@@ -220,8 +220,8 @@ unittest {
     r.id = md5UUID("test5");
     auto parser = MultipartParser("--" ~ boundary, uploadDir);
     string binaryContent = "data=with=equals\r\nand newlines\r\nmore data";
-    string body = buildMultipart(boundary, [], [["bin", "binary.bin", binaryContent]]);
-    assert(parser.feed(r, body), "binary content must complete");
+    string mp = buildMultipart(boundary, [], [["bin", "binary.bin", binaryContent]]);
+    assert(parser.feed(r, mp), "binary content must complete");
     assert(r.postinfo["bin"].size == binaryContent.length, "binary size must match");
     string written = cast(string) read(r.postinfo["bin"].value);
     assert(written == binaryContent, "binary content must be preserved exactly");
