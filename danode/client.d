@@ -82,7 +82,7 @@ class Client {
     }
 
     void logConnection(in Request rq, in Response rs) {
-      if(request.starttime == SysTime.init) return;
+      if(rq.starttime == SysTime.init) return;
       string uri;
       try { uri = decodeComponent(rq.uri); } catch (Exception e) { uri = rq.uri; }
       long bytes = (rs.payload && rs.isRange) ? (rs.rangeEnd - rs.rangeStart + 1) : (rs.payload ? rs.payload.length : 0);
