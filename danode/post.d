@@ -69,7 +69,7 @@ final bool parsePost(ref Request request, ref Response response, in FileSystem f
     log(Level.Verbose, "MPART: [I] # of items: %s", request.postinfo.length);
   } else if (contenttype.indexOf(JSON) >= 0) {
     log(Level.Verbose, "JSON: [I] Parsing %d bytes", expectedlength);
-    //request.postinfo["php://input"] = PostItem(PostType.File, "stdin", "php://input", content, JSON, content.length);
+    // JSON body is passed raw to the script via stdin - no server-side parsing needed
   } else {
     error("parsePost: Unsupported POST content type: %s [%s] -> %s", contenttype, expectedlength, content);
     request.parseXform(content);
