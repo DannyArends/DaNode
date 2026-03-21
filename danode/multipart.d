@@ -68,7 +68,6 @@ struct MultipartParser {
           // Boundary found - write up to it and close part
           writeChunk(data[0 .. i]);
           closePart(request);
-          //writefln("POST-BOUNDARY data='%s' len=%d", data, data.length);
           data = data[i + delim.length .. $];
           // Check for final boundary (--) or next part (\r\n)
           if (data.length == 0) { tail = cast(char[])[]; return false; }
@@ -168,9 +167,7 @@ unittest {
     r.id = md5UUID("test1");
     auto parser = MultipartParser("--" ~ boundary, uploadDir);
     string body = buildMultipart(boundary, [["name", "danny"]], []);
-    //writefln("TEST1 body='%s' len=%d", body, body.length);
     bool result = parser.feed(r, body);
-    //writefln("TEST1 result=%s state=%s done=%s postinfo=%s", result, parser.state, parser.done, r.postinfo);
     assert(result, "single text field must complete");
   }
 
@@ -210,10 +207,8 @@ unittest {
     bool done = false;
     foreach (i; 0 .. body.length) {
       done = parser.feed(r, body[i..i+1]);
-      //writefln("byte %d '%s' state=%s tail='%s' done=%s", i, body[i], parser.state, parser.tail, done);
       if (done) break;
     }
-    //writefln("final state=%s postinfo=%s", parser.state, r.postinfo);
     assert(done, "byte-by-byte feed must complete");
   }
 
