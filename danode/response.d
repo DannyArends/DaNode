@@ -82,7 +82,7 @@ struct Response {
   }
 
   @property final bool isSSE() const { return(payload !is null && payload.mimetype == "text/event-stream"); }
-  @property final bool scriptCompleted() { return(canComplete && payload.type == PayloadType.Script && payload.ready > 0 && index >= length); }
+  @property final bool scriptCompleted() { return(canComplete && payload.type == PayloadType.Script && payload.ready && index >= length); }
   @property final bool canComplete() const { return(payload !is null && payload.length >= 0); }
 
   // Stream of bytes (header + stream of bytes)

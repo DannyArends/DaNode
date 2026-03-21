@@ -14,7 +14,7 @@ enum HeaderType { None, FastCGI, HTTP10, HTTP11 }
 /* Payload interface, Payload is carried by the Response structure, not the Request structure */
 interface Payload {
   public:
-    @property long                ready();
+    @property bool                ready();
     @property StatusCode          statuscode() const;
     @property PayloadType         type() const;
     @property ptrdiff_t           length() const;
@@ -39,7 +39,7 @@ class Message : Payload {
     }
 
     final @property PayloadType type() const { return(PayloadType.Message); }
-    final @property long ready() { return(true); }
+    final @property bool ready() { return(true); }
     final @property ptrdiff_t length() const { return(message.length); }
     final @property SysTime mtime() { return SysTime.init; }
     final @property string mimetype() const { return mime; }

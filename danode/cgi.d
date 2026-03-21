@@ -28,7 +28,7 @@ class CGI : Payload {
     final @property PayloadType type() const { return(PayloadType.Script); }
 
     // Ready to start sending ?
-    final @property long ready() { 
+    final @property bool ready() { 
       if (external.finished) return true;
       if (mimetype == "text/event-stream") return (endOfHeader > 0);
       return false;

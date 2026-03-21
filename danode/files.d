@@ -30,7 +30,7 @@ class FileStream : Payload {
     }
 
     final @property PayloadType type() const { return PayloadType.File; }
-    final @property long ready() { return payload.ready(); }
+    final @property bool ready() { return payload.ready(); }
     final @property ptrdiff_t length() const { return payload.length(); }
     final @property SysTime mtime() { return payload.mtime(); }
     final @property string mimetype() const { return payload.mimetype(); }
@@ -126,7 +126,7 @@ class FilePayload : Payload {
     final @property bool hasEncodedVersion() const { return(encbuf !is null); }
     final @property bool isStaticFile() { return(!path.isCGI()); }
     final @property SysTime mtime() const { try { return path.timeLastModified(); }catch (Exception e) { return btime; } }
-    final @property long ready() { return(true); }
+    final @property bool ready() { return(true); }
     final @property PayloadType type() const { return(PayloadType.File); }
     final @property ptrdiff_t fileSize() const { if(!realfile){ return -1; } return to!ptrdiff_t(path.getSize()); }
     final @property long buffersize() const { return cast(long)(buf.length); }
