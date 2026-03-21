@@ -51,8 +51,8 @@ struct Request {
   HTTPVersion protocol; /// protocol requested
   string[string] headers; /// Associative array holding the header values
   SysTime starttime; /// start time of the Request
-  PostItem[string] postinfo;  /// Associative array holding the post parameters and values
-  long maxtime;  /// Maximum time in ms before the request is discarded
+  PostItem[string] postinfo; /// Associative array holding the post parameters and values
+  long maxtime; /// Maximum time in ms before the request is discarded
 
   // Start a new Request, and parseHeader on the DriverInterface
   final void initialize(const DriverInterface driver) {
