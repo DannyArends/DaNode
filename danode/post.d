@@ -96,7 +96,7 @@ final void parseXform(ref Request request, const string content) {
    This data is picked-up by the different CGI APIs, and presented to the client in the regular way */
 final void serverAPI(in FileSystem filesystem, in WebConfig config, in Request request, in Response response)  {
   Appender!(string) content;
-  content.put(format("S=REDIRECT_STATUS=%d\n", (response.payload)? response.payload.statuscode.code : 200));
+  content.put(format("S=REDIRECT_STATUS=%d\n", (response.payload !is null)? response.payload.statuscode.code : 200));
 
   // Give HTTP_COOKIES to CGI
   foreach (c; request.cookies.split("; ")) { content.put(format("C=%s\n", chomp(c)) ); }
