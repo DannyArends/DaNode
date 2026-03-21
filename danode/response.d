@@ -45,8 +45,8 @@ struct Response {
       if (buildScriptHeader(hdr, connection, script, protocol)) return(hdr.data);
       // Fallback: Populate headers from script output
       foreach (line; script.fullHeader().split("\n")) {
-        auto v = line.split(": ");
-        if(v.length == 2) headers[v[0]] = chomp(v[1]);
+        auto v = line.split(":");
+        if(v.length >= 2) this.headers[v[0]] = strip(join(v[1 .. $], ":"));
       }
     }
     // Server always owns these, overwrite anything the script has set
@@ -113,9 +113,8 @@ bool buildScriptHeader(ref Appender!(char[]) hdr, ref string connection, CGI scr
       hdr.put(format("%s %d %s\r\n", protocol, script.statuscode, script.statuscode.reason));
     }
     foreach (line; scriptheader.split("\n")) {
-      auto stripped = strip(line);
-      auto parts = stripped.split(":");
-      if (stripped.length > 0 && parts.length > 0 && icmp(parts[0], "connection") != 0) { hdr.put(line ~ "\n"); }
+      auto parts = strip(line).split(":");
+      if (parts.length > 0 && parts[0].length > 0 && icmp(parts[0], "connection") != 0) { hdr.put(line ~ "\n"); }
     }
     hdr.put(format("Connection: %s\r\n\r\n", connection));
     return true;

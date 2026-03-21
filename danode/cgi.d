@@ -60,8 +60,8 @@ class CGI : Payload {
     final T getHeader(T)(string key, T def = T.init) const {
       if (endOfHeader > 0) {
         foreach (line; fullHeader().split("\n")) {
-          string[] elems = line.split(": ");
-          if (elems.length == 2) { if (icmp(elems[0], key) == 0) return(to!T(strip(elems[1]))); }
+          string[] elems = line.split(":");
+          if (elems.length >= 2) { if (icmp(elems[0], key) == 0) return(to!T(strip(join(elems[1 .. $], ":")))); }
         }
       }
       return(def);
