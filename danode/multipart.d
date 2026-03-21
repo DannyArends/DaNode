@@ -162,9 +162,7 @@ unittest {
   FileSystem fs = new FileSystem("./www/");
   string uploadDir = fs.localroot("localhost") ~ "/";
   string boundary = "testboundary123";
-
-  // Test 1: single text field
-  {
+  {  // Test 1: single text field
     Request r;
     r.id = md5UUID("test1");
     auto parser = MultipartParser("--" ~ boundary, uploadDir);
@@ -172,9 +170,7 @@ unittest {
     bool result = parser.feed(r, mp);
     assert(result, "single text field must complete");
   }
-
-  // Test 2: single file upload
-  {
+  {  // Test 2: single file upload
     Request r;
     r.id = md5UUID("test2");
     auto parser = MultipartParser("--" ~ boundary, uploadDir);
@@ -187,9 +183,7 @@ unittest {
     // cleanup
     if (r.postinfo["file"].value.exists) remove(r.postinfo["file"].value);
   }
-
-  // Test 3: mixed text + file
-  {
+  {  // Test 3: mixed text + file
     Request r;
     r.id = md5UUID("test3");
     auto parser = MultipartParser("--" ~ boundary, uploadDir);
@@ -199,9 +193,7 @@ unittest {
     assert(r.postinfo["file"].type == PostType.File, "file field must parse");
     if (r.postinfo["file"].value.exists) remove(r.postinfo["file"].value);
   }
-
-  // Test 4: cross-chunk boundary detection - feed 1 byte at a time
-  {
+  {  // Test 4: cross-chunk boundary detection - feed 1 byte at a time
     Request r;
     r.id = md5UUID("test4");
     auto parser = MultipartParser("--" ~ boundary, uploadDir);
@@ -213,9 +205,7 @@ unittest {
     }
     assert(done, "byte-by-byte feed must complete");
   }
-
-  // Test 5: binary file with = and \r\n in content
-  {
+  {  // Test 5: binary file with = and \r\n in content
     Request r;
     r.id = md5UUID("test5");
     auto parser = MultipartParser("--" ~ boundary, uploadDir);
