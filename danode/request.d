@@ -136,9 +136,6 @@ struct Request {
     return format("%s/%s.up", filesystem.localroot(shorthost()), md5UUID(format("%s-%s", this.id, name)));
   }
 
-  // Get parameters as associative array
-  final string[string] get() const { return parseQueryString(query[1 .. $]); }
-
   // List of filenames uploaded by the user
   final @property string[]  postfiles() const { 
     string[] files;
