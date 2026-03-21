@@ -182,7 +182,7 @@ class Process : Thread {
         log(Level.Trace, "removing process input file %s ? %s", inputfile, removeInput);
         if(removeInput) remove(inputfile);
       } catch(Exception e) { error("process.d, exception: '%s'", e.msg); }
-      this.completed = true;
+      synchronized { this.completed = true; }
     }
 }
 
