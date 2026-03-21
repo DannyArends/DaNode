@@ -1,4 +1,4 @@
-/** danode/server.d - Entry point: socket setup, connection acceptance, rate limiting
+/** danode/multipart.d - Streaming multipart/form-data parser
   * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.multipart;
 
@@ -45,18 +45,16 @@ struct MultipartParser {
           data = data[i + boundary.length + 2 .. $];
           state = MPState.HEADER;
           break;
-
-          case MPState.HEADER:        // Accumulate until \r\n\r\n
-            hdrbuf.put(data);
-            ptrdiff_t i = indexOf(cast(string)hdrbuf.data, "\r\n\r\n");
-            if (i < 0) { tail = []; return(false); }
-            data = hdrbuf.data[i + 4 .. $].dup;
-            hdrbuf.shrinkTo(i);
-            parsePartHeader(request);
-            hdrbuf.clear();
-            state = MPState.BODY;
-            break;
-
+        case MPState.HEADER:        // Accumulate until \r\n\r\n
+          hdrbuf.put(data);
+          ptrdiff_t i = indexOf(cast(string)hdrbuf.data, "\r\n\r\n");
+          if (i < 0) { tail = []; return(false); }
+          data = hdrbuf.data[i + 4 .. $].dup;
+          hdrbuf.shrinkTo(i);
+          parsePartHeader(request);
+          hdrbuf.clear();
+          state = MPState.BODY;
+          break;
         case MPState.BODY:          // Look for \r\n--boundary
           ptrdiff_t i = indexOf(data, delim);
           if (i < 0) { // No boundary found - write all but tail
@@ -66,9 +64,9 @@ struct MultipartParser {
             }
             ptrdiff_t safe = cast(ptrdiff_t)data.length - keep;
             if (safe > 0) { writeChunk(data[0 .. safe]); }
-            return(saveTail(data)); 
+            return(saveTail(data[safe .. $]));
           }
-          if (i + delim.length + 2 > data.length) { tail = data[i .. $].dup; if (i > 0) writeChunk(data[0 .. i]); return false; }
+          if (i + delim.length + 2 > data.length) { tail = data[i .. $].dup; if (i > 0) writeChunk(data[0 .. i]); return(false); }
           // Boundary found - write up to it and close part
           writeChunk(data[0 .. i]);
           closePart(request);

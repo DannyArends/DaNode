@@ -43,9 +43,8 @@ abstract class DriverInterface {
       ptrdiff_t bs = bodyStart();
       if (bs >= 0 && bs < inbuffer.data.length) {
         auto buffered = inbuffer.data[bs .. $].dup;
-        ptrdiff_t hsize = bodyStart();
-        if (hsize > 0 && hsize <= inbuffer.data.length) {
-          auto header = inbuffer.data[0 .. hsize].dup;
+        if (bs  > 0 && bs  <= inbuffer.data.length) {
+          auto header = inbuffer.data[0 .. bs].dup;
           inbuffer.clear();
           inbuffer.put(header);
         }
