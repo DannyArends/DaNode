@@ -73,8 +73,8 @@ class Server {
         string ip = accepted.remoteAddress().toAddrString();
         bool isLoopback = (ip == "127.0.0.1" || ip == "::1");
         DriverInterface driver = null;
-        if (!secure) driver = new HTTP(accepted, false);
-        version(SSL) { if (secure) driver = new HTTPS(accepted, false); }
+        if (!secure) driver = new HTTP(accepted);
+        version(SSL) { if (secure) driver = new HTTPS(accepted); }
         if (driver is null) { accepted.close(); return; }
         if (!pool.push(driver, ip, isLoopback)) {
           log(Level.Always, "Rate limit or capacity exceeded [%s]", ip);
