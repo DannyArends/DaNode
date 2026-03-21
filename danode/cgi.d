@@ -140,7 +140,9 @@ class CGI : Payload {
 unittest {
   import danode.router : Router, runRequest;
   import danode.interfaces : StringDriver;
+  import danode.signals : registerExitHandler;
 
+  registerExitHandler();
   tag(Level.Always, "FILE", "%s", __FILE__);
 
   auto router = new Router("./www/", Address.init);

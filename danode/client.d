@@ -12,6 +12,7 @@ import danode.response : Response;
 import danode.request : Request;
 import danode.log : log, tag, Level;
 import danode.webconfig : serverConfig;
+import danode.signals : shutdownSignal;
 
 class Client {
   private:
@@ -28,17 +29,17 @@ class Client {
     }
 
    final void run() {
+      Request request;
+      Response response;
       log(Level.Trace, "New connection established %s:%d", ip(), port() );
+      scope (exit) {
+        if (driver.socketReady()) driver.closeConnection();   // Close connection
+        request.clearUploadFiles();                           // Clean uploaded files
+        response.kill();                                      // Kill any running CGI process
+      }
       try {
         if (!driver.openConnection()) { log(Level.Verbose, "WARN: Unable to open connection"); return; }
-        Request request;
-        Response response;
-        scope (exit) {
-          if (driver.socketReady()) driver.closeConnection();   // Close connection
-          request.clearUploadFiles();                           // Clean uploaded files
-          response.kill();                                      // kill any running CGI process
-        }
-        size_t headerLimit  = serverConfig.get("max_header_size", 32 * 1024);
+        size_t headerLimit = serverConfig.get("max_header_size", 32 * 1024);
         while (running) {
           if (driver.receive(driver.socket) > 0) { // We've received new data
             if (!driver.hasHeader()) {
@@ -93,7 +94,7 @@ class Client {
     }
 
     // Is the client still running, if the socket was gone it's not otherwise check the terminated flag
-    final @property bool running() const { return(!atomicLoad(terminated) && driver.socketReady()); }
+    final @property bool running() const { return(!atomicLoad(terminated) && !atomicLoad(shutdownSignal) && driver.socketReady()); }
 
     // Stop the client by setting the terminated flag
     final void stop() {

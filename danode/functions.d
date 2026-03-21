@@ -43,6 +43,9 @@ string resolveFolder(string path) {
   return(path);
 }
 
+void safeClose(ref File f) nothrow { try { if (f.isOpen()) { f.close(); } } catch(Exception e) {} }
+void safeRemove(string path) nothrow { try { if (exists(path)) { remove(path); } } catch(Exception e) {} }
+
 // Returns null if path escapes root
 string safePath(in string root, in string path) {
   if (path.canFind("..")) return null;

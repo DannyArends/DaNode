@@ -4,7 +4,7 @@ module danode.process;
 
 import danode.imports;
 
-import danode.functions : Msecs;
+import danode.functions : Msecs, safeClose, safeRemove;
 import danode.log : log, tag, error, Level;
 import danode.webconfig : serverConfig;
 
@@ -141,6 +141,12 @@ class Process : Thread {
     // execute the process and wait until maxtime has finished or the process returns
     // inputfile is removed when the run() returns succesfully, on error, it is kept
     final void run() {
+      scope(exit) {
+        log(Level.Always, "Removing process input file %s ? %s", inputfile, removeInput);
+        safeClose(fStdIn);
+        if (removeInput) safeRemove(inputfile);
+        synchronized { this.completed = true; }
+      }
       try {
         if( !exists(inputfile) ) {
           log(Level.Verbose, "no input path: %s", inputfile);
@@ -177,11 +183,7 @@ class Process : Thread {
 
         // Close the file handles
         fStdIn.close(); fStdOut.close(); fStdErr.close();
-
-        log(Level.Trace, "removing process input file %s ? %s", inputfile, removeInput);
-        if(removeInput) remove(inputfile);
       } catch(Exception e) { error("process.d, exception: '%s'", e.msg); }
-      synchronized { this.completed = true; }
     }
 }
 
