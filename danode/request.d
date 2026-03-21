@@ -139,9 +139,7 @@ struct Request {
   // List of filenames uploaded by the user
   final @property string[]  postfiles() const { 
     string[] files;
-    foreach (p; postinfo) {
-      if(p.type == PostType.File && p.size > 0) files ~= p.value;
-    } 
+    foreach (p; postinfo) { if(p.type == PostType.File && p.size > 0) { files ~= p.value; } } 
     return(files);
   }
 
