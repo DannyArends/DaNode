@@ -11,12 +11,12 @@ DaNode is a web server written in the [D programming language](https://dlang.org
 
 - Host websites in **ANY** language that writes to *stdout*
 - HTTPS: SNI, TLS 1.2+, ACME auto-renewing certificates via [OpenSSL](https://www.openssl.org/)
-- Minimal footprint — Code, CPU, and RAM
+- Minimal Code, CPU, and RAM footprint
 - Static file serving: ETag, gzip, range requests, SSE, keep-alive, conditional GET
-- Streaming multipart uploads — large files written directly to disk
+- Streaming multipart uploads - large files written directly to disk
 - Per-domain configuration: CGI control, redirects, directory access
 - Per-IP rate limiting and configurable request/upload size limits
-- Native APIs for PHP, Python, D, R — or [add your own](api/)
+- Native APIs for PHP, Python, D, R - or [add your own](api/)
 
 ### Get DaNode
 
