@@ -7,28 +7,12 @@ import danode.imports;
 import danode.functions : Msecs;
 import danode.log : log, tag, error, Level;
 import danode.webconfig : serverConfig;
+import danode.files : safeClose, safeRemove, nonblocking;
 
 struct WaitResult {
   bool terminated; /// Is the process terminated
   int status; /// Exit status when terminated
 }
-
-/* Set a filestream to nonblocking mode, if not Posix, use winbase.h */
-bool nonblocking(ref File file) {
-  version(Posix) {
-    import core.sys.posix.fcntl : fcntl, F_SETFL, O_NONBLOCK;
-
-    return(fcntl(fileno(file.getFP()), F_SETFL, O_NONBLOCK) != -1); 
-  }else{
-    import core.sys.windows.winbase;
-
-    auto x = PIPE_NOWAIT;
-    return(SetNamedPipeHandleState(file.windowsHandle(), &x, null, null) != 0);
-  }
-}
-
-void safeClose(ref File f) nothrow { try { if (f.isOpen()) { f.close(); } } catch(Exception e) {} }
-void safeRemove(string path) nothrow { try { if (exists(path)) { remove(path); } } catch(Exception e) {} }
 
 version(Posix) {
   alias kill killProcess;

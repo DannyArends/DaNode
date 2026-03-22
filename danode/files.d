@@ -12,6 +12,24 @@ import danode.request : Request;
 import danode.response : Response;
 import danode.router : notModified;
 
+
+/* Set a filestream to nonblocking mode, if not Posix, use winbase.h */
+bool nonblocking(ref File file) {
+  version(Posix) {
+    import core.sys.posix.fcntl : fcntl, F_SETFL, O_NONBLOCK;
+
+    return(fcntl(fileno(file.getFP()), F_SETFL, O_NONBLOCK) != -1); 
+  }else{
+    import core.sys.windows.winbase;
+
+    auto x = PIPE_NOWAIT;
+    return(SetNamedPipeHandleState(file.windowsHandle(), &x, null, null) != 0);
+  }
+}
+
+void safeClose(ref File f) nothrow { try { if (f.isOpen()) { f.close(); } } catch(Exception e) {} }
+void safeRemove(string path) nothrow { try { if (exists(path)) { remove(path); } } catch(Exception e) {} }
+
 // Serve a static file from the disc, send encrypted when requested and available
 void serveStaticFile(ref Response response, in Request request, FilePayload reqFile) {
   log(Level.Trace, "serving a static file");
