@@ -16,9 +16,9 @@ DaNode is a web server written in the [D programming language](https://dlang.org
 - [Range request](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Range_requests) support for video/audio streaming
 - [Example sites](www/localhost/) in PHP, Perl, D, R, Ada, brainfuck
 - Per-domain configuration via `web.config` (CGI, redirects, directory access control)
-- HTTP keep-alive, conditional GET (`If-Modified-Since`), and per-IP rate limiting
+- [HTTP keep-alive](https://en.wikipedia.org/wiki/HTTP_persistent_connection), conditional GET (`If-Modified-Since`), and per-IP rate limiting
 - Streaming multipart file uploads to minimize RAM usage
-- ETag support and gzip compression for static files
+- [ETag](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/ETag) support and gzip compression for static files
 - Server-Sent Events (SSE) support
 
 ### Get DaNode
@@ -98,11 +98,11 @@ connections to port 80 (and 443, when using the ssl version), then start the web
 The content of the [./sh/run](sh/run) shell script:
 
 ```
-nohup authbind danode/server -b 100 -v 2 > server.log 2>&1 &
+nohup authbind danode/server -b 100 -v 0 > server.log 2>&1 &
 ```
 
-This starts the server, does not allow for keyboard command (-k) has a backlog (-b) 
-of 100 simultaneous connection (per port), and produces more log output (-v 2).
+This starts the server with a backlog (-b) of 100 simultaneous connection (per port), and produces 
+less log output (-v 0).
 
 ```
 --port      -p      # HTTP port to listen on (integer)
