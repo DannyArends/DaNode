@@ -98,8 +98,7 @@ The content of the [./sh/run](sh/run) shell script:
 nohup authbind danode/server -b 100 -v 0 > server.log 2>&1 &
 ```
 
-This starts the server with a backlog (-b) of 100 simultaneous connection (per port), and produces 
-less log output (-v 0).
+Start the server with a backlog (-b) of 100 simultaneous connection (per port), and less log output (-v 0).
 
 ```
 --port      -p      # HTTP port to listen on (integer)
