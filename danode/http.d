@@ -4,7 +4,7 @@ module danode.http;
 
 import danode.imports;
 
-import danode.interfaces : DriverInterface, bodystart, endofheader, fullheader;
+import danode.interfaces : DriverInterface, bodystart, endofheader;
 import danode.response : Response;
 import danode.log : log, tag, error, Level;
 

@@ -4,9 +4,9 @@ module danode.files;
 
 import danode.imports;
 import danode.statuscode : StatusCode;
-import danode.mimetypes : mime, isCGI, isCompressible, UNSUPPORTED_FILE;
-import danode.payload : Payload, PayloadType, Message, FilePayload, FileStream;
-import danode.log : log, tag, error, Level;
+import danode.mimetypes : isCompressible;
+import danode.payload : Message, FilePayload, FileStream;
+import danode.log : log, tag, Level;
 import danode.functions : htmltime;
 import danode.request : Request;
 import danode.response : Response;

@@ -5,8 +5,8 @@ module danode.filesystem;
 import danode.imports;
 
 import danode.statuscode : StatusCode;
-import danode.payload : Payload, PayloadType, FilePayload, FileStream;
-import danode.mimetypes : mime, isCGI, CGI_FILE, UNSUPPORTED_FILE;
+import danode.payload : PayloadType, FilePayload, FileStream;
+import danode.mimetypes : mime, isCGI, UNSUPPORTED_FILE;
 import danode.functions : has;
 import danode.log : log, tag, error, Level;
 

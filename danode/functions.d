@@ -4,7 +4,7 @@ module danode.functions;
 
 import danode.imports;
 
-import danode.log : log, tag, error, Level;
+import danode.log : tag, error, Level;
 
 immutable string[int] months; 
 shared static this(){

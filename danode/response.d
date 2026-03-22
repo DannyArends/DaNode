@@ -12,7 +12,7 @@ import danode.router : notFound, forbidden, badRequest, domainNotFound;
 import danode.mimetypes : UNSUPPORTED_FILE;
 import danode.payload : Payload, PayloadType, HeaderType, Message;
 import danode.log : tag, log, Level;
-import danode.webconfig : WebConfig, serverConfig;
+import danode.webconfig : serverConfig;
 
 struct Response {
   string            protocol = "HTTP/1.1";

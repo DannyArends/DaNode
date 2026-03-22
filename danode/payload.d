@@ -178,3 +178,7 @@ class FileStream : Payload {
   ptrdiff_t sz = (limit > 0) ? to!ptrdiff_t(min(maxsize, max(0, limit - from))) : maxsize;
   return [offset, sz];
 }
+
+unittest {
+  tag(Level.Always, "FILE", "%s", __FILE__);
+}
