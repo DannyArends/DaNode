@@ -12,7 +12,6 @@ import danode.request : Request;
 import danode.response : Response;
 import danode.router : notModified;
 
-
 /* Set a filestream to nonblocking mode, if not Posix, use winbase.h */
 bool nonblocking(ref File file) {
   version(Posix) {
@@ -83,26 +82,21 @@ unittest {
   auto router = new Router("./www/", Address.init);
   StringDriver res;
 
-  // Route 1: 304 Not Modified
+  // 304 Not Modified
   res = router.runRequest("GET /index.html HTTP/1.1\nHost: localhost\nIf-Modified-Since: " ~ htmltime(Clock.currTime + 1.hours) ~ "\n\n");
   assert(res.lastStatus == StatusCode.NotModified, format("Expected 304, got %d", res.lastStatus.code));
-
-  // Route 2: Range request
+  // Range request
   res = router.runRequest("GET /test.pdf HTTP/1.1\nHost: localhost\nRange: bytes=0-1023\n\n");
   assert(res.lastStatus == StatusCode.PartialContent, format("Expected 206, got %d", res.lastStatus.code));
-
-  // Route 3: Gzip compression
+  // Gzip compression
   res = router.runRequest("GET /index.html HTTP/1.1\nHost: localhost\nAccept-Encoding: gzip\n\n");
   assert(res.lastStatus == StatusCode.Ok, format("Expected 200, got %d", res.lastStatus.code));
   assert(res.lastHeaders.get("Content-Encoding", "") == "gzip", "Expected gzip Content-Encoding header");
   assert(res.lastBody.length >= 2 && res.lastBody[0] == 0x1f && res.lastBody[1] == 0x8b, "Expected gzip magic bytes 1f 8b");
-
-  // Route 4: ETag - not modified
+  // ETag - not modified
   res = router.runRequest("GET /index.html HTTP/1.1\nHost: localhost\n\n");
   string etag = res.lastHeaders.get("ETag", "");
   assert(etag.length > 0, "Expected ETag header in response");
-
   res = router.runRequest("GET /index.html HTTP/1.1\nHost: localhost\nIf-None-Match: " ~ etag ~ "\n\n");
   assert(res.lastStatus == StatusCode.NotModified, format("Expected 304, got %d", res.lastStatus.code));
 }
-
