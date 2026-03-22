@@ -4,10 +4,23 @@ module danode.mimetypes;
 
 import danode.imports;
 
-import danode.log : log, tag, Level;
+import danode.log : log, tag, Level, error;
 
-immutable string      UNSUPPORTED_FILE = "file/unknown";                            /// Unsupported file mime
-immutable string      CGI_FILE         = "executable/";                             /// CGI mime prefix
+immutable string UNSUPPORTED_FILE = "file/unknown";   /// Unsupported file mime
+immutable string CGI_FILE = "executable/";            /// CGI mime prefix
+
+bool isCGI(in string path) {
+  try { return(isFile(path) && mime(path).indexOf(CGI_FILE) >= 0);
+  }catch(Exception e) { error("isCGI: I/O exception '%s'", e.msg); }
+  return(false);
+}
+
+bool isStaticFile(string path) { return(!path.isCGI()); }
+
+// Should the file be compressed ?
+bool isCompressible(string mime) {
+  return mime.startsWith("text/") || mime == "application/json" || mime == "application/javascript" || mime == "image/svg+xml";
+}
 
 pure string mime(string i) {
   switch(extension(i).toLower()){
