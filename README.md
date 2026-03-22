@@ -14,7 +14,7 @@ DaNode is a web server written in the [D programming language](https://dlang.org
 - Minimal footprint — Code, CPU, and RAM
 - Static file serving: ETag, gzip, range requests, SSE, keep-alive, conditional GET
 - Streaming multipart uploads — large files written directly to disk
-- Per-domain `web.config`: CGI control, redirects, directory access
+- Per-domain configuration: CGI control, redirects, directory access
 - Per-IP rate limiting and configurable request/upload size limits
 - Native APIs for PHP, Python, D, R — or [add your own](api/)
 
