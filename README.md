@@ -17,6 +17,9 @@ DaNode is a web server written in the [D programming language](https://dlang.org
 - [Example sites](www/localhost/) in PHP, Perl, D, R, Ada, brainfuck
 - Per-domain configuration via `web.config` (CGI, redirects, directory access control)
 - HTTP keep-alive, conditional GET (`If-Modified-Since`), and per-IP rate limiting
+- Streaming multipart file uploads to minimize RAM usage
+- ETag support and gzip compression for static files
+- Server-Sent Events (SSE) support
 
 ### Get DaNode
 
@@ -95,20 +98,34 @@ connections to port 80 (and 443, when using the ssl version), then start the web
 The content of the [./sh/run](sh/run) shell script:
 
 ```
-nohup authbind danode/server -k -b 100 -v 2 > server.log 2>&1 &
+nohup authbind danode/server -b 100 -v 2 > server.log 2>&1 &
 ```
 
 This starts the server, does not allow for keyboard command (-k) has a backlog (-b) 
 of 100 simultaneous connection (per port), and produces more log output (-v 2).
 
 ```
---port      -p       HTTP port to listen on (integer)
---backlog   -b       Backlog of clients supported simultaneously per port (integer)
---keyoff    -k       Keyboard input via STDIN (boolean)
---certDir            Location of folder with SSL certificates (string)
---keyFile            Server private key location (string)
---wwwRoot            Server www root folder holding website domains (string)
---verbose   -v       Verbose level, logs on STDOUT (integer)
+--port      -p      # HTTP port to listen on (integer)
+--backlog   -b      # Backlog of clients supported simultaneously per port (integer)
+--certDir           # Location of folder with SSL certificates (string)
+--keyFile           # Server private key location (string)
+--wwwRoot           # Server www root folder holding website domains (string)
+--verbose   -v      # Verbose level, logs on STDOUT (integer)
+```
+
+### server.config
+
+Place a `server.config` file in your `wwwRoot` folder to tune server behaviour:
+
+```
+max_header_size   = 32768       # Max HTTP header size in bytes (default 32KB)
+max_request_size  = 2097152     # Max POST body size in bytes (default 2MB)
+max_upload_size   = 104857600   # Max multipart upload size in bytes (default 100MB)
+max_cgi_output    = 10485760    # Max CGI output size in bytes (default 10MB)
+cgi_timeout       = 4500        # CGI script timeout in ms (default 4500ms)
+max_sse_time      = 60000       # Max SSE connection lifetime in ms (default 60s)
+pool_size         = 200         # Worker thread pool size (default 200)
+serverinfo        = DaNode/1.0  # Server header string
 ```
 
 ### Example websites
