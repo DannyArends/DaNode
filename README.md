@@ -10,16 +10,13 @@ DaNode is a web server written in the [D programming language](https://dlang.org
 ### Main features
 
 - Host websites in **ANY** language that writes to *stdout*
-- HTTPS via [OpenSSL](https://www.openssl.org/): SNI, Modern TLS (1.2+), [ACME](https://en.wikipedia.org/wiki/Automatic_Certificate_Management_Environment) based auto-renewing certificates
-- Minimal footprint: Code, CPU, and RAM
+- HTTPS: SNI, TLS 1.2+, ACME auto-renewing certificates via [OpenSSL](https://www.openssl.org/)
+- Minimal footprint — Code, CPU, and RAM
+- Static file serving: ETag, gzip, range requests, SSE, keep-alive, conditional GET
+- Streaming multipart uploads — large files written directly to disk
+- Per-domain `web.config`: CGI control, redirects, directory access
+- Per-IP rate limiting and configurable request/upload size limits
 - Native APIs for PHP, Python, D, R — or [add your own](api/)
-- [Range request](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Range_requests) support for video/audio streaming
-- [Example sites](www/localhost/) in PHP, Perl, D, R, Ada, brainfuck
-- Per-domain configuration via `web.config` (CGI, redirects, directory access control)
-- [HTTP keep-alive](https://en.wikipedia.org/wiki/HTTP_persistent_connection), conditional GET (`If-Modified-Since`), and per-IP rate limiting
-- Streaming multipart file uploads to minimize RAM usage
-- [ETag](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/ETag) support and gzip compression for static files
-- Server-Sent Events (SSE) support
 
 ### Get DaNode
 
