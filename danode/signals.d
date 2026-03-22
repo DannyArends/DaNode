@@ -2,11 +2,11 @@
   * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 module danode.signals;
 
+import danode.imports;
+
 shared bool shutdownSignal = false;
 
 version(Posix) {
-  import danode.imports;
-
   import core.sys.posix.sys.resource;
   import core.sys.posix.signal : signal, SIGPIPE, SIGTERM, SIGINT;
   import core.sys.posix.unistd : write;
@@ -27,8 +27,23 @@ version(Posix) {
         break;
     }
   }
+}
 
-  void setupPosix() {
+version(Windows) {
+  import core.sys.windows.wincon : SetConsoleCtrlHandler, CTRL_C_EVENT, CTRL_BREAK_EVENT, CTRL_CLOSE_EVENT;
+  import core.sys.windows.windef : BOOL, DWORD, TRUE, FALSE;
+
+  extern(Windows) BOOL handleConsoleCtrl(DWORD ctrlType) nothrow {
+    switch (ctrlType) {
+      case CTRL_C_EVENT, CTRL_BREAK_EVENT, CTRL_CLOSE_EVENT: atomicStore(shutdownSignal, true); return TRUE;
+      default: return FALSE;
+    }
+  }
+}
+
+void registerExitHandler(){
+  version(Windows){ SetConsoleCtrlHandler(&handleConsoleCtrl, TRUE); }
+  version(Posix) {
     rlimit rl;
     getrlimit(RLIMIT_NOFILE, &rl);
     rl.rlim_cur = rl.rlim_max;
@@ -39,4 +54,3 @@ version(Posix) {
     signal(SIGINT,  &handleSignal);
   }
 }
-

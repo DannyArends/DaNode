@@ -5,11 +5,12 @@ module danode.server;
 import danode.imports;
 
 import danode.log : cv, abort, log, tag, error, Level;
-import danode.functions : Msecs, sISelect, resolveFolder;
+import danode.functions : Msecs, sISelect;
+import danode.filesystem : resolveFolder;
 import danode.interfaces : DriverInterface;
 import danode.http : HTTP;
 import danode.router : Router;
-import danode.signals : shutdownSignal;
+import danode.signals : shutdownSignal, registerExitHandler;
 import danode.workerpool : WorkerPool;
 import danode.webconfig : serverConfig, ServerConfig, serverConfigMutex;
 
@@ -73,8 +74,8 @@ class Server {
         string ip = accepted.remoteAddress().toAddrString();
         bool isLoopback = (ip == "127.0.0.1" || ip == "::1");
         DriverInterface driver = null;
-        if (!secure) driver = new HTTP(accepted, false);
-        version(SSL) { if (secure) driver = new HTTPS(accepted, false); }
+        if (!secure) driver = new HTTP(accepted);
+        version(SSL) { if (secure) driver = new HTTPS(accepted); }
         if (driver is null) { accepted.close(); return; }
         if (!pool.push(driver, ip, isLoopback)) {
           log(Level.Always, "Rate limit or capacity exceeded [%s]", ip);
@@ -139,10 +140,7 @@ void main(string[] args) {
                "verbose|v",   &verbose);     // Verbose level (via commandline)
   atomicStore(cv, verbose);
   synchronized(serverConfigMutex) { serverConfig = ServerConfig(wwwFolder ~ "server.config"); }
-  version(Posix) {
-    import danode.signals : setupPosix;
-    setupPosix();
-  }
+  registerExitHandler();
 
   auto server = new Server(port, backlog, wwwFolder, sslFolder, sslKey, accountKey);
   version (SSL) {

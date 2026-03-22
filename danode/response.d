@@ -5,16 +5,14 @@ module danode.response;
 import danode.imports;
 
 import danode.cgi : CGI;
-import danode.functions : htmltime;
+import danode.functions : htmltime, htmlEscape;
 import danode.statuscode : StatusCode, noBody;
 import danode.request : Request;
+import danode.router : notFound, forbidden, badRequest, domainNotFound;
 import danode.mimetypes : UNSUPPORTED_FILE;
 import danode.payload : Payload, PayloadType, HeaderType, Message;
 import danode.log : tag, log, Level;
-import danode.webconfig : WebConfig, serverConfig;
-import danode.filesystem : FileSystem;
-import danode.post : serverAPI;
-import danode.functions : browseDir;
+import danode.webconfig : serverConfig;
 
 struct Response {
   string            protocol = "HTTP/1.1";
@@ -24,7 +22,6 @@ struct Response {
   string[string]    headers;
   Payload           payload;
   bool              created = false;
-  bool              havepost = false;
   bool              routed = false;
   bool              completed = false;
   Appender!(char[]) hdr;
@@ -37,35 +34,42 @@ struct Response {
 
   // Generate a HTTP header for the response
   @property final char[] header() {
-    if (hdr.data) { return(hdr.data); /* Header was constructed */ }
+    if (hdr.data) { return(hdr.data); } // Header was already constructed
 
     // Scripts are allowed to have/send their own header
     if (payload.type == PayloadType.Script) {
       CGI script = to!CGI(payload);
-      foreach (line; script.fullHeader().split("\n")) {
-        auto v = line.split(": ");
-        if(v.length == 2) this.headers[v[0]] = chomp(v[1]);
-      }
       if (buildScriptHeader(hdr, connection, script, protocol)) return(hdr.data);
+      // Fallback: Populate headers from script output
+      foreach (line; script.fullHeader().split("\n")) {
+        auto v = line.split(":");
+        if(v.length >= 2) this.headers[v[0]] = strip(join(v[1 .. $], ":"));
+      }
     }
-    // Server-generated header
+    // Server always owns these, overwrite anything the script has set
+    headers["Connection"] = connection;
+    headers["Date"] = htmltime();
+    if (payload.mtime != SysTime.init) headers["Last-Modified"] = htmltime(payload.mtime);
+    if (payload.type != PayloadType.Script && !noBody(statuscode)) {
+      headers["Content-Length"] = to!string(isRange ? (rangeEnd - rangeStart + 1) : payload.length);
+      headers["Content-Type"] = payload.mimetype;
+      if (maxage > 0) headers["Cache-Control"] = format("max-age=%d, public", maxage);
+    }
+
+    // Header emit loop
     hdr.put(format("%s %d %s\r\n", protocol, statuscode, statuscode.reason));
     foreach (key, value; headers) { hdr.put(format("%s: %s\r\n", key, value)); }
-    hdr.put(format("Date: %s\r\n", htmltime()));
-    if (payload.type != PayloadType.Script && !noBody(statuscode)) {
-      long contentLength = isRange ? (rangeEnd - rangeStart + 1) : payload.length;
-      hdr.put(format("Content-Length: %d\r\n", contentLength));
-      hdr.put(format("Content-Type: %s\r\n", payload.mimetype));
-      if (maxage > 0) { hdr.put(format("Cache-Control: max-age=%d, public\r\n", maxage)); }
-    }
-    if (payload.mtime != SysTime.init) { hdr.put(format("Last-Modified: %s\r\n", htmltime(payload.mtime))); }
-    hdr.put(format("Connection: %s\r\n\r\n", connection));
+    hdr.put("\r\n");
     return(hdr.data);
   }
 
   // Propagate shutdown through the chain to kill Process
   final void kill() {
-    if (payload && payload.type == PayloadType.Script) { to!CGI(payload).notifyovertime(); }
+    if (payload !is null && payload.type == PayloadType.Script) { 
+      auto cgi = to!CGI(payload);
+      cgi.notifyovertime();
+      cgi.joinThread();
+    }
   }
 
   @property final StatusCode statuscode() const {
@@ -79,7 +83,7 @@ struct Response {
   }
 
   @property final bool isSSE() const { return(payload !is null && payload.mimetype == "text/event-stream"); }
-  @property final bool scriptCompleted() { return(canComplete && payload.type == PayloadType.Script && payload.ready > 0 && index >= length); }
+  @property final bool scriptCompleted() { return(canComplete && payload.type == PayloadType.Script && payload.ready && index >= length); }
   @property final bool canComplete() const { return(payload !is null && payload.length >= 0); }
 
   // Stream of bytes (header + stream of bytes)
@@ -110,9 +114,8 @@ bool buildScriptHeader(ref Appender!(char[]) hdr, ref string connection, CGI scr
       hdr.put(format("%s %d %s\r\n", protocol, script.statuscode, script.statuscode.reason));
     }
     foreach (line; scriptheader.split("\n")) {
-      auto stripped = strip(line);
-      auto parts = stripped.split(":");
-      if (stripped.length > 0 && parts.length > 0 && icmp(parts[0], "connection") != 0) { hdr.put(line ~ "\n"); }
+      auto parts = strip(line).split(":");
+      if (parts.length > 0 && parts[0].length > 0 && icmp(parts[0], "connection") != 0) { hdr.put(line ~ "\n"); }
     }
     hdr.put(format("Connection: %s\r\n\r\n", connection));
     return true;
@@ -136,92 +139,45 @@ Response create(in Request request, Address address, in StatusCode statuscode = 
 
 bool setPayload(ref Response response, StatusCode code, string msg = "", in string mimetype = UNSUPPORTED_FILE) {
   response.payload = new Message(code, msg, mimetype);
-  return(response.ready = response.havepost = true);
+  return(response.ready = true);
 }
 
-// send a redirect permanently response
-void redirect(ref Response response, in Request request, in string fqdn, bool isSecure = false) {
-  log(Level.Trace, "Redirecting request to %s", fqdn);
-  response.setPayload(StatusCode.MovedPermanently);
-  response.customheader("Location", format("http%s://%s%s%s", isSecure? "s": "", fqdn, request.path, request.query));
-  response.connection = "Close";
-}
-
-// serve a not modified response
-void notModified(ref Response response, in string mimetype = UNSUPPORTED_FILE, string etag = "") { 
-  if (etag.length) response.customheader("ETag", etag);
-  response.setPayload(StatusCode.NotModified, "", mimetype);
-}
-
-// serve a 404 domain not found page
-void domainNotFound(ref Response response) {
-  response.setPayload(StatusCode.NotFound, "404 - No such domain is available\n", "text/plain");
-}
-
-// serve a the output of an external script 
-void serveCGI(ref Response response, in Request request, in WebConfig config, in FileSystem fs, string localpath, bool removeInput = true) {
-  log(Level.Trace, "Requested a cgi file, execution allowed");
-  if (!response.routed) { // Store POST data (could fail multiple times)
-    log(Level.Trace, "Writing server variables");
-    fs.serverAPI(config, request, response);
-    log(Level.Trace, "Creating CGI payload");
-    response.payload = new CGI(request.command(localpath), request.inputfile(fs), request.environ(localpath), removeInput);
-    response.ready = true;
+// Browse the content of a directory, generate a rudimentairy HTML file
+string browseDir(in string root, in string localpath) {
+  Appender!(string) content;
+  content.put(format("Content of: %s<br>\n", htmlEscape(localpath)));
+  foreach (DirEntry d; dirEntries(localpath, SpanMode.shallow)) {
+    string name = d.name[root.length .. $].replace("\\", "/");
+    if (name.endsWith(".in") || name.endsWith(".up")) continue;
+    string escaped = htmlEscape(name);
+    content.put(format("<a href='%s'>%s</a><br>", escaped, escaped));
   }
-}
-
-// serve a directory browsing request, via a message
-void serveDirectory(ref Response response, ref Request request, in WebConfig config, in FileSystem fs, string localpath) {
-  log(Level.Trace, "Sending browse directory");
-  response.setPayload(StatusCode.Ok, browseDir(fs.localroot(request.shorthost()), localpath), "text/html");
-}
-
-// serve a forbidden page
-void forbidden(ref Response response) {
-  response.setPayload(StatusCode.Forbidden, "403 - Access to this resource has been restricted\n", "text/plain");
-}
-
-// serve a 400 bad request 
-void badRequest(ref Response response) {
-  response.setPayload(StatusCode.BadRequest, "400 - Bad Request\n", "text/plain");
-}
-
-// serve a 404 not found page
-void notFound(ref Response response) {
-  response.setPayload(StatusCode.NotFound, "404 - The requested path does not exists on disk\n", "text/plain");
+  return(format("<html><head><title>200 - Allowed directory</title></head><body>%s</body></html>", content.data));
 }
 
 unittest {
   tag(Level.Always, "FILE", "%s", __FILE__);
+  Response r;
 
   // setPayload
-  Response r;
   r.setPayload(StatusCode.Ok, "hello", "text/plain");
   assert(r.ready, "setPayload must set ready");
   assert(r.statuscode == StatusCode.Ok, "setPayload must set statuscode");
   assert(r.payload.mimetype == "text/plain", "setPayload must set mimetype");
-
   // notFound
-  Response r2;
-  r2.notFound();
-  assert(r2.ready, "notFound must set ready");
-  assert(r2.statuscode == StatusCode.NotFound, "notFound must be 404");
-
+  r.notFound();
+  assert(r.ready, "notFound must set ready");
+  assert(r.statuscode == StatusCode.NotFound, "notFound must be 404");
   // forbidden
-  Response r3;
-  r3.forbidden();
-  assert(r3.ready, "forbidden must set ready");
-  assert(r3.statuscode == StatusCode.Forbidden, "forbidden must be 403");
-
+  r.forbidden();
+  assert(r.ready, "forbidden must set ready");
+  assert(r.statuscode == StatusCode.Forbidden, "forbidden must be 403");
   // badRequest
-  Response r4;
-  r4.badRequest();
-  assert(r4.ready, "badRequest must set ready");
-  assert(r4.statuscode == StatusCode.BadRequest, "badRequest must be 400");
-
+  r.badRequest();
+  assert(r.ready, "badRequest must set ready");
+  assert(r.statuscode == StatusCode.BadRequest, "badRequest must be 400");
   // domainNotFound
-  Response r5;
-  r5.domainNotFound();
-  assert(r5.ready, "domainNotFound must set ready");
-  assert(r5.statuscode == StatusCode.NotFound, "domainNotFound must be 404");
+  r.domainNotFound();
+  assert(r.ready, "domainNotFound must set ready");
+  assert(r.statuscode == StatusCode.NotFound, "domainNotFound must be 404");
 }

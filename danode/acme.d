@@ -8,7 +8,7 @@ version(SSL) {
 
   import danode.log : log, error, Level;
   import danode.ssl : loadSSL, generateKey;
-  import danode.functions : writeFile, isFILE;
+  import danode.filesystem : isFILE, writeFile;
   import danode.webconfig : serverConfig;
 
   immutable string ACME_DIR_PROD = "https://acme-v02.api.letsencrypt.org/directory";

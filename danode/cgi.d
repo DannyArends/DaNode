@@ -5,7 +5,7 @@ module danode.cgi;
 import danode.imports;
 
 import danode.functions : bodystart, endofheader, fullheader;
-import danode.log : log, tag, error, Level;
+import danode.log : tag, error, Level;
 import danode.process : Process;
 import danode.statuscode : StatusCode;
 import danode.payload : HeaderType, Payload, PayloadType;
@@ -28,7 +28,7 @@ class CGI : Payload {
     final @property PayloadType type() const { return(PayloadType.Script); }
 
     // Ready to start sending ?
-    final @property long ready() { 
+    final @property bool ready() { 
       if (external.finished) return true;
       if (mimetype == "text/event-stream") return (endOfHeader > 0);
       return false;
@@ -60,16 +60,15 @@ class CGI : Payload {
     final T getHeader(T)(string key, T def = T.init) const {
       if (endOfHeader > 0) {
         foreach (line; fullHeader().split("\n")) {
-          string[] elems = line.split(": ");
-          if (elems.length == 2) { if (icmp(elems[0], key) == 0) return(to!T(strip(elems[1]))); }
+          string[] elems = line.split(":");
+          if (elems.length >= 2) { if (icmp(elems[0], key) == 0) return(to!T(strip(join(elems[1 .. $], ":")))); }
         }
       }
       return(def);
     }
 
-    private const(char)[] rawOutput() const {
-      return cast(const(char)[]) external.output(0);
-    }
+    private const(char)[] rawOutput() const { return cast(const(char)[]) external.output(0); }
+    void joinThread() { external.join(); }
 
     // Type of header returned by the script: FastCGI, HTTP10, HTTP11
     @property final HeaderType headerType() const {
@@ -78,7 +77,6 @@ class CGI : Payload {
       if (values.length >= 3 && values[0] == "HTTP/1.0") return HeaderType.HTTP10;
       if (values.length >= 3 && values[0] == "HTTP/1.1") return HeaderType.HTTP11;
       if (getHeader("Status", "") != "") return HeaderType.FastCGI;
-      //if (getHeader("Content-Type", "") != "") return HeaderType.FastCGI;
       return HeaderType.None;
     }
 
@@ -140,7 +138,9 @@ class CGI : Payload {
 unittest {
   import danode.router : Router, runRequest;
   import danode.interfaces : StringDriver;
+  import danode.signals : registerExitHandler;
 
+  registerExitHandler();
   tag(Level.Always, "FILE", "%s", __FILE__);
 
   auto router = new Router("./www/", Address.init);

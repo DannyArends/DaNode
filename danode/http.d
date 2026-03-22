@@ -4,17 +4,17 @@ module danode.http;
 
 import danode.imports;
 
-import danode.functions : sISelect;
+import danode.functions : bodystart, endofheader;
 import danode.interfaces : DriverInterface;
 import danode.response : Response;
 import danode.log : log, tag, error, Level;
 
 class HTTP : DriverInterface {
   public:
-    this(Socket socket, bool blocking = false) { super(socket, blocking); }
+    this(Socket socket) { super(socket); }
 
     // Open the connection by setting the socket to non blocking I/O, and registering the origin address
-    override bool openConnection() {
+    override bool openConnection(bool blocking = false) {
       try {
         socket.blocking = blocking;
       } catch(Exception e) { error("Unable to accept socket: %s", e.msg); return(false); }
@@ -30,7 +30,7 @@ class HTTP : DriverInterface {
     override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096) {
       if (!socketReady()) return;
       // Wait until socket is writable before sending
-      if (socketSet.sISelect(socket, true, 0) <= 0) return;
+      if (sISelect(true, 0) <= 0) return;
       ptrdiff_t send = socket.send(response.bytes(maxsize));
       if (send > 0) {
         log(Level.Trace, "Send result=%d index=%d length=%d", send, response.index, response.length);
@@ -49,5 +49,18 @@ class HTTP : DriverInterface {
 
 unittest {
   tag(Level.Always, "FILE", "%s", __FILE__);
-}
 
+  // endofheader
+  assert(endofheader("GET / HTTP/1.1\r\nHost: x\r\n\r\n") >= 0, "\\r\\n\\r\\n header must be found");
+  assert(endofheader("GET / HTTP/1.1\nHost: x\n\n") >= 0, "\\n\\n header must be found");
+  assert(endofheader("incomplete header") == -1, "no terminator must return -1");
+  assert(endofheader("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\nbody content") == 40, "\\r\\n\\r\\n position must be 40");
+  assert(endofheader("HTTP/1.1 200 OK\nContent-Type: text/html\n\nbody content") == 39,  "\\n\\n position must be 39");
+  assert(endofheader("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n") == -1, "incomplete must return -1");
+  assert(endofheader("") == -1, "empty must return -1");
+  // bodystart
+  assert(bodystart("GET / HTTP/1.1\nHost: x\n\nbody") > 0, "bodystart must be positive");
+  assert(bodystart("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\nbody content") == 44, "\\r\\n\\r\\n bodystart must be 44");
+  assert(bodystart("HTTP/1.1 200 OK\nContent-Type: text/html\n\nbody content") == 41,  "\\n\\n bodystart must be 41");
+  assert(bodystart("incomplete") == -1, "no terminator must return -1");
+}

@@ -4,17 +4,16 @@ module danode.request;
 
 import danode.imports;
 
-import danode.filesystem : FileSystem;
+import danode.filesystem : FileSystem, interpreter;
 import danode.interfaces : DriverInterface;
-import danode.functions : interpreter, from, parseHtmlDate, parseQueryString;
-import danode.webconfig : WebConfig, serverConfig;
-import danode.post : PostItem, PostType;
+import danode.functions : from, parseHtmlDate;
+import danode.webconfig : WebConfig;
 import danode.log : log, tag, error, Level;
+import danode.multipart : MultipartParser;
 
 // The Request-Method indicates which method is to be performed on the specified resource
 enum RequestMethod : string {
-  GET = "GET", HEAD = "HEAD", POST = "POST", PUT = "PUT", DELETE = "DELETE", 
-  CONNECT = "CONNECT", OPTIONS = "OPTIONS", TRACE = "TRACE"
+  GET = "GET", HEAD = "HEAD", POST = "POST", PUT = "PUT", DELETE = "DELETE", CONNECT = "CONNECT", OPTIONS = "OPTIONS", TRACE = "TRACE"
 }
 
 // The HTTP-Version indicates which protocol version is requested to obtain the specified resource
@@ -37,10 +36,21 @@ pure bool parseRequestLine(ref Request request, const string line) {
   return(true);
 }
 
+enum PostType { Input, File };
+
+struct PostItem {
+  PostType  type;
+  string    name;
+  string    filename;
+  string    value;
+  string    mime = "post/input";
+  long      size = 0;
+}
+
 struct Request {
   string ip; /// IP location of the client
   long port; /// Port at which the client is connected
-  string body; /// the body of the HTTP request
+  string content; /// the content of the HTTP request
   bool isSecure; /// was a secure request made
   bool isValid; /// Is the header valid ?
   UUID id; /// md5UUID for this request
@@ -51,17 +61,17 @@ struct Request {
   HTTPVersion protocol; /// protocol requested
   string[string] headers; /// Associative array holding the header values
   SysTime starttime; /// start time of the Request
-  PostItem[string] postinfo;  /// Associative array holding the post parameters and values
-  long maxtime;  /// Maximum time in ms before the request is discarded
-
+  PostItem[string] postinfo; /// Associative array holding the post parameters and values
+  bool postParsed = false;
+  MultipartParser mpParser;  /// streaming multipart parser
+  
   // Start a new Request, and parseHeader on the DriverInterface
   final void initialize(const DriverInterface driver) {
     this.ip = driver.ip;
     this.port = driver.port;
-    this.body = driver.body;
+    this.content = driver.content;
     this.isSecure = driver.isSecure;
     this.starttime = Clock.currTime();
-    this.maxtime = serverConfig.get("request_timeout", 5000L);
     this.id = md5UUID(format("%s:%d-%s", driver.ip, driver.port, starttime));
     this.isValid = this.parseHeader(driver.header);
     log(Level.Verbose, "request: %s to %s from %s:%d - %s", method, uri, this.ip, this.port, this.id);
@@ -86,7 +96,7 @@ struct Request {
   }
 
   // New input was obtained and / or the driver has been changed, update the driver
-  final void update(string body) { this.body = body; }
+  final void update(string content) { this.content = content; }
 
   // Parse Range header: "bytes=start-end" or "bytes=start-"
   final @property long[2] range() const {
@@ -103,17 +113,27 @@ struct Request {
   final @property @nogc bool hasRange() const nothrow { return headers.from("Range").startsWith("bytes="); }
 
   // The Host header requested in the request
-  final @property @nogc string host() const nothrow { 
-    ptrdiff_t i = headers.from("Host").indexOf(":");
-    if (i > 0) { return(headers.from("Host")[0 .. i]); }
-    return(headers.from("Host")); 
+  final @property @nogc string host() const nothrow {
+    ptrdiff_t i;
+    string h = headers.from("Host");
+    if (h.startsWith("[")) { // IPv6: [::1]:8080
+      i = h.indexOf("]"); return((i > 0)? h[0 .. i+1] : h);
+    }
+    i = h.indexOf(":"); return((i > 0)? h[0 .. i] : h);
   }
 
   // The Port from the Host header in the request
   final @property ushort serverport() const {
-    ptrdiff_t i = headers.from("Host").indexOf(":");
-    if (i > 0) { return( to!ushort(headers.from("Host")[(i+1) .. $])); }
-    return(isSecure ? to!ushort(443) : to!ushort(80)); // return the default ports
+    ptrdiff_t i;
+    string h = headers.from("Host");
+    if (h.startsWith("[")) { // IPv6: [::1]:8080
+      i = h.indexOf("]:");
+      if (i > 0) { return(to!ushort(h[i+2 .. $])); }
+      return(isSecure ? to!ushort(443) : to!ushort(80));
+    }
+    i = h.indexOf(":");
+    if (i > 0) { return(to!ushort(h[i+1 .. $])); }
+    return(isSecure ? to!ushort(443) : to!ushort(80));
   }
 
   // Input file generated storing the headers of the request
@@ -126,15 +146,10 @@ struct Request {
     return format("%s/%s.up", filesystem.localroot(shorthost()), md5UUID(format("%s-%s", this.id, name)));
   }
 
-  // Get parameters as associative array
-  final string[string] get() const { return parseQueryString(query[1 .. $]); }
-
   // List of filenames uploaded by the user
   final @property string[]  postfiles() const { 
     string[] files;
-    foreach (p; postinfo) {
-      if(p.type == PostType.File && p.size > 0) files ~= p.value;
-    } 
+    foreach (p; postinfo) { if(p.type == PostType.File && p.size > 0) { files ~= p.value; } } 
     return(files);
   }
 
@@ -269,4 +284,14 @@ unittest {
   Request r11;
   r11.headers["Range"] = "bytes=abc-def";
   assert(r11.range() == [-1, -1], "malformed range must return [-1, -1]");
+
+  Request r_ipv6;
+  r_ipv6.headers["Host"] = "[::1]:8080";
+  assert(r_ipv6.host == "[::1]", "IPv6 host must include brackets");
+  assert(r_ipv6.serverport() == 8080, "IPv6 port must be 8080");
+
+  Request r_ipv6b;
+  r_ipv6b.headers["Host"] = "[::1]";
+  assert(r_ipv6b.host == "[::1]", "IPv6 without port must return host");
+  assert(r_ipv6b.serverport() == 80, "IPv6 without port must return default");
 }

@@ -5,16 +5,18 @@ module danode.router;
 import danode.imports;
 
 import danode.client : Client;
+import danode.cgi : CGI;
 import danode.interfaces : DriverInterface, StringDriver;
 import danode.statuscode : StatusCode;
 import danode.request : Request;
-import danode.response : Response, setPayload, create, badRequest, domainNotFound, forbidden, redirect, serveCGI, serveDirectory, notFound;
+import danode.response : Response, setPayload, create, browseDir;
 import danode.files : serveStaticFile;
 import danode.webconfig : getConfig, WebConfig;
-import danode.functions : isCGI, isFILE, isDIR, isAllowed, safePath;
-import danode.filesystem : FileSystem;
-import danode.post : parsePost;
+import danode.mimetypes : isCGI, UNSUPPORTED_FILE;
+import danode.filesystem : FileSystem, isFILE, isDIR, isAllowed, safePath;
+import danode.post : parsePost, serverAPI;
 import danode.log : log, tag, Level;
+import danode.signals : shutdownSignal;
 
 version(SSL) {
   import danode.ssl : hasCertificate;
@@ -38,14 +40,14 @@ class Router {
       if (!response.created) {
         request.initialize(driver);
         response = request.create(this.address);
-      } else { request.update(driver.body); }
+      } else { request.update(driver.content); }
       return(true);
     }
 
     // Route a request based on the request header
     final void route(DriverInterface driver, ref Request request, ref Response response) {
       if (!response.routed && parse(driver, request, response)) {
-        if (request.parsePost(response, filesystem)) { deliver(request, response); }
+        if (request.parsePost(response, filesystem, driver)) { deliver(request, response); }
       }
     }
 
@@ -91,7 +93,7 @@ class Router {
         }
         if (pathIsFILE && !pathIsCGI && pathAllowed) {
           log(Level.Trace, "Router: [T] localpath %s is a normal file", localpath);
-          return(response.serveStaticFile(request, filesystem));
+          return(response.serveStaticFile(request, filesystem.file(filesystem.localroot(request.shorthost()), request.path)));
         }
         if (pathIsDIR && config.dirAllowed(localroot, localpath)) {
           log(Level.Trace, "Router: [T] localpath %s is a directory [%s,%s]", localpath, config.redirectdir(), config.index());
@@ -143,19 +145,73 @@ class Router {
     // Perform a canonical redirect of a non-existing page to the index script
     void redirectCanonical(WebConfig config, ref Request request, ref Response response){
       log(Level.Trace, "Router: [T] Redirecting canonical url to the index page");
-      request.url  = format("%s?%s", config.index, request.query);
+      request.url = config.index ~ request.query;
       return deliver(request, response, true);
     }
 }
 
 // Helper function used to make calls during a unittest, setup a driver, a client and run the request
 StringDriver runRequest(Router router, string request = "GET /dmd.d HTTP/1.1\nHost: localhost\n\n", long maxtime = 1000) {
+  if(atomicLoad(shutdownSignal)) { exit(1); }
   tag(Level.Verbose, "runRequest", "%s", request);
   auto driver = new StringDriver(request);
   auto client = new Client(router, driver, maxtime);
   log(Level.Verbose, "Router: [I] %s:%s %s", client.ip(), client.port(), request.splitLines()[0]);
   client.run();
   return driver;
+}
+
+
+// send a redirect permanently response
+void redirect(ref Response response, in Request request, in string fqdn, bool isSecure = false) {
+  log(Level.Trace, "Redirecting request to %s", fqdn);
+  response.setPayload(StatusCode.MovedPermanently);
+  response.customheader("Location", format("http%s://%s%s%s", isSecure? "s": "", fqdn, request.path, request.query));
+  response.connection = "Close";
+}
+
+// serve a not modified response
+void notModified(ref Response response, in string mimetype = UNSUPPORTED_FILE, string etag = "") { 
+  if (etag.length) response.customheader("ETag", etag);
+  response.setPayload(StatusCode.NotModified, "", mimetype);
+}
+
+// serve a 404 domain not found page
+void domainNotFound(ref Response response) {
+  response.setPayload(StatusCode.NotFound, "404 - No such domain is available\n", "text/plain");
+}
+
+// serve a the output of an external script 
+void serveCGI(ref Response response, in Request request, in WebConfig config, in FileSystem fs, string localpath, bool removeInput = true) {
+  log(Level.Trace, "Requested a cgi file, execution allowed");
+  if (!response.routed) { // Store POST data (could fail multiple times)
+    log(Level.Trace, "Writing server variables");
+    fs.serverAPI(config, request, response);
+    log(Level.Trace, "Creating CGI payload");
+    response.payload = new CGI(request.command(localpath), request.inputfile(fs), request.environ(localpath), removeInput);
+    response.ready = true;
+  }
+}
+
+// serve a directory browsing request, via a message
+void serveDirectory(ref Response response, ref Request request, in WebConfig config, in FileSystem fs, string localpath) {
+  log(Level.Trace, "Sending browse directory");
+  response.setPayload(StatusCode.Ok, browseDir(fs.localroot(request.shorthost()), localpath), "text/html");
+}
+
+// serve a forbidden page
+void forbidden(ref Response response) {
+  response.setPayload(StatusCode.Forbidden, "403 - Access to this resource has been restricted\n", "text/plain");
+}
+
+// serve a 400 bad request 
+void badRequest(ref Response response) {
+  response.setPayload(StatusCode.BadRequest, "400 - Bad Request\n", "text/plain");
+}
+
+// serve a 404 not found page
+void notFound(ref Response response) {
+  response.setPayload(StatusCode.NotFound, "404 - The requested path does not exists on disk\n", "text/plain");
 }
 
 unittest {

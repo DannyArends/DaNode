@@ -7,24 +7,11 @@ import danode.imports;
 import danode.functions : Msecs;
 import danode.log : log, tag, error, Level;
 import danode.webconfig : serverConfig;
+import danode.files : safeClose, safeRemove, nonblocking;
 
 struct WaitResult {
   bool terminated; /// Is the process terminated
   int status; /// Exit status when terminated
-}
-
-/* Set a filestream to nonblocking mode, if not Posix, use winbase.h */
-bool nonblocking(ref File file) {
-  version(Posix) {
-    import core.sys.posix.fcntl : fcntl, F_SETFL, O_NONBLOCK;
-
-    return(fcntl(fileno(file.getFP()), F_SETFL, O_NONBLOCK) != -1); 
-  }else{
-    import core.sys.windows.winbase;
-
-    auto x = PIPE_NOWAIT;
-    return(SetNamedPipeHandleState(file.windowsHandle(), &x, null, null) != 0);
-  }
 }
 
 version(Posix) {
@@ -121,7 +108,7 @@ class Process : Thread {
         while (lastmodified < maxtime && buffer.data.length < maxOutput) {
           n = fread(tmp.ptr, 1, tmp.sizeof, fp);
           if (n > 0) {
-            modified = Clock.currTime();
+            synchronized { modified = Clock.currTime(); }
             buffer.put(tmp[0 .. n]);
           } else { break; }
         }
@@ -141,11 +128,16 @@ class Process : Thread {
     // execute the process and wait until maxtime has finished or the process returns
     // inputfile is removed when the run() returns succesfully, on error, it is kept
     final void run() {
+      scope(exit) {
+        log(Level.Verbose, "Removing process input file %s ? %s", inputfile, removeInput);
+        safeClose(fStdIn);
+        if (removeInput) safeRemove(inputfile);
+        synchronized { this.completed = true; }
+      }
       try {
         if( !exists(inputfile) ) {
           log(Level.Verbose, "no input path: %s", inputfile);
-          this.process.terminated = true;
-          this.completed = true;
+          synchronized { this.process.terminated = true; this.completed = true; }
           return;
         }
         fStdIn = File(inputfile, "r");
@@ -162,7 +154,7 @@ class Process : Thread {
 
         while (running && lastmodified < maxtime) {
           drainPipes();
-          process = cast(WaitResult) tryWait(cpid);
+          synchronized { process = cast(WaitResult) tryWait(cpid); }
           Thread.sleep(msecs(1));
         }
         if (!process.terminated) {
@@ -178,11 +170,7 @@ class Process : Thread {
 
         // Close the file handles
         fStdIn.close(); fStdOut.close(); fStdErr.close();
-
-        log(Level.Trace, "removing process input file %s ? %s", inputfile, removeInput);
-        if(removeInput) remove(inputfile);
       } catch(Exception e) { error("process.d, exception: '%s'", e.msg); }
-      this.completed = true;
     }
 }
 
