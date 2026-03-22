@@ -18,7 +18,6 @@ DaNode is a web server written in the [D programming language](https://dlang.org
 - Per-domain configuration via a simple [web.config](www/localhost/web.config)
 - Keep-alive, conditional GET and per-IP rate limits
 - Configurable via [server.config](www/server.config)
-
 - Native APIs: PHP, Python, D, R - or [add your own](api/)
 
 ### Get DaNode
