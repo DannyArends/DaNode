@@ -9,7 +9,8 @@ import danode.payload : Payload, PayloadType, Message, FilePayload, FileStream;
 import danode.log : log, tag, error, Level;
 import danode.functions : htmltime;
 import danode.request : Request;
-import danode.response : Response, notModified;
+import danode.response : Response;
+import danode.router : notModified;
 
 // Serve a static file from the disc, send encrypted when requested and available
 void serveStaticFile(ref Response response, in Request request, FilePayload reqFile) {

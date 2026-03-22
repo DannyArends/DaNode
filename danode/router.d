@@ -5,15 +5,16 @@ module danode.router;
 import danode.imports;
 
 import danode.client : Client;
+import danode.cgi : CGI;
 import danode.interfaces : DriverInterface, StringDriver;
 import danode.statuscode : StatusCode;
 import danode.request : Request;
-import danode.response : Response, setPayload, create, badRequest, domainNotFound, forbidden, redirect, serveCGI, serveDirectory, notFound;
+import danode.response : Response, setPayload, create, browseDir;
 import danode.files : serveStaticFile;
 import danode.webconfig : getConfig, WebConfig;
-import danode.mimetypes : isCGI;
+import danode.mimetypes : isCGI, UNSUPPORTED_FILE;
 import danode.filesystem : FileSystem, isFILE, isDIR, isAllowed, safePath;
-import danode.post : parsePost;
+import danode.post : parsePost, serverAPI;
 import danode.log : log, tag, Level;
 import danode.signals : shutdownSignal;
 
@@ -158,6 +159,59 @@ StringDriver runRequest(Router router, string request = "GET /dmd.d HTTP/1.1\nHo
   log(Level.Verbose, "Router: [I] %s:%s %s", client.ip(), client.port(), request.splitLines()[0]);
   client.run();
   return driver;
+}
+
+
+// send a redirect permanently response
+void redirect(ref Response response, in Request request, in string fqdn, bool isSecure = false) {
+  log(Level.Trace, "Redirecting request to %s", fqdn);
+  response.setPayload(StatusCode.MovedPermanently);
+  response.customheader("Location", format("http%s://%s%s%s", isSecure? "s": "", fqdn, request.path, request.query));
+  response.connection = "Close";
+}
+
+// serve a not modified response
+void notModified(ref Response response, in string mimetype = UNSUPPORTED_FILE, string etag = "") { 
+  if (etag.length) response.customheader("ETag", etag);
+  response.setPayload(StatusCode.NotModified, "", mimetype);
+}
+
+// serve a 404 domain not found page
+void domainNotFound(ref Response response) {
+  response.setPayload(StatusCode.NotFound, "404 - No such domain is available\n", "text/plain");
+}
+
+// serve a the output of an external script 
+void serveCGI(ref Response response, in Request request, in WebConfig config, in FileSystem fs, string localpath, bool removeInput = true) {
+  log(Level.Trace, "Requested a cgi file, execution allowed");
+  if (!response.routed) { // Store POST data (could fail multiple times)
+    log(Level.Trace, "Writing server variables");
+    fs.serverAPI(config, request, response);
+    log(Level.Trace, "Creating CGI payload");
+    response.payload = new CGI(request.command(localpath), request.inputfile(fs), request.environ(localpath), removeInput);
+    response.ready = true;
+  }
+}
+
+// serve a directory browsing request, via a message
+void serveDirectory(ref Response response, ref Request request, in WebConfig config, in FileSystem fs, string localpath) {
+  log(Level.Trace, "Sending browse directory");
+  response.setPayload(StatusCode.Ok, browseDir(fs.localroot(request.shorthost()), localpath), "text/html");
+}
+
+// serve a forbidden page
+void forbidden(ref Response response) {
+  response.setPayload(StatusCode.Forbidden, "403 - Access to this resource has been restricted\n", "text/plain");
+}
+
+// serve a 400 bad request 
+void badRequest(ref Response response) {
+  response.setPayload(StatusCode.BadRequest, "400 - Bad Request\n", "text/plain");
+}
+
+// serve a 404 not found page
+void notFound(ref Response response) {
+  response.setPayload(StatusCode.NotFound, "404 - The requested path does not exists on disk\n", "text/plain");
 }
 
 unittest {
