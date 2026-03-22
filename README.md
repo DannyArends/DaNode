@@ -91,12 +91,13 @@ nohup authbind danode/server -b 100 -v 0 > server.log 2>&1 &
 Start the server with a backlog (-b) of 100 simultaneous connection (per port), and less log output (-v 0).
 
 ```
---port      -p      # HTTP port to listen on (integer)
---backlog   -b      # Backlog of clients supported simultaneously per port (integer)
---certDir           # Location of folder with SSL certificates (string)
---keyFile           # Server private key location (string)
---wwwRoot           # Server www root folder holding website domains (string)
---verbose   -v      # Verbose level, logs on STDOUT (integer)
+--port        -p      # HTTP port to listen on (integer)
+--backlog     -b      # Backlog of clients supported simultaneously per port (integer)
+--ssl                 # Location of SSL certificates folder (string)
+--sslKey              # Server private key filename (string)
+--accountKey          # Let's Encrypt account key filename (string)
+--wwwRoot             # Server www root folder holding website domains (string)
+--verbose     -v      # Verbose level, logs on STDOUT (integer)
 ```
 
 ### server.config
@@ -138,13 +139,13 @@ touch www/domain.xxx/web.config
 ```
 Add the following configuration settings to the web.config file, if you want to use 
 scripting languages such as PHP, you have to manually allow the execution of cgi file. 
-Add the following lines in your web.cofig file to redirect to the index.php file, and 
+Add the following lines in your web.config file to redirect to the index.php file, and 
 allow the webserver to execute the php script, and redirect the incomming requests to 
 the index.php page:
 
 ```
-allowcgi     = yes
-redirecturl  = index.php
+allowcgi = yes
+redirect = index.php
 ```
 
 ### Update the hosts file
@@ -163,12 +164,6 @@ Then add the following lines to this hostfile using your favourite editor:
 ```
 Save the file with these lines added, then open a browser and navigate to: 
 http://www.domain.xxx, you should now see the content of your php / html file.
-
-### Supported back-end languages
-
-Languages with supported APIs: PHP, PYTHON, D, R
-
-See: [api/README.md](api/README.md)
 
 ### Contributing
 
