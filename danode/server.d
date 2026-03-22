@@ -5,7 +5,8 @@ module danode.server;
 import danode.imports;
 
 import danode.log : cv, abort, log, tag, error, Level;
-import danode.functions : Msecs, sISelect, resolveFolder;
+import danode.functions : Msecs, sISelect;
+import danode.filesystem : resolveFolder;
 import danode.interfaces : DriverInterface;
 import danode.http : HTTP;
 import danode.router : Router;

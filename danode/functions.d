@@ -67,6 +67,12 @@ string[string] parseQueryString(const string query) {
   return(*p);
 }
 
+int sISelect(SocketSet set, Socket socket, bool write = false, int timeout = 25) {
+  set.reset();
+  set.add(socket);
+  return(write ? Socket.select(null, set, null, dur!"msecs"(timeout)) : Socket.select(set, null, null, dur!"msecs"(timeout)));
+}
+
 string htmltime(in SysTime d = Clock.currTime()) {
   auto utc = d.toUTC();
   return format("%s %s %s %02d:%02d:%02d GMT", utc.day(), months[utc.month()], utc.year(), utc.hour(), utc.minute(), utc.second());

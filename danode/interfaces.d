@@ -5,7 +5,7 @@ module danode.interfaces;
 import danode.imports;
 
 import danode.cgi : CGI;
-import danode.functions : Msecs, bodystart, endofheader, fullheader;
+import danode.functions : Msecs, bodystart, endofheader, fullheader, sISelect;
 import danode.payload : PayloadType;
 import danode.response : Response, setPayload;
 import danode.statuscode : StatusCode;
@@ -87,12 +87,7 @@ abstract class DriverInterface {
     }
     
     // Reset the socketset and add a server socket to the set
-    int sISelect(bool write = false, int timeout = 25) {
-      set.reset();
-      set.add(socket);
-      return(write ? Socket.select(null, set, null, dur!"msecs"(timeout)) : Socket.select(set, null, null, dur!"msecs"(timeout)));
-    }
-
+    final int sISelect(bool write = false, int timeout = 25) { return(set.sISelect(socket, write, timeout)); }
     final @property ptrdiff_t endOfHeader() const { return(endofheader(inbuffer.data)); }
     final @property ptrdiff_t bodyStart() const { return(bodystart(inbuffer.data)); }
     final @property bool hasHeader() const { return(endOfHeader > 0); }
