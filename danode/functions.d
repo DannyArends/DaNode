@@ -15,8 +15,7 @@ shared static this(){
 
 immutable auto htmlDateRegex = ctRegex!(r"([0-9]{1,2}) ([a-z]{1,3}) ([0-9]{4}) ([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2}) [a-z]{3}", "g");
 
-// Try to convert a HTML date in a string into a SysTime
-// Structure that we expect: "21 Apr 2014 20:20:13 GMT"
+// Try to convert a HTML date in a string into a SysTime, expected: "21 Apr 2014 20:20:13 GMT"
 SysTime parseHtmlDate(const string datestr) {
   SysTime ts =  SysTime(DateTime(-7, 1, 1, 1, 0, 0));
   auto m = match(datestr.toLower(), htmlDateRegex);
@@ -73,7 +72,7 @@ string htmltime(in SysTime d = Clock.currTime()) {
   return format("%s %s %s %02d:%02d:%02d GMT", utc.day(), months[utc.month()], utc.year(), utc.hour(), utc.minute(), utc.second());
 }
 
-// get the HTTP header contained in the buffer (including the \r\n\r\n)
+// Get the HTTP header contained in the buffer (including the \r\n\r\n)
 pure string fullheader(T)(const(T) buffer) {
   auto i = bodystart(buffer);
   if (i > 0 && i <= buffer.length) { return(to!string(buffer[0 .. i])); }
