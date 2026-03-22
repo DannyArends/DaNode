@@ -73,6 +73,30 @@ string htmltime(in SysTime d = Clock.currTime()) {
   return format("%s %s %s %02d:%02d:%02d GMT", utc.day(), months[utc.month()], utc.year(), utc.hour(), utc.minute(), utc.second());
 }
 
+// get the HTTP header contained in the buffer (including the \r\n\r\n)
+pure string fullheader(T)(const(T) buffer) {
+  auto i = bodystart(buffer);
+  if (i > 0 && i <= buffer.length) { return(to!string(buffer[0 .. i])); }
+  return [];
+}
+
+// Where does the HTTP request header end ?
+@nogc pure ptrdiff_t endofheader(T)(const(T) buffer) nothrow {
+  ptrdiff_t len = buffer.length;
+  for (ptrdiff_t i = 0; i < len - 1; i++) {
+    if (i < len - 3 && buffer[i] == '\r' && buffer[i+1] == '\n' && buffer[i+2] == '\r' && buffer[i+3] == '\n') return i;
+    if (buffer[i] == '\n' && buffer[i+1] == '\n') return i;
+  }
+  return -1;
+}
+
+// Where does the HTTP request body start ?
+@nogc pure ptrdiff_t bodystart(T)(const(T) buffer) nothrow {
+  ptrdiff_t i = endofheader(buffer);
+  if (i < 0) return -1;
+  return((i + 3 < buffer.length && buffer[i] == '\r' && buffer[i+1] == '\n') ? i + 4 : i + 2);
+}
+
 unittest {
   tag(Level.Always, "FILE", "%s", __FILE__);
 

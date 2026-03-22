@@ -5,7 +5,7 @@ module danode.interfaces;
 import danode.imports;
 
 import danode.cgi : CGI;
-import danode.functions : Msecs;
+import danode.functions : Msecs, bodystart, endofheader, fullheader;
 import danode.payload : PayloadType;
 import danode.response : Response, setPayload;
 import danode.statuscode : StatusCode;
@@ -115,30 +115,6 @@ void sendHeaderTooLarge(ref DriverInterface driver, ref Response response) {
 void sendPayloadTooLarge(ref DriverInterface driver, ref Response response) {
   response.setPayload(StatusCode.PayloadTooLarge, "413 - Payload Too Large\n", "text/plain");
   driver.send(response, driver.socket);
-}
-
-// get the HTTP header contained in the buffer (including the \r\n\r\n)
-pure string fullheader(T)(const(T) buffer) {
-  auto i = bodystart(buffer);
-  if (i > 0 && i <= buffer.length) { return(to!string(buffer[0 .. i])); }
-  return [];
-}
-
-// Where does the HTTP request header end ?
-@nogc pure ptrdiff_t endofheader(T)(const(T) buffer) nothrow {
-  ptrdiff_t len = buffer.length;
-  for (ptrdiff_t i = 0; i < len - 1; i++) {
-    if (i < len - 3 && buffer[i] == '\r' && buffer[i+1] == '\n' && buffer[i+2] == '\r' && buffer[i+3] == '\n') return i;
-    if (buffer[i] == '\n' && buffer[i+1] == '\n') return i;
-  }
-  return -1;
-}
-
-// Where does the HTTP request body start ?
-@nogc pure ptrdiff_t bodystart(T)(const(T) buffer) nothrow {
-  ptrdiff_t i = endofheader(buffer);
-  if (i < 0) return -1;
-  return((i + 3 < buffer.length && buffer[i] == '\r' && buffer[i+1] == '\n') ? i + 4 : i + 2);
 }
 
 class StringDriver : DriverInterface {
