@@ -3,7 +3,7 @@ DaNode - A secure, small footprint web server written in D
 master: [![D](https://github.com/DannyArends/DaNode/actions/workflows/d.yml/badge.svg?branch=master)](https://github.com/DannyArends/DaNode/actions/workflows/d.yml)
 licence: [![license](https://img.shields.io/github/license/DannyArends/DaNode.svg?style=flat)](https://github.com/DannyArends/DaNode/blob/master/LICENSE.txt)
 
-DaNode is a web server written in the [D programming language](https://dlang.org/) that hosts websites written in **ANY** language that outputs to *stdout*. It supports multiple domains, SSL via [ImportC](https://dlang.org/spec/importc.html) with support for [Server Name Indication](https://en.wikipedia.org/wiki/Server_Name_Indication) (SNI) and [ACME](https://en.wikipedia.org/wiki/Automatic_Certificate_Management_Environment) automatic certificate renewal.
+DaNode is a web server written in the [D programming language](https://dlang.org/) that hosts websites written in **ANY** language that can output to *stdout*. It supports multiple domains, SSL via [ImportC](https://dlang.org/spec/importc.html) with support for [Server Name Indication](https://en.wikipedia.org/wiki/Server_Name_Indication) (SNI) and [ACME](https://en.wikipedia.org/wiki/Automatic_Certificate_Management_Environment) automatic certificate renewal.
 
 *Battle tested in production for over 12 years, including hosting my own [personal website](https://www.dannyarends.nl/).*
 
@@ -11,12 +11,12 @@ DaNode is a web server written in the [D programming language](https://dlang.org
 
 - Host websites in **ANY** language that writes to *stdout*
 - HTTPS: SNI, TLS 1.2+, ACME auto-renewing certificates via [OpenSSL](https://www.openssl.org/)
-- Minimal footprint — Code, CPU, and RAM
+- Minimal Code, CPU, and RAM footprint
 - Static file serving: ETag, gzip, range requests, SSE, keep-alive, conditional GET
-- Streaming multipart uploads — large files written directly to disk
-- Per-domain configuration: CGI control, redirects, directory access
+- Streaming multipart uploads - large files written directly to disk
+- Per-domain config: CGI control, redirects, directory access
 - Per-IP rate limiting and configurable request/upload size limits
-- Native APIs for PHP, Python, D, R — or [add your own](api/)
+- Native APIs: PHP, Python, D, R - or [add your own](api/)
 
 ### Get DaNode
 
@@ -31,19 +31,16 @@ Build DaNode using the dub package manager
 ```
 dub build
 ```
-
 Another option is to compile using the compile script
 
 ```
 ./sh/compile
 ```
-
 Start the web server at a specific port (e.g. 8080)
 
 ```
 ./bin/server -p 8080
 ```
-
 Confirm that the web server is running by going to: http://localhost:8080/
 
 ### Enable HTTPs support
@@ -55,19 +52,16 @@ specify the _ssl_ configuration:
 ```
 dub build --config=ssl
 ```
-
 or, compile using the compile script:
 
 ```
 ./sh/compile ssl
 ```
-
 Start the web server on port 80 and 443:
 
 ```
 ./bin/server
 ```
-
 After starting the server, confirm that the web server is running by going to http://127.0.0.1/ 
 and https://127.0.0.1/ and make sure you have enough user rights to bind port 80 and 443, a server 
 private key and domain certificates are required. I use Let's Encrypt to secure my own homepage. 
@@ -81,7 +75,6 @@ rights on the system. First check if you can start the server on another port:
 ```
 ./danode/server -p 8080
 ```
-
 I use _nohup_ and _authbind_ to start the web server in deamon (background) mode at port 80, and 443 (SSL). 
 First, install _nohup_ and _authbind_ via your package manager, configure _authbind_ to allow 
 connections to port 80 (and 443, when using the ssl version), then start the webserver by running:
@@ -97,9 +90,7 @@ The content of the [./sh/run](sh/run) shell script:
 ```
 nohup authbind danode/server -b 100 -v 0 > server.log 2>&1 &
 ```
-
-This starts the server with a backlog (-b) of 100 simultaneous connection (per port), and produces 
-less log output (-v 0).
+Start the server with a backlog (-b) of 100 simultaneous connection (per port), and less log output (-v 0).
 
 ```
 --port      -p      # HTTP port to listen on (integer)
@@ -142,13 +133,11 @@ from the DaNode directory:
 mkdir www/domain.xxx
 touch www/domain.xxx/index.php
 ```
-
 Add some php / html content to the index page, and create a web.config file:
 
 ```
 touch www/domain.xxx/web.config
 ```
-
 Add the following configuration settings to the web.config file, if you want to use 
 scripting languages such as PHP, you have to manually allow the execution of cgi file. 
 Add the following lines in your web.cofig file to redirect to the index.php file, and 
@@ -168,14 +157,12 @@ requests from the domain name to your local IP address using the hosts file:
 ```
 sudo nano /etc/hosts
 ```
-
 Then add the following lines to this hostfile using your favourite editor:
 
 ```
 127.0.0.1   domain.xxx
 127.0.0.1   www.domain.xxx
 ```
-
 Save the file with these lines added, then open a browser and navigate to: 
 http://www.domain.xxx, you should now see the content of your php / html file.
 
