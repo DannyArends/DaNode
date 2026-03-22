@@ -8,14 +8,12 @@ import danode.filesystem : FileSystem, interpreter;
 import danode.interfaces : DriverInterface;
 import danode.functions : from, parseHtmlDate;
 import danode.webconfig : WebConfig;
-import danode.post : PostItem, PostType;
 import danode.log : log, tag, error, Level;
 import danode.multipart : MultipartParser;
 
 // The Request-Method indicates which method is to be performed on the specified resource
 enum RequestMethod : string {
-  GET = "GET", HEAD = "HEAD", POST = "POST", PUT = "PUT", DELETE = "DELETE", 
-  CONNECT = "CONNECT", OPTIONS = "OPTIONS", TRACE = "TRACE"
+  GET = "GET", HEAD = "HEAD", POST = "POST", PUT = "PUT", DELETE = "DELETE", CONNECT = "CONNECT", OPTIONS = "OPTIONS", TRACE = "TRACE"
 }
 
 // The HTTP-Version indicates which protocol version is requested to obtain the specified resource
@@ -36,6 +34,17 @@ pure bool parseRequestLine(ref Request request, const string line) {
   request.uri = request.url = strip(join(parts[1 .. ($-1)], " "));
   request.protocol = parseHTTPVersion(strip(parts[($-1)]));
   return(true);
+}
+
+enum PostType { Input, File };
+
+struct PostItem {
+  PostType  type;
+  string    name;
+  string    filename;
+  string    value;
+  string    mime = "post/input";
+  long      size = 0;
 }
 
 struct Request {

@@ -7,7 +7,7 @@ import danode.imports;
 import danode.cgi : CGI;
 import danode.statuscode : StatusCode;
 import danode.interfaces : StringDriver, DriverInterface;
-import danode.request : Request, RequestMethod;
+import danode.request : Request, RequestMethod, PostItem, PostType;
 import danode.response : Response, setPayload;
 import danode.webconfig : WebConfig;
 import danode.mimetypes : mime;
@@ -19,16 +19,6 @@ import danode.multipart : MultipartParser;
 
 immutable string MPHEADER = "multipart/form-data";                    /// Multipart header mime
 immutable string XFORMHEADER = "application/x-www-form-urlencoded";   /// X-form header mime
-enum PostType { Input, File };
-
-struct PostItem {
-  PostType  type;
-  string    name;
-  string    filename;
-  string    value;
-  string    mime = "post/input";
-  long      size = 0;
-}
 
 // Parse the POST request data from the client, or waits (returning false) for more data 
 // when the entire request body is not yet available. POST data supplied in Multipart 

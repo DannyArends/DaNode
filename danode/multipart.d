@@ -4,8 +4,7 @@ module danode.multipart;
 
 import danode.imports;
 
-import danode.request : Request;
-import danode.post : PostItem, PostType;
+import danode.request : Request, PostItem, PostType;
 import danode.log : log, tag, error, Level;
 
 enum MPState { INIT, HEADER, BODY }
