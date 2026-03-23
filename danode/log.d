@@ -6,14 +6,13 @@ import danode.imports;
 
 enum Level { Always = 0, Verbose = 1, Trace = 2 }
 
-shared int cv = 0;
-private __gshared Mutex logM;
+private shared Level cv = Level.Always;
+private __gshared Mutex logMutex;
+private Mutex logM() { return initOnce!logMutex(new Mutex()); }
+private void logTo(A...)(ref File fp, string tag, const string fmt, auto ref A args) { synchronized(logM()) { fp.writefln("[%s] " ~ fmt, tag, args); } }
 
-shared static this() { logM  = new Mutex(); }
-
-private void logTo(A...)(ref File fp, string tag, const string fmt, auto ref A args) {
-  synchronized(logM) { fp.writeln(format("[%s] %s", tag, format(fmt, args))); fp.flush(); }
-}
+@nogc void set(int level) nothrow { try{ atomicStore(cv, cast(Level)(level)); }catch(Exception e){ } }
+@nogc Level getVerbose() nothrow { return(atomicLoad(cv)); }
 
 void log(A...)(Level lvl, const string fmt, auto ref A args) { tag(lvl, "LOG", fmt, args); }
 void tag(A...)(Level lvl, const string tag, const string fmt, auto ref A args) { if(atomicLoad(cv) >= lvl) stdout.logTo(tag, fmt, args); }

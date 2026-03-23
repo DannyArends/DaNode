@@ -4,7 +4,7 @@ module danode.server;
 
 import danode.imports;
 
-import danode.log : cv, abort, log, tag, error, Level;
+import danode.log : set, abort, log, tag, error, Level;
 import danode.functions : Msecs, sISelect;
 import danode.filesystem : resolveFolder;
 import danode.interfaces : DriverInterface;
@@ -138,7 +138,7 @@ void main(string[] args) {
                "sslKey",      &sslKey,       // Server private key
                "accountKey",  &accountKey,   // Server Let's encrypt account key
                "verbose|v",   &verbose);     // Verbose level (via commandline)
-  atomicStore(cv, verbose);
+  verbose.set();
   synchronized(serverConfigMutex) { serverConfig = ServerConfig(wwwFolder ~ "server.config"); }
   registerExitHandler();
 

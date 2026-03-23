@@ -17,6 +17,7 @@ public import std.algorithm;
 public import std.array;
 public import std.base64 : Base64URL;
 public import std.compiler;
+public import std.concurrency;
 public import std.conv;
 public import std.datetime;
 public import std.file;
