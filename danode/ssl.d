@@ -26,14 +26,16 @@ version(SSL) {
 
   extern (C)
   {
-    __gshared SSLcontext[]    contexts;         // SSL / HTTPs contexts (allocated globally from C)
+    __gshared SSLcontext[] contexts;         // SSL / HTTPs contexts (allocated globally from C)
+    private __gshared Mutex ctxMutex;
+    private Mutex contextsMutex() { return initOnce!ctxMutex(new Mutex()); }
 
     // C callback function to switch SSL contexts after hostname lookup
     static void switchContext(SSL* ssl, int *ad, void *arg) {
       string hostname = to!(string)(cast(const(char*)) SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name));
       log(Level.Verbose, "SSL: [I] Looking for hostname: %s", hostname);
       if(hostname is null) { log(Level.Verbose, "SSL: [W] Client no SNI support, using default: contexts[0]"); return; }
-      synchronized(contextsMutex) {
+      synchronized(contextsMutex()) {
         ptrdiff_t idx = findContext(hostname);
         if (idx >= 0) { 
           log(Level.Verbose, "SSL: [I] Switching SSL context to %s", hostname); 
@@ -42,10 +44,6 @@ version(SSL) {
       }
     }
   }
-
-  __gshared Mutex contextsMutex;
-
-  shared static this() { contextsMutex = new Mutex(); }
 
   void generateKey(string path, int bits = 4096) {
     if (path.exists()) return;
@@ -95,7 +93,7 @@ version(SSL) {
   // Does the hostname requested have a certificate ?
   bool hasCertificate(string hostname) {
     bool found;
-    synchronized(contextsMutex) { found = (findContext(hostname) >= 0); }
+    synchronized(contextsMutex()) { found = (findContext(hostname) >= 0); }
     log(Level.Trace, "SSL: [T] '%s' certificate? %s", hostname, found);
     return found;
   }
@@ -147,7 +145,7 @@ version(SSL) {
         }
       }
     }
-    synchronized(contextsMutex) { contexts = localContexts; }
+    synchronized(contextsMutex()) { contexts = localContexts; }
     log(Level.Always, "SSL: [I] Loaded %s SSL certificates", contexts.length);
   }
 
@@ -156,7 +154,7 @@ version(SSL) {
     log(Level.Verbose, "SSL: [I] Closing server SSL socket");
     socket.close();
     log(Level.Verbose, "SSL: [I] Cleaning up %d SSL contexts", contexts.length);
-    synchronized(contextsMutex) {
+    synchronized(contextsMutex()) {
       foreach (ref ctx; contexts) { SSL_CTX_free(ctx.context); }
       contexts = null;
     }

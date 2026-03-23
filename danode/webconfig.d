@@ -9,9 +9,9 @@ import danode.payload : FilePayload;
 import danode.log : log, tag, Level;
 
 __gshared ServerConfig serverConfig;
-__gshared Mutex serverConfigMutex;
+private __gshared Mutex scMutex;
 
-shared static this() { serverConfigMutex = new Mutex(); }
+Mutex serverConfigMutex() { return initOnce!scMutex(new Mutex()); }
 
 struct Config {
   string[string] data;
@@ -48,7 +48,7 @@ struct ServerConfig {
     @property size_t maxUploadSize() { return(get("max_upload_size",  100 * 1024 * 1024)); }
     @property size_t maxRequestSize() { return(get("max_request_size",  2 * 1024 * 1024)); }
 
-    T get(T)(string key, T def) { synchronized(serverConfigMutex) {
+    T get(T)(string key, T def) { synchronized(serverConfigMutex()) {
       try { return to!T(data.from(key, to!string(def))); }catch (Exception e) { return def; }
     } }
 }

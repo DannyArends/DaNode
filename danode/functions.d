@@ -6,12 +6,9 @@ import danode.imports;
 
 import danode.log : tag, error, Level;
 
-immutable string[int] months; 
-shared static this(){
-  months = [ 1 : "Jan", 2 : "Feb", 3 : "Mar", 4 : "Apr",
-             5 : "May", 6 : "Jun", 7 : "Jul", 8 : "Aug",
-             9 : "Sep", 10: "Oct", 11: "Nov", 12: "Dec"];
-}
+immutable string[int] months = [ 1 : "Jan", 2 : "Feb", 3 : "Mar", 4 : "Apr",
+                                 5 : "May", 6 : "Jun", 7 : "Jul", 8 : "Aug",
+                                 9 : "Sep", 10: "Oct", 11: "Nov", 12: "Dec"];
 
 immutable auto htmlDateRegex = ctRegex!(r"([0-9]{1,2}) ([a-z]{1,3}) ([0-9]{4}) ([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2}) [a-z]{3}", "g");
 

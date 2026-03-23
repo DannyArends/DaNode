@@ -139,7 +139,7 @@ void main(string[] args) {
                "accountKey",  &accountKey,   // Server Let's encrypt account key
                "verbose|v",   &verbose);     // Verbose level (via commandline)
   verbose.set();
-  synchronized(serverConfigMutex) { serverConfig = ServerConfig(wwwFolder ~ "server.config"); }
+  synchronized(serverConfigMutex()) { serverConfig = ServerConfig(wwwFolder ~ "server.config"); }
   registerExitHandler();
 
   auto server = new Server(port, backlog, wwwFolder, sslFolder, sslKey, accountKey);
