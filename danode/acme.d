@@ -46,6 +46,7 @@ version(SSL) {
 
     EVP_PKEY* pkey = loadAccountKey(accountKey);
     if (pkey is null) return false;
+    scope(exit) EVP_PKEY_free(pkey);
 
     JSONValue dir = acmeDirectory(staging);
     string kid = acmeAccountURL(dir, pkey, email);

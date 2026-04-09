@@ -150,6 +150,8 @@ class FileStream : Payload {
       }
     }
 
+    ~this() { if (handle.isOpen()) handle.close(); }
+
     final @property PayloadType type() const { return PayloadType.File; }
     final @property bool ready() { return payload.ready(); }
     final @property ptrdiff_t length() const { return payload.length(); }
