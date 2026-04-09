@@ -63,8 +63,8 @@ class Process : Thread {
     }
 
     ~this() {
-      if (outbuffer.data.ptr !is null) GC.free(outbuffer.data.ptr);
-      if (errbuffer.data.ptr !is null) GC.free(errbuffer.data.ptr);
+      outbuffer = Appender!(char[])();
+      errbuffer = Appender!(char[])();
       environ = null;
     }
 
