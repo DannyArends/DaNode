@@ -145,6 +145,8 @@ class Process : Thread {
         log(Level.Verbose, "command: %s < %s", command, inputfile);
         import std.process : Config;
         auto cpid = spawnProcess(command, fStdIn, pStdOut.writeEnd, pStdErr.writeEnd, environ, Config.none, environ.get("PWD", "."));
+        pStdOut.writeEnd.close(); // Close WriteEnd
+        pStdErr.writeEnd.close(); // Close WriteEnd
 
         fStdOut = pStdOut.readEnd;
         if(!nonblocking(fStdOut) && fStdOut.isOpen()) log(Level.Trace, "unable to create nonblocking stdout pipe for command");

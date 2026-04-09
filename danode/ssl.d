@@ -60,7 +60,7 @@ version(SSL) {
     PEM_write_bio_PrivateKey(bio, pkey, null, null, 0, null, null);
   }
 
-  ptrdiff_t findContext(string hostname) {
+  @nogc ptrdiff_t findContext(string hostname) nothrow {
     for (size_t x = 0; x < contexts.length; x++) {
       if (hostname.endsWith(fromStringz(contexts[x].hostname))) return(x);
     }

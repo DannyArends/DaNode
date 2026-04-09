@@ -81,8 +81,10 @@ class WorkerPool {
         try {
           auto client = new Client(router, driver);
           client.run();
+          client.destroy();
         } catch(Exception e) { error("WorkerPool: Client exception [%s]: %s", ip, e.msg);
         } catch(Error e) { error("WorkerPool: Client error [%s]: %s",     ip, e.msg); }
+        driver = null;
         synchronized(mutex) {
           if (ip in nAlivePerIP && nAlivePerIP[ip] > 0) nAlivePerIP[ip]--;
           if (nAlivePerIP[ip] == 0) nAlivePerIP.remove(ip);

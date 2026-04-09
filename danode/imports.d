@@ -10,6 +10,7 @@ public import core.stdc.stdio : fileno;
 public import core.atomic;
 public import core.sync.semaphore : Semaphore;
 public import core.sync.mutex : Mutex;
+public import core.memory : GC;
 public import core.thread;
 
 // Public imported function from std
