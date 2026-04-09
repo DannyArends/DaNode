@@ -62,6 +62,12 @@ class Process : Thread {
       super(&run);
     }
 
+    ~this() {
+      if (outbuffer.data.ptr !is null) GC.free(outbuffer.data.ptr);
+      if (errbuffer.data.ptr !is null) GC.free(errbuffer.data.ptr);
+      environ = null;
+    }
+
      // Query Output/Errors from 'from' to the end, if the outbuffer contains any output this will be served
      // from is checked to be in-range of the outbuffer/errbuffer, if not an empty array is returned
     final @property const(char)[] output(ptrdiff_t from) const { synchronized {
