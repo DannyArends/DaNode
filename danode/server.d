@@ -111,7 +111,6 @@ class Server {
           accept(socket);
           version (SSL) { accept(sslsocket, true); }
           if (Msecs(lastScan) > 86_400_000) {
-            GC.collect();
             pool.scan();
             version(SSL) { checkAndRenew(sslPath, sslKey, accountKey); }
             lastScan = Clock.currTime();
