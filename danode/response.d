@@ -69,6 +69,8 @@ struct Response {
       auto cgi = to!CGI(payload);
       cgi.notifyovertime();
       cgi.joinThread();
+      destroy(cgi);
+      payload = null;
     }
   }
 
