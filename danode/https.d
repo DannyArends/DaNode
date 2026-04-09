@@ -78,6 +78,7 @@ version(SSL) {
         try {
           if (socketReady()) { SSL_shutdown(ssl); SSL_shutdown(ssl); }
         } catch(Exception e) { error("Exception during SSL shutdown: %s", e.msg); }
+        if (ssl !is null) { SSL_free(ssl); ssl = null; }
         closeSocket();
       }
 
