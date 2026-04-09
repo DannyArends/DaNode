@@ -2,11 +2,11 @@
   * License: GPLv3 (https://github.com/DannyArends/DaNode) - Danny Arends **/
 #define OPENSSL_NO_DEPRECATED
 
-#pragma attribute(push, nogc, nothrow)
+//#pragma attribute(push, nogc, nothrow)
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/bio.h>
 #include <openssl/pem.h>
 #include <openssl/evp.h>
-#pragma attribute(pop)
+//#pragma attribute(pop)
 
