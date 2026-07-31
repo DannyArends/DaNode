@@ -33,7 +33,7 @@ abstract class DriverInterface {
     void touch() { modtime = Clock.currTime(); }
     private ptrdiff_t readSocket(ref char[] tmpbuffer) {
       if (!socketReady()) return 0;
-      if (bufferedBytes() <= 0 && sISelect(false, 25) <= 0) return 0; 
+      if (!hasBuffered() && sISelect(false, 25) <= 0) return 0;  // SSL may hold decrypted bytes select can't see
       ptrdiff_t received = receiveData(tmpbuffer);
       if (received > 0) { touch(); log(Level.Trace, "Received %d bytes of data", received); }
       return received;
@@ -68,7 +68,7 @@ abstract class DriverInterface {
     }
 
     long receiveData(ref char[] buffer);
-    ptrdiff_t bufferedBytes() { return 0; }
+    bool hasBuffered() const { return false; }
     bool openConnection(bool blocking = false);
     void closeConnection();
     @nogc bool isSecure() const nothrow;
