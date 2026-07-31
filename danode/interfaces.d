@@ -32,7 +32,8 @@ abstract class DriverInterface {
     bool socketReady() const { if (socket !is null) { return socket.isAlive(); } return false; }; /// Is the connection alive ?
     void touch() { modtime = Clock.currTime(); }
     private ptrdiff_t readSocket(ref char[] tmpbuffer) {
-      if (!socketReady() || sISelect(false, 25) <= 0) return 0;
+      if (!socketReady()) return 0;
+      if (bufferedBytes() <= 0 && sISelect(false, 25) <= 0) return 0; 
       ptrdiff_t received = receiveData(tmpbuffer);
       if (received > 0) { touch(); log(Level.Trace, "Received %d bytes of data", received); }
       return received;
@@ -67,6 +68,7 @@ abstract class DriverInterface {
     }
 
     long receiveData(ref char[] buffer);
+    ptrdiff_t bufferedBytes() { return 0; }
     bool openConnection(bool blocking = false);
     void closeConnection();
     @nogc bool isSecure() const nothrow;
