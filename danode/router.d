@@ -58,7 +58,9 @@ class Router {
       string localroot = filesystem.localroot(request.shorthost());
       log(Level.Trace, "Router: [T] %s:%s %s client (%s)", request.ip, request.port, (finalrewrite? "redirecting" : "routing"), request.id);
       log(Level.Trace, "Router: [T] shorthost '%s' -> localroot '%s'", request.shorthost(), localroot);
-      if (request.shorthost() == "" || !exists(localroot)) return(response.domainNotFound());
+      if (request.shorthost() == "" || request.shorthost().canFind("..") || request.shorthost().canFind("\0") || !exists(localroot)) {
+        return(response.domainNotFound());
+      }
 
       version(SSL) { if (serveACMEChallenge(request, response)) return; }
 
