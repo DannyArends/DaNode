@@ -15,10 +15,11 @@ import danode.workerpool : WorkerPool;
 import danode.webconfig : serverConfig, ServerConfig, serverConfigMutex;
 
 version(SSL) {
+  enum hasSSL = true;
   import danode.acme : checkAndRenew;
   import danode.ssl : loadSSL, closeSSL;
   import danode.https : HTTPS;
-}
+} else { enum hasSSL = false; }
 
 class Server {
   private:
@@ -71,14 +72,11 @@ class Server {
       if (set.sISelect(socket, false, 5) <= 0) return;
       try {
         Socket accepted = socket.accept();
-        string ip = accepted.remoteAddress().toAddrString();
-        bool isLoopback = (ip == "127.0.0.1" || ip == "::1");
-        DriverInterface driver = null;
-        if (!secure) driver = new HTTP(accepted);
-        version(SSL) { if (secure) driver = new HTTPS(accepted); }
-        if (driver is null) { accepted.close(); return; }
-        if (!pool.push(driver, ip, isLoopback)) {
-          log(Level.Always, "Rate limit or capacity exceeded [%s]", ip);
+        DriverInterface driver = (hasSSL && secure) ? new HTTPS(accepted) : new HTTP(accepted);
+        driver.address = accepted.remoteAddress();
+        bool isLoopback = (driver.ip == "127.0.0.1" || driver.ip == "::1");
+        if (!pool.push(driver, driver.ip, isLoopback)) {
+          log(Level.Always, "Rate limit or capacity exceeded [%s]", driver.ip);
           driver.closeConnection();
         }
       } catch(Exception e) { error("Unable to accept connection, Exception: %s", e.msg);
