@@ -83,7 +83,7 @@ version(SSL) {
       }
 
       override long receiveData(ref char[] buffer) { return(SSL_read(ssl, cast(void*) buffer, cast(int)buffer.length)); }
-      override bool hasBuffered() const { return(ssl !is null && SSL_pending(ssl) > 0); }
+      override bool hasBuffered() const { return(ssl !is null && SSL_pending(cast(SSL*) ssl) > 0); }
 
       // Send upto maxsize bytes from the response to the client
       override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096){

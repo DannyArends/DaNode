@@ -164,5 +164,27 @@ version(SSL) {
 
   unittest {
     tag(Level.Always, "FILE", "%s", __FILE__);
+
+    // SNI context matching - no handshake, context pointer left null (findContext reads only hostname)
+    auto saved = contexts;
+    scope(exit) contexts = saved;
+    static SSLcontext mk(string h) { SSLcontext c; c.hostname[0 .. h.length] = h[]; c.hostname[h.length] = '\0'; return c; }
+    contexts = [mk("example.com"), mk("test.org")];
+
+    assert(findContext("example.com") == 0, "exact host must match its context");
+    assert(findContext("test.org") == 1, "second exact host must match");
+    assert(findContext("absent.net") == -1, "unknown host must return -1");
+    assert(hasCertificate("example.com"), "hasCertificate must see a loaded host");
+    assert(!hasCertificate("absent.net"), "hasCertificate must reject unknown host");
+    // Documents current behaviour: matching is endsWith(), so a look-alike also matches (no label boundary)
+    assert(findContext("notexample.com") == 0, "suffix match currently accepts look-alike host");
+
+    // generateKey - exercises libcrypto EVP RSA keygen + PEM write
+    string kpath = buildPath(tempDir, "danode_test_ssl.key");
+    if (kpath.exists) remove(kpath);
+    generateKey(kpath, 2048);
+    assert(kpath.exists, "generateKey must write a key file");
+    assert(getSize(kpath) > 0, "generated key must be non-empty");
+    remove(kpath);
   }
 }
