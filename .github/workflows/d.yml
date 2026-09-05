@@ -36,7 +36,7 @@ jobs:
       if: steps.cache-openssl.outputs.cache-hit != 'true'
       run: |
         cd deps/openssl
-        ./Configure linux-x86_64
+        ./Configure linux-x86_64 no-tests no-apps no-docs
         make -j$(nproc)
 
     - name: 'Build'
