@@ -15,11 +15,10 @@ import danode.workerpool : WorkerPool;
 import danode.webconfig : serverConfig, ServerConfig, serverConfigMutex;
 
 version(SSL) {
-  enum hasSSL = true;
   import danode.acme : checkAndRenew;
   import danode.ssl : loadSSL, closeSSL;
   import danode.https : HTTPS;
-} else { enum hasSSL = false; }
+} else { alias HTTPS = HTTP; /* No HTTPS driver without SSL */ }
 
 class Server {
   private:
@@ -72,7 +71,7 @@ class Server {
       if (set.sISelect(socket, false, 5) <= 0) return;
       try {
         Socket accepted = socket.accept();
-        DriverInterface driver = (hasSSL && secure) ? new HTTPS(accepted) : new HTTP(accepted);
+        DriverInterface driver = secure ? new HTTPS(accepted) : new HTTP(accepted);
         driver.address = accepted.remoteAddress();
         bool isLoopback = (driver.ip == "127.0.0.1" || driver.ip == "::1");
         if (!pool.push(driver, driver.ip, isLoopback)) {
