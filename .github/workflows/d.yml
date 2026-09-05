@@ -4,19 +4,47 @@ name: D
 
 on:
   push:
-    branches: [ master ]
+    branches: [ development, master ]
   pull_request:
     branches: [ master ]
 
 jobs:
   build:
-    runs-on: ubuntu-slim
-
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
-    - uses: actions/checkout@v4
-    - uses: dlang-community/setup-dlang@v1
+    - uses: actions/checkout@v5
+      with:
+        submodules: recursive
+    - uses: dlang-community/setup-dlang@v2
 
-    - name: 'Build & Test'
+    - name: 'Install OpenSSL build deps'
+      run: sudo apt-get update && sudo apt-get install -y build-essential perl
+
+    - name: 'OpenSSL submodule SHA'
+      id: openssl-sha
+      run: echo "sha=$(git rev-parse HEAD:deps/openssl)" >> "$GITHUB_OUTPUT"
+
+    - name: 'Cache OpenSSL build'
+      id: cache-openssl
+      uses: actions/cache@v5
+      with:
+        path: deps/openssl
+        key: openssl-${{ runner.os }}-${{ steps.openssl-sha.outputs.sha }}
+
+    - name: 'Build OpenSSL submodule'
+      if: steps.cache-openssl.outputs.cache-hit != 'true'
+      run: |
+        cd deps/openssl
+        ./Configure linux-x86_64 no-tests
+        make -j$(nproc)
+
+    - name: 'Build'
       run: |
         dub build --compiler=$DC
+        dub build --compiler=$DC --config=ssl
+
+    - name: 'Test'
+      run: |
         dub test --compiler=$DC
+        dub test --compiler=$DC --config=ssl

@@ -80,6 +80,9 @@ final void parseXform(ref Request request, const string content) {
   return -1;
 }
 
+/* Strip CR/LF so a field cannot forge extra lines in the CGI input protocol */
+pure string oneline(in string s) { return s.replace("\r", "").replace("\n", ""); }
+
 /* The serverAPI functions prepares and writes out the input file for external process execution
    The inputfile contains the SERVER, COOKIES, POST, and FILES information that can be used by the external script
    This data is picked-up by the different CGI APIs, and presented to the client in the regular way */
@@ -108,8 +111,8 @@ final void serverAPI(in FileSystem filesystem, in WebConfig config, in Request r
 
   // Write the post information we received
   foreach (p; request.postinfo) {
-    if(p.type == PostType.Input)  content.put(format("P=%s=%s\n", p.name, p.value));
-    if(p.type == PostType.File)   content.put(format("F=%s=%s=%s=%s\n", p.name, p.filename, p.mime, p.value));
+    if(p.type == PostType.Input) content.put(format("P=%s=%s\n", oneline(p.name), oneline(p.value)));
+    if(p.type == PostType.File) content.put(format("F=%s=%s=%s=%s\n", oneline(p.name), oneline(p.filename), oneline(p.mime), p.value));
   }
 
   string fIn = request.inputfile(filesystem);

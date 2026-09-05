@@ -40,6 +40,7 @@ class WorkerPool {
         if (!isLoopback && nAlivePerIP.get(ip, 0L) >= serverConfig.get("max_clients_per_ip", 32)) return(false);
         if (queue.length >= serverConfig.get("max_clients", 2048)) return(false);
         queue ~= driver;
+        nAlivePerIP[ip]++;
       }
       sem.notify();
       return true;
@@ -73,22 +74,19 @@ class WorkerPool {
           if (stopped) return;
           if (queue.length == 0) continue;   // spurious notify from stop()
           driver = queue[0];
-          queue  = queue[1 .. $];
+          queue = queue[1 .. $];
         }
-
-        string ip = driver.ip;
-        synchronized(mutex) { nAlivePerIP[ip]++; }
         try {
           auto client = new Client(router, driver);
           client.run();
           client.destroy();
-        } catch(Exception e) { error("WorkerPool: Client exception [%s]: %s", ip, e.msg);
-        } catch(Error e) { error("WorkerPool: Client error [%s]: %s",     ip, e.msg); }
+        } catch(Exception e) { error("WorkerPool: Client exception [%s]: %s", driver.ip, e.msg);
+        } catch(Error e) { error("WorkerPool: Client error [%s]: %s",     driver.ip, e.msg); }
         driver = null;
         if (GC.stats().usedSize > 32 * 1_048_576) { GC.collect(); GC.minimize(); }
         synchronized(mutex) {
-          if (ip in nAlivePerIP && nAlivePerIP[ip] > 0) nAlivePerIP[ip]--;
-          if (nAlivePerIP[ip] == 0) nAlivePerIP.remove(ip);
+          if (driver.ip in nAlivePerIP && nAlivePerIP[driver.ip] > 0) nAlivePerIP[driver.ip]--;
+          if (nAlivePerIP[driver.ip] == 0) nAlivePerIP.remove(driver.ip);
         }
       }
     }

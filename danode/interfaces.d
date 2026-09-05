@@ -14,14 +14,16 @@ import danode.log : log, error, Level;
 /* Connection/Driver interface available to the client */
 abstract class DriverInterface {
   public:
-    Appender!(char[])   inbuffer;            /// Input appender buffer
-    Socket              socket;              /// Client socket for reading and writing
-    SocketSet           set;                 /// SocketSet used for non-blocking select on this connection
-    long                requests = 0;        /// Number of requests we handled
-    long[long]          senddata;            /// Size of data send per request
-    SysTime             systime;             /// Time in ms since this process came alive
-    SysTime             modtime;             /// Time in ms since this process was last modified
-    Address             address;             /// Private address field
+    Appender!(char[])   inbuffer;               /// Input appender buffer
+    Socket              socket;                 /// Client socket for reading and writing
+    SocketSet           set;                    /// SocketSet used for non-blocking select on this connection
+    long                requests = 0;           /// Number of requests we handled
+    long[long]          senddata;               /// Size of data send per request
+    SysTime             systime;                /// Time in ms since this process came alive
+    SysTime             modtime;                /// Time in ms since this process was last modified
+    private Address     peer;                   /// Peer address, resolved once on assignment
+    private string      peerIp = "0.0.0.0";     /// Cached peer IP
+    private long        peerPort = -1;          /// Cached peer port
 
     this(Socket s) {
       socket = s;
@@ -29,11 +31,14 @@ abstract class DriverInterface {
       systime = Clock.currTime();
       touch(); 
     }
+
+    @property void address(Address a) { peer = a; if (a !is null) { peerIp = a.toAddrString(); peerPort = to!long(a.toPortString()); } }
+    @property const(Address) address() const { return(peer); }
     bool socketReady() const { if (socket !is null) { return socket.isAlive(); } return false; }; /// Is the connection alive ?
     void touch() { modtime = Clock.currTime(); }
     private ptrdiff_t readSocket(ref char[] tmpbuffer) {
       if (!socketReady()) return 0;
-      if (bufferedBytes() <= 0 && sISelect(false, 25) <= 0) return 0; 
+      if (!hasBuffered() && sISelect(false, 25) <= 0) return 0;  // SSL may hold decrypted bytes select can't see
       ptrdiff_t received = receiveData(tmpbuffer);
       if (received > 0) { touch(); log(Level.Trace, "Received %d bytes of data", received); }
       return received;
@@ -68,7 +73,7 @@ abstract class DriverInterface {
     }
 
     long receiveData(ref char[] buffer);
-    ptrdiff_t bufferedBytes() { return 0; }
+    bool hasBuffered() const { return false; }
     bool openConnection(bool blocking = false);
     void closeConnection();
     @nogc bool isSecure() const nothrow;
@@ -76,8 +81,8 @@ abstract class DriverInterface {
     // Send upto maxsize bytes from the response to the client
     void send(ref Response response, Socket conn, ptrdiff_t maxsize = 4096);
 
-    final @property long port() const { if (address !is null){ return(to!long(address.toPortString())); } return(-1); }
-    final @property string ip() const { if (address !is null){ return(address.toAddrString()); } return("0.0.0.0"); }
+    final @property long port() const { return(peerPort); }
+    final @property string ip() const { return(peerIp); }
     final @property long starttime() const { return(Msecs(systime)); }
     final @property long lastmodified() const { return(Msecs(modtime)); }
     final @property string header() const { return(fullheader(inbuffer.data)); }

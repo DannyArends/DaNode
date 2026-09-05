@@ -195,7 +195,10 @@ struct Request {
     env["HTTPS"] = isSecure ? "on" : "";
     env["REDIRECT_STATUS"] = "200";
     env["PATH"] = environment.get("PATH", "");
-    foreach (k, v; headers) { env["HTTP_" ~ k.toUpper().replace("-", "_")] = v; }
+    foreach (k, v; headers) {
+      if(icmp(k, "Proxy") == 0) continue;
+      env["HTTP_" ~ k.toUpper().replace("-", "_")] = v;
+    }
     return env;
   }
 
