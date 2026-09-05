@@ -11,19 +11,19 @@ version(Posix) {
   import core.sys.posix.signal : signal, SIGPIPE, SIGTERM, SIGINT;
   import core.sys.posix.unistd : write;
 
-  import danode.log : cv, log, Level;
+  import danode.log : getVerbose, log, Level;
 
   extern(C) @nogc nothrow void handleSignal(int signal) {
     switch (signal) {
       case SIGPIPE:
-        if(atomicLoad(cv) > 1) write(2, cast(const(void*)) "[SIG]    Broken pipe caught, and ignored\n\0".ptr, 41);
+        if(getVerbose() >= Level.Trace) write(2, cast(const(void*)) "[SIG]    Broken pipe caught, and ignored\n\0".ptr, 41);
         break;
      case SIGTERM, SIGINT:
-        if(atomicLoad(cv) > 1) write(2, cast(const(void*)) "[SIG]    SIGTERM/SIGINT\n\0".ptr, 24);
+        if(getVerbose() >= Level.Trace) write(2, cast(const(void*)) "[SIG]    SIGTERM/SIGINT\n\0".ptr, 24);
         atomicStore(shutdownSignal, true);
         break;
       default:
-        if(atomicLoad(cv) > 1) write(2, cast(const(void*)) "[SIG]    Caught\n\0".ptr, 16);
+        if(getVerbose() >= Level.Trace) write(2, cast(const(void*)) "[SIG]    Caught\n\0".ptr, 16);
         break;
     }
   }

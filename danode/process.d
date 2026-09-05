@@ -62,6 +62,12 @@ class Process : Thread {
       super(&run);
     }
 
+    ~this() {
+      outbuffer = Appender!(char[])();
+      errbuffer = Appender!(char[])();
+      environ = null;
+    }
+
      // Query Output/Errors from 'from' to the end, if the outbuffer contains any output this will be served
      // from is checked to be in-range of the outbuffer/errbuffer, if not an empty array is returned
     final @property const(char)[] output(ptrdiff_t from) const { synchronized {
@@ -145,6 +151,8 @@ class Process : Thread {
         log(Level.Verbose, "command: %s < %s", command, inputfile);
         import std.process : Config;
         auto cpid = spawnProcess(command, fStdIn, pStdOut.writeEnd, pStdErr.writeEnd, environ, Config.none, environ.get("PWD", "."));
+        pStdOut.writeEnd.close(); // Close WriteEnd
+        pStdErr.writeEnd.close(); // Close WriteEnd
 
         fStdOut = pStdOut.readEnd;
         if(!nonblocking(fStdOut) && fStdOut.isOpen()) log(Level.Trace, "unable to create nonblocking stdout pipe for command");

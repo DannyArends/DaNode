@@ -66,6 +66,7 @@ class Client {
             driver.inbuffer.clear();                        // Clear the input buffer
             if(!response.keepalive){ stop(); continue; }    // No keep alive, then stop this client
             request = Request.init;                         // Reset request for next request cycle
+            response.kill();                                // Join CGI thread and destroy
             response = Response.init;                       // Reset response for next request cycle
           }
           if (lastmodified >= maxtime) { // Client are not allowed to be silent for more than maxtime

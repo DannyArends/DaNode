@@ -10,6 +10,7 @@ public import core.stdc.stdio : fileno;
 public import core.atomic;
 public import core.sync.semaphore : Semaphore;
 public import core.sync.mutex : Mutex;
+public import core.memory : GC;
 public import core.thread;
 
 // Public imported function from std
@@ -17,6 +18,7 @@ public import std.algorithm;
 public import std.array;
 public import std.base64 : Base64URL;
 public import std.compiler;
+public import std.concurrency;
 public import std.conv;
 public import std.datetime;
 public import std.file;

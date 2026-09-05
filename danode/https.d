@@ -78,10 +78,12 @@ version(SSL) {
         try {
           if (socketReady()) { SSL_shutdown(ssl); SSL_shutdown(ssl); }
         } catch(Exception e) { error("Exception during SSL shutdown: %s", e.msg); }
+        if (ssl !is null) { SSL_free(ssl); ssl = null; }
         closeSocket();
       }
 
       override long receiveData(ref char[] buffer) { return(SSL_read(ssl, cast(void*) buffer, cast(int)buffer.length)); }
+      override bool hasBuffered() const { return(ssl !is null && SSL_pending(ssl) > 0); }
 
       // Send upto maxsize bytes from the response to the client
       override void send(ref Response response, Socket socket, ptrdiff_t maxsize = 4096){
