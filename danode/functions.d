@@ -58,6 +58,10 @@ string[string] parseQueryString(const string query) {
   return params;
 }
 
+
+/** Canonical HTTP header name: Title-Case per hyphen part (host -> Host, user-agent -> User-Agent) */
+string canonicalHeader(in string name) { return(name.split("-").map!(p => p.length ? p[0 .. 1].toUpper() ~ p[1 .. $].toLower() : p).join("-")); }
+
 @nogc pure T from(T,K)(in T[K] buffer, in K key, T def = T.init) nothrow {
   T* p = cast(T*)(key in buffer);
   if(p is null) return def;
