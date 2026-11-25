@@ -86,7 +86,7 @@ connections to port 80 (and 443, when using the ssl version), then start the web
 The content of the [./sh/run](sh/run) shell script:
 
 ```
-nohup authbind danode/server -b 100 -v 0 > server.log 2>&1 &
+nohup authbind bin/server -b 100 -v 0 > server.log 2>&1 &
 ```
 Start the server with a backlog (-b) of 100 simultaneous connection (per port), and less log output (-v 0).
 
@@ -96,23 +96,25 @@ Start the server with a backlog (-b) of 100 simultaneous connection (per port), 
 --ssl                 # Location of SSL certificates folder (string)
 --sslKey              # Server private key filename (string)
 --accountKey          # Let's Encrypt account key filename (string)
---wwwRoot             # Server www root folder holding website domains (string)
+--www                 # Server www root folder holding website domains (string)
 --verbose     -v      # Verbose level, logs on STDOUT (integer)
 ```
 
 ### server.config
 
-Place a `server.config` file in your `wwwRoot` folder to tune server behaviour:
+Place a `server.config` file in your `--www` folder to tune server behaviour:
 
 ```
-max_header_size   = 32768       # Max HTTP header size in bytes (default 32KB)
-max_request_size  = 2097152     # Max POST body size in bytes (default 2MB)
-max_upload_size   = 104857600   # Max multipart upload size in bytes (default 100MB)
-max_cgi_output    = 10485760    # Max CGI output size in bytes (default 10MB)
-cgi_timeout       = 4500        # CGI script timeout in ms (default 4500ms)
-max_sse_time      = 60000       # Max SSE connection lifetime in ms (default 60s)
-pool_size         = 200         # Worker thread pool size (default 200)
-serverinfo        = DaNode/1.0  # Server header string
+max_clients        = 2048          # Max queued connections (default 2048)
+max_clients_per_ip = 32            # Max simultaneous connections per remote IP, loopback exempt (default 32)
+max_header_size    = 32768         # Max HTTP header size in bytes (default 32KB)
+max_request_size   = 2097152       # Max POST body size in bytes (default 2MB)
+max_upload_size    = 104857600     # Max multipart upload size in bytes (default 100MB)
+max_cgi_output     = 10485760      # Max CGI output size in bytes (default 10MB)
+cgi_timeout        = 4500          # CGI script timeout in ms (default 4500ms)
+max_sse_time       = 60000         # Max SSE connection lifetime in ms (default 60s)
+pool_size          = 200           # Worker thread pool size (default 200)
+serverinfo         = DaNode/0.0.3  # Server header string
 ```
 
 ### Example websites

@@ -21,7 +21,7 @@ struct Config {
 Config parseConfig(string content, string def = "no") {
   Config config;
   foreach (line; split(content, "\n")) {
-    if (chomp(strip(line)) == "" || line[0] == '#') continue;
+    if (line.strip.empty || line.strip.startsWith("#")) continue;
     auto parts = line.split("=");
     string key = toLower(chomp(strip(parts[0])));
     if (parts.length == 1) {
@@ -70,7 +70,7 @@ struct WebConfig {
     @property @nogc bool allowcgi() const nothrow { return flag("allowcgi", "no", "yes"); }
     @property @nogc bool redirect() const nothrow { return !flag("redirect", "/",  "/"); }
     @property @nogc bool redirectdir() const nothrow { return !flag("redirectdir","no", "no"); }
-    @property string index() const { string to = data.from("redirect", "/"); if (to[0] != '/') { return(format("/%s", to)); } return(to); }
+    @property string index() const { string to = data.from("redirect", "/"); return(to.startsWith("/") ? to : format("/%s", to)); }
     @property string[] allowdirs() const nothrow { return(data.from("allowdirs", "/").split(",")); }
 
     // Is the directory allowed to be viewed ?

@@ -63,9 +63,8 @@ string[string] parseQueryString(const string query) {
 string canonicalHeader(in string name) { return(name.split("-").map!(p => p.length ? p[0 .. 1].toUpper() ~ p[1 .. $].toLower() : p).join("-")); }
 
 @nogc pure T from(T,K)(in T[K] buffer, in K key, T def = T.init) nothrow {
-  T* p = cast(T*)(key in buffer);
-  if(p is null) return def;
-  return(*p);
+  if (auto p = key in buffer) { return(*p); }
+  return(def);
 }
 
 int sISelect(SocketSet set, Socket socket, bool write = false, int timeout = 25) {
