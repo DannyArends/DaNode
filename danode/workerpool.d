@@ -82,13 +82,21 @@ class WorkerPool {
           client.destroy();
         } catch(Exception e) { error("WorkerPool: Client exception [%s]: %s", driver.ip, e.msg);
         } catch(Error e) { error("WorkerPool: Client error [%s]: %s",     driver.ip, e.msg); }
+        synchronized(mutex) { if (auto n = driver.ip in nAlivePerIP) { if (--(*n) <= 0) nAlivePerIP.remove(driver.ip); } }
         driver = null;
         if (GC.stats().usedSize > 32 * 1_048_576) { GC.collect(); GC.minimize(); }
-        synchronized(mutex) {
-          if (driver.ip in nAlivePerIP && nAlivePerIP[driver.ip] > 0) nAlivePerIP[driver.ip]--;
-          if (nAlivePerIP[driver.ip] == 0) nAlivePerIP.remove(driver.ip);
-        }
       }
     }
+}
+
+unittest {
+  import danode.interfaces : StringDriver;
+  import danode.log : tag;
+  tag(Level.Always, "FILE", "%s", __FILE__);
+  auto pool = new WorkerPool(new Router("./www/", Address.init));
+  assert(pool.push(new StringDriver("GET /test.txt HTTP/1.1\nHost: localhost\n\n"), "0.0.0.0", false), "push must accept");
+  foreach (_; 0 .. 200) { if (pool.nAlive == 0) break; Thread.sleep(10.msecs); }
+  assert(pool.nAlive == 0, "per-IP count must drop to 0 once the client finishes");
+  pool.stop();
 }
 

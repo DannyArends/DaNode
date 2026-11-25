@@ -6,7 +6,7 @@ import danode.imports;
 
 import danode.filesystem : FileSystem, interpreter;
 import danode.interfaces : DriverInterface;
-import danode.functions : from, parseHtmlDate;
+import danode.functions : canonicalHeader, from, parseHtmlDate;
 import danode.webconfig : WebConfig;
 import danode.log : log, tag, error, Level;
 import danode.multipart : MultipartParser;
@@ -86,7 +86,7 @@ struct Request {
           this.parseRequestLine(line);
         } else { // next lines: header-param: attribute 
           auto parts = line.split(":");
-          if (parts.length > 1) this.headers[strip(parts[0])] = strip(join(parts[1 .. $], ":"));
+          if (parts.length > 1) this.headers[canonicalHeader(strip(parts[0]))] = strip(join(parts[1 .. $], ":"));
         }
       }
     } catch (Exception e) { error("parseHeader exception: %s", e.msg); return(false); }
@@ -164,7 +164,7 @@ struct Request {
   final @property @nogc bool keepalive() const nothrow { return(icmp(headers.from("Connection"), "keep-alive") == 0); }
   final @property SysTime ifModified() const { return(parseHtmlDate(headers.from("If-Modified-Since"))); }
   final @property @nogc bool acceptsEncoding(string encoding = "deflate") const nothrow { return(headers.from("Accept-Encoding").canFind(encoding)); }
-  final @property @nogc bool track() const nothrow { return(  headers.from("DNT","0") == "0"); }
+  final @property @nogc bool track() const nothrow { return(  headers.from("Dnt","0") == "0"); }
   final @property @nogc string cookies() const nothrow { return(headers.from("Cookie")); }
   final @property @nogc string useragent() const nothrow { return(headers.from("User-Agent", "Unknown")); }
   final @property @nogc string ifNoneMatch() const nothrow { return headers.from("If-None-Match"); }

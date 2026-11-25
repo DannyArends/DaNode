@@ -10,7 +10,7 @@ import danode.interfaces : DriverInterface, StringDriver, sendHeaderTooLarge, se
 import danode.router : Router, runRequest;
 import danode.response : Response;
 import danode.request : Request;
-import danode.log : log, tag, Level;
+import danode.log : getVerbose, log, tag, Level;
 import danode.webconfig : serverConfig;
 import danode.signals : shutdownSignal;
 
@@ -74,7 +74,7 @@ class Client {
             driver.sendTimedOut(response);
             stop(); continue;
           }
-          log(Level.Trace, "Connection %s:%s (%s msecs) %s", ip, port, starttime, to!string(driver.inbuffer.data));
+          if (getVerbose() >= Level.Trace) log(Level.Trace, "Connection %s:%s (%s msecs) %s", ip, port, starttime, driver.inbuffer.data);
         }
         logConnection(request, response);
       } catch(Exception e) { log(Level.Verbose, "Unknown Client Exception: %s", e); stop();

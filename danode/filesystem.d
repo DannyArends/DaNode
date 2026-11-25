@@ -49,7 +49,7 @@ class FileSystem {
 
     /* Scan a single folder */
     final Domain scan(string dname){ synchronized {
-      Domain domain;
+      Domain domain = domains.get(dname, Domain.init);
       try {
         foreach (DirEntry f; dirEntries(dname, SpanMode.depth)) {
           if (f.isFILE()) {

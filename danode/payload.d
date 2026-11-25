@@ -106,8 +106,7 @@ class FilePayload : Payload {
 
     /* Get bytes in a lockfree manner from the correct underlying buffer */
     final const(char)[] bytes(ptrdiff_t from, ptrdiff_t maxsize = 4096, bool isRange = false, long start = 0, long end = -1) { synchronized {
-      if (!realfile) { return []; }
-      if (needsupdate) { buffer();  if (!buffered) { log(Level.Verbose, "FilePayload.bytes() failed to buffer '%s'", path); return([]); } }
+      if (!buffered) { return []; }
       auto r = rangeCalc(from, maxsize, isRange, start, end);
       log(Level.Trace, "bytes: isRange=%s start=%d end=%d from=%d offset=%d sz=%d", isRange, start, end, from, r[0], r[1]);
       if(hasEncodedVersion && gzip) {
@@ -131,7 +130,7 @@ class FilePayload : Payload {
     final @property bool isBuffered() const { return buffered; }
     final @property string filePath() const { return path; }
     final @property StatusCode statuscode() const { return realfile ? StatusCode.Ok : StatusCode.NotFound; }
-    final @property ptrdiff_t length() const { if(hasEncodedVersion && gzip) { return(encbuf.length); } return(fileSize()); }
+    final @property ptrdiff_t length() const { if(hasEncodedVersion && gzip) { return(encbuf.length); } return(buffered ? buf.length : fileSize()); }
 }
 
 /* Per-client streaming wrapper around a shared FilePayload. Keeps its own File handle open for the duration of streaming,
